@@ -93,7 +93,7 @@
                 if (p1 === -1 || p2 === -1)
                     return numbers.some(n => n === null) ? null : false;
                 let sandwich = numbers.slice(Math.min(p1, p2) + 1, Math.max(p1, p2));
-                return sandwich.some(n => n === null) ? null : sandwich.reduce((p, n) => p + n, 0) === constr.Sum;
+                return sandwich.some(n => n === null) ? null : sandwich.reduce((p, n) => p + n, 0) === constr.Clue;
             }
 
             case 'ToroidalSandwich': {
@@ -111,7 +111,7 @@
                     s += numbers[i];
                     i = (i + 1) % numbers.length;
                 }
-                return s === constr.Sum;
+                return s === constr.Clue;
             }
 
             case 'Skyscraper': {
@@ -133,6 +133,13 @@
                 if (numbers[0] === null || numbers.slice(0, numbers[0]).some(n => n === null))
                     return null;
                 return constr.Clue === numbers.slice(0, numbers[0]).reduce((p, n) => p + n, 0);
+            }
+
+            case 'YSum': {
+                let numbers = Array(9).fill(null).map((_, x) => grid[constr.IsCol ? (constr.RowCol + 9 * (constr.Reverse ? 8 - x : x)) : ((constr.Reverse ? 8 - x : x) + 9 * constr.RowCol)]);
+                if (numbers[0] === null || numbers[numbers[0] - 1] === null || numbers.slice(0, numbers[numbers[0] - 1]).some(n => n === null))
+                    return null;
+                return constr.Clue === numbers.slice(0, numbers[numbers[0] - 1]).reduce((p, n) => p + n, 0);
             }
 
             case 'Battlefield': {
@@ -304,7 +311,8 @@
         let mode = 'normal';
         let selectedCells = [];
         let highlightedDigits = [];
-        let showErrors = puzzleDiv.dataset.showerrors === '1';
+        let showErrors = 1;
+        let sidebarMode = 'off';
 
         function remoteLog2(msg)
         {
@@ -527,7 +535,7 @@
                 digitCounts[digit - 1]++;
 
                 let sudokuCell = document.getElementById(`sudoku-${cell}`);
-                setClass(sudokuCell, 'highlighted', (selectedCells.includes(cell) || (highlightedDigits.includes(digit))) && !isSolved);
+                setClass(sudokuCell, 'highlighted', selectedCells.includes(cell) || highlightedDigits.includes(digit));
                 setClass(sudokuCell, 'invalid', digit === false);
 
                 let intendedText = null;
@@ -1005,14 +1013,9 @@
 
                 case 'Delete': clearCells(); break;
 
-                case 'Ctrl+KeyV':
-                    let pasted = prompt('Enter 81 digits:');
-                    if (pasted !== null && pasted.length == 81)
-                    {
-                        for (let cell = 0; cell < 81; cell++)
-                            state.enteredDigits[cell] = parseInt(pasted.substr(cell, 1));
-                        updateVisuals(false);
-                    }
+                case 'Ctrl+KeyC':
+                case 'Ctrl+Insert':
+                    navigator.clipboard.writeText(selectedCells.map(c => state.enteredDigits[c] || '.').join(''));
                     break;
 
                 // Navigation
@@ -1020,6 +1023,12 @@
                 case 'KeyX': mode = 'corner'; updateVisuals(); break;
                 case 'KeyC': mode = 'center'; updateVisuals(); break;
                 case 'KeyV': mode = 'color'; updateVisuals(); break;
+                case 'Space': {
+                    let modes = ['normal', 'corner', 'center', 'color'];
+                    mode = modes[(modes.indexOf(mode) + 1) % modes.length];
+                    updateVisuals();
+                    break;
+                }
 
                 case 'ArrowUp': ArrowMovement(0, -1, 'clear'); break;
                 case 'ArrowDown': ArrowMovement(0, 1, 'clear'); break;
@@ -1096,42 +1105,14 @@
         };
 
         let puzzleSvg = puzzleDiv.getElementsByTagName('svg')[0];
-        if (window.location.hash)
-        {
-            document.getElementById('extra-svg').innerHTML = decodeURIComponent(window.location.hash.substr(1));
 
-            // Step 1: move the button row so that it’s below the extra SVG
-            var buttonRow = document.getElementById('button-row');
-            var extraBBox = document.getElementById('extra-svg').getBBox();
-            buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, extraBBox.y + extraBBox.height) + .25})`);
+        // Step 1: move the button row so that it’s below the puzzle
+        var buttonRow = document.getElementById('button-row');
+        var extraBBox = document.getElementById('sudoku').getBBox();
+        buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, extraBBox.y + extraBBox.height) + .25})`);
 
-            // Step 2: change the viewBox so that it includes everything
-            var fullBBox = document.getElementById('full-puzzle').getBBox();
-            puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
-        }
-
-        function setView()
-        {
-            // Set the width to 100% in order to measure its height, then dynamically resize if the SVG is too wide.
-            puzzleSvg.style.width = '100vw';
-            puzzleDiv.style.minHeight = '';
-            let puzzleHeight = puzzleDiv.offsetHeight;
-            let availableHeight = window.innerHeight - document.getElementById('topbar').offsetHeight;
-            let warning = document.querySelector('.warning');
-            if (warning !== null)
-                availableHeight -= warning.offsetHeight;
-            if (puzzleHeight > availableHeight)
-            {
-                puzzleDiv.style.display = 'none';
-                puzzleSvg.style.width = `${100 * availableHeight / puzzleHeight}vw`;
-                puzzleDiv.style.display = '';
-            }
-            let isMobile = (window.innerWidth <= 860);
-            puzzleDiv.style.minHeight = `calc(100vh - ${isMobile ? 1 : 2}cm)`;
-        };
-
-        window.addEventListener('resize', setView);
+        // Step 2: change the viewBox so that it includes everything
+        var fullBBox = document.getElementById('full-puzzle').getBBox();
+        puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
     });
-
-    window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 1);
 });

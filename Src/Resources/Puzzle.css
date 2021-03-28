@@ -23,55 +23,33 @@ th, td {
     white-space: nowrap;
 }
 
-#main {
-    padding: 0;
-}
-
 #topbar {
     background: hsl(220, 70%, 80%);
-    height: 2cm;
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    height: 8vh;
     box-sizing: border-box;
 }
 
-    #topbar a, #topbar .puzzle-id {
-        display: inline-block;
-        text-decoration: none;
-        color: black;
-        height: 2cm;
-        box-sizing: border-box;
-        padding: .725cm 1cm 0;
-        vertical-align: bottom;
+    #topbar .title {
+        font-size: 4.1vh;
+        font-weight: bold;
+        text-align: center;
     }
 
-        #topbar a:hover {
-            background: hsl(220, 70%, 70%);
-        }
-
-        #topbar a.home {
-            padding: .5cm 1cm 0 2.25cm;
-            left: 0;
-            font-size: 24pt;
-            font-weight: bold;
-        }
-
-            #topbar a.home::before {
-                content: '';
-                position: absolute;
-                left: .75cm;
-                top: .5cm;
-                width: 1cm;
-                height: 1cm;
-                background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQAAQMAAABF07nAAAAABlBMVEUAAAD///+l2Z/dAAACFElEQVR42u3YsQ2AMBAEwZMIKINS3RplERm38ERvodn4gokvkSRJkiRJ2qHxFrqTXJXhk+SsDCcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAJEmSJEmStslFAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8EPA8Q0gSZIkSZLUflD4iAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANoBkiRJkiRJnS37yw5ZFqD7+QAAAABJRU5ErkJggg==);
-                background-size: 1cm 1cm;
-                background-repeat: no-repeat;
-                background-position: 0 0;
-            }
-
-    #topbar .right {
-        float: right;
+    #topbar .author {
+        font-size: 2vh;
+        text-align: center;
     }
 
 .puzzle {
+    position: absolute;
+    top: 8vh;
+    left: 0;
+    right: 0;
+    bottom: 0;
     outline: none;
     touch-action: none;
 }
@@ -80,9 +58,11 @@ svg {
     user-select: none;
     margin: 0 auto;
     display: block;
+    width: 100vw;
+    height: 92vh;
 }
 
-    svg * {
+    svg.puzzle-svg * {
         pointer-events: none;
         touch-action: none;
     }
@@ -208,7 +188,6 @@ svg {
     svg .button > rect.clickable {
         fill: white;
         stroke: black;
-        stroke-width: 0.025;
     }
 
     svg .button > text.label {
@@ -244,17 +223,14 @@ svg {
         stroke: none;
     }
 
-    svg .solved-sticker {
-        opacity: 0;
+    svg .frame.invalid {
+        opacity: 1;
+        stroke: #f00;
     }
 
 .puzzle.solved {
     background: hsl(115, 50%, 40%);
 }
-
-    .puzzle.solved svg .solved-sticker {
-        opacity: 1;
-    }
 
     .puzzle.solved svg .frame {
         opacity: 1;
@@ -263,34 +239,4 @@ svg {
 
 .puzzle.mode-color svg .button rect.color {
     opacity: 1;
-}
-
-@media only screen and (max-width: 860px) {
-    #topbar {
-        height: 1cm;
-    }
-
-        #topbar a, #topbar .puzzle-id {
-            height: 1cm;
-            padding: .35cm .25cm 0;
-            font-size: 8pt;
-        }
-
-            #topbar a.home {
-                padding: .08cm .2cm 0 1.25cm;
-                font-size: 14pt;
-            }
-
-                #topbar a.home::before {
-                    top: 0;
-                    left: 0;
-                }
-
-        #topbar .puzzle-id {
-            position: absolute;
-            top: .255cm;
-            left: 1.8cm;
-            pointer-events: none;
-            touch-action: none;
-        }
 }

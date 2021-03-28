@@ -124,6 +124,12 @@
       <Generator>ResXFileCodeGenerator</Generator>
     </Content>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\SvgPuzzleConstraints\Src\SvgPuzzleConstraints.csproj">
+      <Project>{592301f2-d4ea-4f45-9ba9-4f28c1dfd6bb}</Project>
+      <Name>SvgPuzzleConstraints</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
