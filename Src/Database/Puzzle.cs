@@ -9,7 +9,7 @@ namespace Zinga.Database
 {
     public sealed class Puzzle
     {
-        [Key, DatabaseGenerated(DatabaseGeneratedOption.None)]
+        [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int PuzzleID { get; set; }
 
         public string PuzzleHash { get; set; }
@@ -22,11 +22,14 @@ namespace Zinga.Database
         public string Links { get; set; }
 
         public DateTime LastAccessed { get; set; }
+        public bool Generated { get; set; }
 
-        public void SetHash()
+        public Puzzle SetHash()
         {
             using var sha1 = SHA1.Create();
             PuzzleHash = sha1.ComputeHash((ConstraintsJson + UnderSvg + OverSvg + Title + Author + Rules + Links).ToUtf8()).ToHex();
+            LastAccessed = DateTime.UtcNow;
+            return this;
         }
     }
 }

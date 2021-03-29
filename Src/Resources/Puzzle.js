@@ -135,13 +135,6 @@
                 return constr.Clue === numbers.slice(0, numbers[0]).reduce((p, n) => p + n, 0);
             }
 
-            case 'YSum': {
-                let numbers = Array(9).fill(null).map((_, x) => grid[constr.IsCol ? (constr.RowCol + 9 * (constr.Reverse ? 8 - x : x)) : ((constr.Reverse ? 8 - x : x) + 9 * constr.RowCol)]);
-                if (numbers[0] === null || numbers[numbers[0] - 1] === null || numbers.slice(0, numbers[numbers[0] - 1]).some(n => n === null))
-                    return null;
-                return constr.Clue === numbers.slice(0, numbers[numbers[0] - 1]).reduce((p, n) => p + n, 0);
-            }
-
             case 'Battlefield': {
                 let numbers = Array(9).fill(null).map((_, x) => grid[constr.IsCol ? (constr.RowCol + 9 * x) : (x + 9 * constr.RowCol)]);
                 if (numbers[0] === null || numbers[8] === null)
@@ -256,6 +249,69 @@
                     case 'NorthEast': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => 72 - 9 * constr.Offset - 8 * i); break;
                 };
                 return affectedCells.some(c => grid[c] === null) ? null : affectedCells.reduce((p, n) => p + grid[n], 0) === constr.Sum;
+            }
+
+
+            // EXOTIC CONSTRAINTS
+
+            case 'YSum': {
+                let numbers = Array(9).fill(null).map((_, x) => grid[constr.IsCol ? (constr.RowCol + 9 * (constr.Reverse ? 8 - x : x)) : ((constr.Reverse ? 8 - x : x) + 9 * constr.RowCol)]);
+                if (numbers[0] === null || numbers[numbers[0] - 1] === null || numbers.slice(0, numbers[numbers[0] - 1]).some(n => n === null))
+                    return null;
+                return constr.Clue === numbers.slice(0, numbers[numbers[0] - 1]).reduce((p, n) => p + n, 0);
+            }
+
+            case 'BinairoCage': {
+                let anyNull = false;
+                function verifyRowOrCol(isOdd)
+                {
+                    let arrangements = [];
+                    let indexes = Array(constr.Size).fill(null).map((_, c) => c);
+                    for (let y = 0; y < constr.Size; y++)
+                    {
+                        // Check for three equal parities in a row
+                        if (Array(constr.Size - 2).fill(null).some((_, x) => isOdd(x, y) !== null && isOdd(x + 1, y) !== null && isOdd(x + 2, y) !== null && isOdd(x, y) === isOdd(x + 1, y) && isOdd(x, y) === isOdd(x + 2, y)))
+                            return false;
+                        // Check if anything is null
+                        if (indexes.some(x => isOdd(x, y) === null))
+                        {
+                            anyNull = true;
+                            continue;
+                        }
+                        // Check equal odds/evens
+                        if (indexes.filter(x => isOdd(x, y)).length * 2 !== constr.Size)
+                            return false;
+                        // Check repeated arrangements of odds/evens
+                        let arrangement = indexes.map(x => isOdd(x, y)).reduce((p, n) => (p << 1) | (n ? 1 : 0), 0);
+                        if (arrangements.includes(arrangement))
+                            return false;
+                        arrangements.push(arrangement);
+                    }
+                    return true;
+                }
+                let ox = constr.TopLeft % 9;
+                let oy = (constr.TopLeft / 9) | 0;
+                let e = verifyRowOrCol((i, j) => grid[i + ox + 9 * (j + oy)] === null ? null : grid[i + ox + 9 * (j + oy)] % 2 !== 0)
+                    && verifyRowOrCol((i, j) => grid[j + ox + 9 * (i + oy)] === null ? null : grid[j + ox + 9 * (i + oy)] % 2 !== 0);
+                return anyNull && e ? null : e;
+            }
+
+            case 'LittleSandwich': {
+                let affectedCells = [];
+                switch (constr.Direction)
+                {
+                    case 'SouthEast': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => constr.Offset + 10 * i); break;
+                    case 'SouthWest': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => 8 + 9 * constr.Offset + 8 * i); break;
+                    case 'NorthWest': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => 80 - constr.Offset - 10 * i); break;
+                    case 'NorthEast': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => 72 - 9 * constr.Offset - 8 * i); break;
+                };
+                let p1 = affectedCells.findIndex(ix => grid[ix] == constr.Digit1);
+                let p2 = affectedCells.findIndex(ix => grid[ix] == constr.Digit2);
+                if (p1 == -1 || p2 == -1)
+                    return affectedCells.some(c => grid[c] === null) ? null : false;
+                let slice = affectedCells.slice(Math.min(p1, p2) + 1, Math.max(p1, p2));
+                console.log(`${p1}, ${p2}, [${affectedCells.join(', ')}], [${slice.join(', ')}]=[${slice.map(ix => grid[ix]).join(', ')}]`);
+                return slice.some(c => grid[c] === null) ? null : slice.reduce((p, n) => p + grid[n], 0) === constr.Clue;
             }
         }
     }
@@ -552,7 +608,7 @@
 
                 document.getElementById(`sudoku-text-${cell}`).textContent = intendedText !== null ? intendedText : '';
                 document.getElementById(`sudoku-center-text-${cell}`).textContent = intendedCenterDigits !== null ? intendedCenterDigits : '';
-                for (var i = 0; i < 8; i++)
+                for (let i = 0; i < 8; i++)
                     document.getElementById(`sudoku-corner-text-${cell}-${i}`).textContent = intendedCornerDigits !== null && i < intendedCornerDigits.length ? intendedCornerDigits[i] : '';
 
                 for (let color = 0; color < 9; color++)
@@ -585,7 +641,7 @@
             if (undoBuffer.length > 0)
             {
                 redoBuffer.push(state);
-                var item = undoBuffer.pop();
+                let item = undoBuffer.pop();
                 state = item;
                 updateVisuals(true);
             }
@@ -596,7 +652,7 @@
             if (redoBuffer.length > 0)
             {
                 undoBuffer.push(state);
-                var item = redoBuffer.pop();
+                let item = redoBuffer.pop();
                 state = item;
                 updateVisuals(true);
             }
@@ -698,7 +754,7 @@
             }
         }
 
-        var tooltip = null;
+        let tooltip = null;
         function clearTooltip()
         {
             if (tooltip !== null)
@@ -1107,12 +1163,12 @@
         let puzzleSvg = puzzleDiv.getElementsByTagName('svg')[0];
 
         // Step 1: move the button row so that it’s below the puzzle
-        var buttonRow = document.getElementById('button-row');
-        var extraBBox = document.getElementById('sudoku').getBBox();
+        let buttonRow = document.getElementById('button-row');
+        let extraBBox = document.getElementById('sudoku').getBBox();
         buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, extraBBox.y + extraBBox.height) + .25})`);
 
         // Step 2: change the viewBox so that it includes everything
-        var fullBBox = document.getElementById('full-puzzle').getBBox();
+        let fullBBox = document.getElementById('full-puzzle').getBBox();
         puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
     });
 });
