@@ -187,16 +187,19 @@
                 return constr.Cells.some(c => grid[c] === null) ? null : true;
 
             case 'KillerCage': {
-                for (let i = 0; i < constr.Cells.length; i++)
-                    for (let j = i + 1; j < constr.Cells.length; j++)
-                        if (grid[constr.Cells[i]] !== null && grid[constr.Cells[j]] !== null && grid[constr.Cells[i]] === grid[constr.Cells[j]])
-                            return false;
+                if (!constr.NonUnique)
+                {
+                    for (let i = 0; i < constr.Cells.length; i++)
+                        for (let j = i + 1; j < constr.Cells.length; j++)
+                            if (grid[constr.Cells[i]] !== null && grid[constr.Cells[j]] !== null && grid[constr.Cells[i]] === grid[constr.Cells[j]])
+                                return false;
+                }
                 return constr.Cells.some(c => grid[c] === null) ? null : (constr.Sum === null || constr.Cells.reduce((p, n) => p + grid[n], 0) === constr.Sum);
             }
 
             case 'RenbanCage': {
                 let numbers = constr.Cells.map(c => grid[c]);
-                return numbers.some(n => n === null) ? null : numbers.filter(n => !numbers.includes(n + 1)).length === 1;
+                return numbers.some(n => n === null) ? null : new Set(numbers).size === constr.Cells.length && numbers.filter(n => !numbers.includes(n + 1)).length === 1;
             }
 
             case 'Snowball': {
@@ -248,7 +251,7 @@
                     case 'NorthWest': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => 80 - constr.Offset - 10 * i); break;
                     case 'NorthEast': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => 72 - 9 * constr.Offset - 8 * i); break;
                 };
-                return affectedCells.some(c => grid[c] === null) ? null : affectedCells.reduce((p, n) => p + grid[n], 0) === constr.Sum;
+                return affectedCells.some(c => grid[c] === null) ? null : affectedCells.reduce((p, n) => p + grid[n], 0) === constr.Clue;
             }
 
 
@@ -305,12 +308,13 @@
                     case 'NorthWest': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => 80 - constr.Offset - 10 * i); break;
                     case 'NorthEast': affectedCells = Array(9 - constr.Offset).fill(null).map((_, i) => 72 - 9 * constr.Offset - 8 * i); break;
                 };
+                if (affectedCells.filter(c => grid[c] === constr.Digit1).length > 1 || affectedCells.filter(c => grid[c] === constr.Digit2).length > 1)
+                    return false;
                 let p1 = affectedCells.findIndex(ix => grid[ix] == constr.Digit1);
                 let p2 = affectedCells.findIndex(ix => grid[ix] == constr.Digit2);
                 if (p1 == -1 || p2 == -1)
                     return affectedCells.some(c => grid[c] === null) ? null : false;
                 let slice = affectedCells.slice(Math.min(p1, p2) + 1, Math.max(p1, p2));
-                console.log(`${p1}, ${p2}, [${affectedCells.join(', ')}], [${slice.join(', ')}]=[${slice.map(ix => grid[ix]).join(', ')}]`);
                 return slice.some(c => grid[c] === null) ? null : slice.reduce((p, n) => p + grid[n], 0) === constr.Clue;
             }
         }
@@ -698,11 +702,19 @@
 
         function setCellColor(color)
         {
-            if (selectedCells.every(cell => state.colors[cell] === color))
+            if (selectedCells.length === 0)
                 return;
             saveUndo();
-            for (let cell of selectedCells)
-                state.colors[cell] = color;
+            if (selectedCells.every(cell => state.colors[cell] === color))
+            {
+                for (let cell of selectedCells)
+                    state.colors[cell] = null;
+            }
+            else
+            {
+                for (let cell of selectedCells)
+                    state.colors[cell] = color;
+            }
             updateVisuals(true);
         }
 
