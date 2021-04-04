@@ -104,7 +104,7 @@ The cell with the down-pointing arrow must state how far in the indicated direct
                     Title = "Rösselsprung Windoku",
                     Author = "surbier",
                     UrlName = "Rösselsprung-Windoku-by-surbier",
-                    Links = Ut.NewArray(new Link { Text = "Rösselsprung Windoku (Logic Masters Germany)", Url = "https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=0002TF" }),
+                    Links = new[] { new Link { Text = "Rösselsprung Windoku (Logic Masters Germany)", Url = "https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=0002TF" } },
                     Rules = "Normal Sudoku, Windoku and anti-knight rules apply.",
                     Constraints = Ut.NewArray<SvgConstraint>(
                         new GlobalAntiKnight(),
@@ -113,6 +113,36 @@ The cell with the down-pointing arrow must state how far in the indicated direct
                         new KillerCage(Enumerable.Range(0, 9).Select(i => i % 3 + 1 + 9 * (i / 3 + 5)).ToArray(), shaded: true),
                         new KillerCage(Enumerable.Range(0, 9).Select(i => i % 3 + 5 + 9 * (i / 3 + 5)).ToArray(), shaded: true)),
                     Givens = ".1.6............1...75....3....5........4........9....7....53...2................".Select((ch, ix) => (cell: ix, value: ch == '.' ? 0 : ch - '0')).Where(g => g.value != 0).ToArray(),
+                    LastAccessed = DateTime.UtcNow
+                },
+
+                new Puzzle
+                {
+                    Title = "Thermo Killer Sudoku",
+                    Author = "Cane_Puzzles",
+                    UrlName = "Thermo-Killer-Sudoku-by-Cane_Puzzles",
+                    Links = new[] { new Link { Text = "Thermo Killer Sudoku (Logic Masters Germany)", Url = "https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=0005UO" } },
+                    Rules = @"Standard Sudoku rules apply.
+
+Standard Thermometer rules apply: Digits increase along thermometers, starting at the bulb ends.
+
+Standard Killer Sudoku rules apply: The digits in a cage sum to the number in the corner of the cage.",
+                    Constraints = Ut.NewArray<SvgConstraint>(
+                        new KillerCage(new[] { 0, 1 }, sum: 10),
+                        new KillerCage(new[] { 5, 14, 13 }, sum: 12),
+                        new KillerCage(new[] { 25, 34 }, sum: 8),
+                        new KillerCage(new[] { 52, 53 }, sum: 12),
+                        new KillerCage(new[] { 58, 59 }, sum: 11),
+                        new KillerCage(new[] { 76, 77 }, sum: 10),
+                        new Thermometer(new[] { 22, 13, 4, 5 }),
+                        new Thermometer(new[] { 35, 26, 17, 8, 7 }),
+                        new Thermometer(new[] { 32, 41, 42, 43 }),
+                        new Thermometer(new[] { 18, 19, 28, 29, 38, 47, 56 }),
+                        new Thermometer(new[] { 36, 37 }),
+                        new Thermometer(new[] { 49, 58 }),
+                        new Thermometer(new[] { 55, 64 }),
+                        new Thermometer(new[] { 69, 70, 71 })
+                    ),
                     LastAccessed = DateTime.UtcNow
                 });
         }
