@@ -2,6 +2,7 @@
 using RT.CommandLine;
 using RT.PostBuild;
 using RT.PropellerApi;
+using RT.Serialization;
 
 namespace Zinga
 {
@@ -33,6 +34,10 @@ namespace Zinga
 
         public override int Execute()
         {
+            //var parseTree = Suco.Parser.ParseConstraint("cells.unique & cells.sum = 23");
+            //System.Console.WriteLine(ClassifyJson.Serialize(parseTree).ToStringIndented());
+            //System.Diagnostics.Debugger.Break();
+
             PropellerUtil.RunStandalone(ConfigFile ?? @"D:\Daten\Config\Zinga.config.json", new ZingaPropellerModule(),
 #if DEBUG
                 true

@@ -84,6 +84,7 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -106,6 +107,27 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
+    <Compile Include="Suco\BinaryOperator.cs" />
+    <Compile Include="Suco\ParseException.cs" />
+    <Compile Include="Suco\ParseExceptionHighlight.cs" />
+    <Compile Include="Suco\Parser.cs" />
+    <Compile Include="Suco\SucoArrayExpression.cs" />
+    <Compile Include="Suco\SucoBinaryOperatorExpression.cs" />
+    <Compile Include="Suco\SucoCallExpression.cs" />
+    <Compile Include="Suco\SucoConditionalExpression.cs" />
+    <Compile Include="Suco\SucoExpression.cs" />
+    <Compile Include="Suco\SucoIdentifierExpression.cs" />
+    <Compile Include="Suco\SucoListClause.cs" />
+    <Compile Include="Suco\SucoListComprehensionExpression.cs" />
+    <Compile Include="Suco\SucoListCondition.cs" />
+    <Compile Include="Suco\SucoListExpressionCondition.cs" />
+    <Compile Include="Suco\SucoListShortcutCondition.cs" />
+    <Compile Include="Suco\SucoMemberAccessExpression.cs" />
+    <Compile Include="Suco\SucoNumberLiteralExpression.cs" />
+    <Compile Include="Suco\SucoTokenType.cs" />
+    <Compile Include="Suco\SucoUnaryOperatorExpression.cs" />
+    <Compile Include="Suco\SucoToken.cs" />
+    <Compile Include="Suco\UnaryOperator.cs" />
     <Compile Include="ZingaPropellerModule.cs" />
     <Compile Include="ZingaSettings.cs" />
   </ItemGroup>
