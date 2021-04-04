@@ -3,8 +3,8 @@ using System.Data;
 using System.Data.Entity;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using RT.PropellerApi;
-using RT.Serialization;
 using RT.Servers;
 using RT.TagSoup;
 using RT.Util;
@@ -35,7 +35,8 @@ namespace Zinga
                 return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
 
             using var db = new Db();
-            var puzzle = db.Puzzles.FirstOrDefault(p => p.PuzzleHash == url);
+            url = url.UrlUnescape();
+            var puzzle = db.Puzzles.FirstOrDefault(p => p.UrlName == url);
             if (puzzle == null)
                 return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
 
@@ -54,7 +55,8 @@ namespace Zinga
 
                     ("Clear", false, "clear", 1, 2, false),
                     ("Undo", false, "undo", 1, 2, false),
-                    ("Redo", false, "redo", 1, 2, false)));
+                    ("Redo", false, "redo", 1, 2, false),
+                    ("More", false, "sidebar", 1, 2, false)));
 
             var hsls = new[] { 0, 30, 60, 120, 180, 210, 240, 280, 310 };
             string renderButton(string id, double x, double y, double width, string label, bool color, bool isSvg = false) => $@"
@@ -74,8 +76,6 @@ namespace Zinga
                     renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
             }).JoinString();
 
-            var constraints = puzzle.ConstraintsJson.NullOr(cstr => ClassifyJson.Deserialize<SvgConstraint[]>(cstr));
-
             return HttpResponse.Html(new HTML(
                 new HEAD(
                     new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
@@ -94,19 +94,21 @@ namespace Zinga
                     new DIV { id = "topbar" }._(
                         new DIV { class_ = "title" }._(puzzle.Title),
                         puzzle.Author == null ? null : new DIV { class_ = "author" }._("by ", puzzle.Author)),
-                    new DIV { class_ = "puzzle", tabindex = 0 }.Data("constraints", puzzle.ConstraintsJson)._(
-                        new RawTag($@"
-                            <svg viewBox='-0.5 -0.5 10 13.5' stroke-width='0' text-anchor='middle' font-family='Bitter' class='puzzle-svg' style='width: 100vw;'>
-                                <defs>{constraints.SelectMany(c => c.SvgDefs).Distinct().JoinString()}</defs>
-                                <g id='full-puzzle'>
-                                    <g transform='translate(0, 9.5)' id='button-row'>{renderButtonArea(btns, 9)}</g>
+                    new DIV { class_ = "puzzle" }.Data("constraints", puzzle.ConstraintsJson).Data("givens", puzzle.GivensJson).Data("puzzleid", puzzle.UrlName)._(
+                        new DIV { class_ = "puzzle-container", tabindex = 0 }._(new RawTag($@"
+                            <svg viewBox='-0.5 -0.5 10 13.5' stroke-width='0' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
+                                <defs>{puzzle.Constraints?.SelectMany(c => c.SvgDefs).Distinct().JoinString()}</defs>
+                                <g class='full-puzzle'>
+                                    <g transform='translate(0, 9.5)' class='button-row'>{renderButtonArea(btns, 9)}</g>
+                                    <g class='global-constraints'>{puzzle.Constraints.OfType<SvgGlobalConstraint>().Select(c => c.Svg).JoinString()}</g>
 
-                                    <g id='sudoku'>
+                                    <g class='sudoku'>
                                         <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
                                         <rect class='frame' id='sudoku-frame' x='0' y='0' width='9' height='9' stroke-width='.2' fill='none' filter='url(#glow-blur)'></rect>
 
                                         {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25'>
                                             <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
+                                            <g id='sudoku-multicolor-{cell}' transform='translate({cell % 9 + .5}, {cell / 9 + .5})'></g>
                                             <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
 
                                             <text class='notation' id='sudoku-center-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .62}' font-size='.3'></text>
@@ -120,7 +122,7 @@ namespace Zinga
                                             <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % 9 + .1}' y='{cell / 9 + .6125}' text-anchor='start'></text>
                                         </g>").JoinString()}
 
-                                        <g>{puzzle.UnderSvg}{constraints?.Where(c => !c.SvgAboveLines).Select(c => c.Svg).JoinString()}</g>
+                                        <g>{puzzle.UnderSvg}{puzzle.Constraints?.Where(c => !(c is SvgGlobalConstraint) && !c.SvgAboveLines).Select(c => c.Svg).JoinString()}</g>
 
                                         <line x1='1' y1='0' x2='1' y2='9' stroke='black' stroke-width='.01' />
                                         <line x1='2' y1='0' x2='2' y2='9' stroke='black' stroke-width='.01' />
@@ -140,10 +142,19 @@ namespace Zinga
                                         <line x1='0' y1='8' x2='9' y2='8' stroke='black' stroke-width='.01' />
                                         <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
 
-                                        <g>{puzzle.OverSvg}{constraints?.Where(c => c.SvgAboveLines).Select(c => c.Svg).JoinString()}</g>
+                                        <g>{puzzle.OverSvg}{puzzle.Constraints?.Where(c => !(c is SvgGlobalConstraint) && c.SvgAboveLines).Select(c => c.Svg).JoinString()}</g>
                                     </g>
                                 </g>
-                            </svg>")))));
+                            </svg>")),
+                        new DIV { class_ = "sidebar" }._(
+                            new DIV { class_ = "sidebar-content" }._(
+                                new DIV { class_ = "rules" }._(new DIV { class_ = "rules-text" }._(
+                                    puzzle.Rules.NullOr(r => Regex.Split(r, @"\r?\n").Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => new P(s)))
+                                        ?? (object) "Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.")),
+                                puzzle.Links == null || puzzle.Links.Length == 0 ? null : new UL { class_ = "links" }._(puzzle.Links.Select(link => new LI(new A { href = link.Url }._(link.Text)))),
+                                new DIV { class_ = "options" }._(
+                                    new DIV(new INPUT { type = itype.checkbox, id = "opt-show-errors" }, new LABEL { for_ = "opt-show-errors" }._(" Show conflicts")),
+                                    new DIV(new INPUT { type = itype.checkbox, id = "opt-multi-color" }, new LABEL { for_ = "opt-multi-color" }._(" Multi-color mode")))))))));
         }
     }
 }

@@ -98,6 +98,7 @@
     <Compile Include="Database\Configuration.cs" />
     <Compile Include="Database\Db.cs" />
     <Compile Include="Database\Puzzle.cs" />
+    <Compile Include="Link.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources.Designer.cs">

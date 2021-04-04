@@ -1,9 +1,9 @@
 ﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Security.Cryptography;
+using RT.Serialization;
 using RT.Util;
-using RT.Util.ExtensionMethods;
+using SvgPuzzleConstraints;
 
 namespace Zinga.Database
 {
@@ -12,24 +12,38 @@ namespace Zinga.Database
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int PuzzleID { get; set; }
 
-        public string PuzzleHash { get; set; }
+        public string UrlName { get; set; }
         public string ConstraintsJson { get; set; }
+        public string GivensJson { get; set; }
+        public string LinksJson { get; set; }
         public string UnderSvg { get; set; }
         public string OverSvg { get; set; }
         public string Title { get; set; }
         public string Author { get; set; }
         public string Rules { get; set; }
-        public string Links { get; set; }
 
         public DateTime LastAccessed { get; set; }
         public bool Generated { get; set; }
 
-        public Puzzle SetHash()
+        private Link[] _linksCache;
+        public Link[] Links
         {
-            using var sha1 = SHA1.Create();
-            PuzzleHash = sha1.ComputeHash((ConstraintsJson + UnderSvg + OverSvg + Title + Author + Rules + Links).ToUtf8()).ToHex();
-            LastAccessed = DateTime.UtcNow;
-            return this;
+            get => _linksCache ??= LinksJson.NullOr(l => ClassifyJson.Deserialize<Link[]>(l));
+            set { LinksJson = ClassifyJson.Serialize(value).ToString(); _linksCache = value; }
+        }
+
+        private SvgConstraint[] _constraintsCache;
+        public SvgConstraint[] Constraints
+        {
+            get => _constraintsCache ??= ConstraintsJson.NullOr(cstr => ClassifyJson.Deserialize<SvgConstraint[]>(cstr));
+            set { ConstraintsJson = ClassifyJson.Serialize(value).ToString(); _constraintsCache = value; }
+        }
+
+        private (int cell, int value)[] _givensCache;
+        public (int cell, int value)[] Givens
+        {
+            get => _givensCache ??= GivensJson.NullOr(cstr => ClassifyJson.Deserialize<(int cell, int value)[]>(cstr));
+            set { GivensJson = ClassifyJson.Serialize(value).ToString(); _givensCache = value; }
         }
     }
 }

@@ -5,7 +5,7 @@
 
 body {
     font-family: Bitter;
-    background: hsl(220, 50%, 90%);
+    background: hsl(220, 50%, 95%);
     margin: 0;
     overflow: hidden;
 }
@@ -50,16 +50,21 @@ th, td {
     left: 0;
     right: 0;
     bottom: 0;
-    outline: none;
-    touch-action: none;
 }
 
-svg {
+.puzzle-container {
+    touch-action: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+svg.puzzle-svg {
     user-select: none;
-    margin: 0 auto;
-    display: block;
-    width: 100vw;
-    height: 92vh;
+    width: 100%;
+    height: 100%;
 }
 
     svg.puzzle-svg * {
@@ -67,163 +72,165 @@ svg {
         touch-action: none;
     }
 
-    svg .clickable {
+    svg.puzzle-svg .clickable {
         pointer-events: all;
     }
 
-    svg .cell rect {
+    svg.puzzle-svg .cell rect {
         fill: white;
     }
 
-    svg .cell.highlighted rect {
+    svg.puzzle-svg .cell.highlighted rect {
         fill: hsl(0, 0%, 50%);
     }
 
-    svg .cell.c0 rect {
+    /*##*/
+    svg.puzzle-svg .cell.c0 rect, svg.puzzle-svg .cell path.c0 {
         fill: hsl(0, 80%, 80%);
     }
 
-    svg .cell.highlighted.c0 rect {
+    svg.puzzle-svg .cell.highlighted.c0 rect, svg.puzzle-svg .cell.highlighted path.c0 {
         fill: hsl(0, 50%, 40%);
     }
 
-    svg .cell.c1 rect {
+    svg.puzzle-svg .cell.c1 rect, svg.puzzle-svg .cell path.c1 {
         fill: hsl(30, 80%, 80%);
     }
 
-    svg .cell.highlighted.c1 rect {
+    svg.puzzle-svg .cell.highlighted.c1 rect, svg.puzzle-svg .cell.highlighted path.c1 {
         fill: hsl(30, 50%, 40%);
     }
 
-    svg .cell.c2 rect {
+    svg.puzzle-svg .cell.c2 rect, svg.puzzle-svg .cell path.c2 {
         fill: hsl(60, 80%, 80%);
     }
 
-    svg .cell.highlighted.c2 rect {
+    svg.puzzle-svg .cell.highlighted.c2 rect, svg.puzzle-svg .cell.highlighted path.c2 {
         fill: hsl(60, 50%, 40%);
     }
 
-    svg .cell.c3 rect {
+    svg.puzzle-svg .cell.c3 rect, svg.puzzle-svg .cell path.c3 {
         fill: hsl(120, 80%, 80%);
     }
 
-    svg .cell.highlighted.c3 rect {
+    svg.puzzle-svg .cell.highlighted.c3 rect, svg.puzzle-svg .cell.highlighted path.c3 {
         fill: hsl(120, 50%, 40%);
     }
 
-    svg .cell.c4 rect {
+    svg.puzzle-svg .cell.c4 rect, svg.puzzle-svg .cell path.c4 {
         fill: hsl(180, 80%, 80%);
     }
 
-    svg .cell.highlighted.c4 rect {
+    svg.puzzle-svg .cell.highlighted.c4 rect, svg.puzzle-svg .cell.highlighted path.c4 {
         fill: hsl(180, 50%, 40%);
     }
 
-    svg .cell.c5 rect {
+    svg.puzzle-svg .cell.c5 rect, svg.puzzle-svg .cell path.c5 {
         fill: hsl(210, 80%, 80%);
     }
 
-    svg .cell.highlighted.c5 rect {
+    svg.puzzle-svg .cell.highlighted.c5 rect, svg.puzzle-svg .cell.highlighted path.c5 {
         fill: hsl(210, 50%, 40%);
     }
 
-    svg .cell.c6 rect {
+    svg.puzzle-svg .cell.c6 rect, svg.puzzle-svg .cell path.c6 {
         fill: hsl(240, 80%, 80%);
     }
 
-    svg .cell.highlighted.c6 rect {
+    svg.puzzle-svg .cell.highlighted.c6 rect, svg.puzzle-svg .cell.highlighted path.c6 {
         fill: hsl(240, 50%, 40%);
     }
 
-    svg .cell.c7 rect {
+    svg.puzzle-svg .cell.c7 rect, svg.puzzle-svg .cell path.c7 {
         fill: hsl(280, 80%, 80%);
     }
 
-    svg .cell.highlighted.c7 rect {
+    svg.puzzle-svg .cell.highlighted.c7 rect, svg.puzzle-svg .cell.highlighted path.c7 {
         fill: hsl(280, 50%, 40%);
     }
 
-    svg .cell.c8 rect {
+    svg.puzzle-svg .cell.c8 rect, svg.puzzle-svg .cell path.c8 {
         fill: hsl(310, 80%, 80%);
     }
 
-    svg .cell.highlighted.c8 rect {
+    svg.puzzle-svg .cell.highlighted.c8 rect, svg.puzzle-svg .cell.highlighted path.c8 {
         fill: hsl(310, 50%, 40%);
     }
+    /*###*/
 
-    svg .cell.highlighted text {
+    svg.puzzle-svg .cell.highlighted text {
         fill: white;
     }
 
-    svg .cell.invalid rect {
+    svg.puzzle-svg .cell.invalid rect {
         fill: #f00;
     }
 
-    svg .cell.highlighted.invalid rect {
+    svg.puzzle-svg .cell.highlighted.invalid rect {
         fill: #800;
     }
 
-    svg .cell .notation {
+    svg.puzzle-svg .cell .notation {
         fill: #1d6ae5;
     }
 
-    svg .cell.highlighted .notation {
+    svg.puzzle-svg .cell.highlighted .notation {
         fill: white;
     }
 
-    svg .frame.invalid {
+    svg.puzzle-svg .frame.invalid {
         opacity: 1;
         stroke: #f00;
     }
 
-    svg .frame.solved {
+    svg.puzzle-svg .frame.solved {
         opacity: 1;
         stroke: #0f0;
     }
 
-    svg .frame {
+    svg.puzzle-svg .frame {
         opacity: 0;
     }
 
-    svg .button > rect.clickable {
+    svg.puzzle-svg .button > rect.clickable {
         fill: white;
         stroke: black;
     }
 
-    svg .button > text.label {
+    svg.puzzle-svg .button > text.label {
         fill: black;
     }
 
-    svg .button.success > rect.clickable {
+    svg.puzzle-svg .button.success > rect.clickable {
         fill: #b8f9bd;
     }
 
-    svg .button.selected > rect.clickable {
+    svg.puzzle-svg .button.selected > rect.clickable {
         fill: hsl(212, 80%, 50%);
     }
 
-    svg .button.warning > rect.clickable {
+    svg.puzzle-svg .button.warning > rect.clickable {
         fill: hsl(0, 80%, 40%);
     }
 
-    svg .button.selected > text.label, svg .button.warning > text.label {
+    svg.puzzle-svg .button.selected > text.label, svg.puzzle-svg .button.warning > text.label {
         fill: white;
     }
 
-    svg .button:not(.selected):not(.warning):hover > rect.clickable {
+    svg.puzzle-svg .button:not(.selected):not(.warning):hover > rect.clickable {
         fill: hsl(212, 90%, 90%);
     }
 
-    svg .button rect.color {
+    svg.puzzle-svg .button rect.color {
         opacity: 0;
     }
 
-    svg .edge-cell {
+    svg.puzzle-svg .edge-cell {
         fill: transparent;
         stroke: none;
     }
 
-    svg .frame.invalid {
+    svg.puzzle-svg .frame.invalid {
         opacity: 1;
         stroke: #f00;
     }
@@ -239,4 +246,72 @@ svg {
 
 .puzzle.mode-color svg .button rect.color {
     opacity: 1;
+}
+
+.sidebar {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 65vw;
+    bottom: 0;
+    right: 0;
+    overflow: auto;
+}
+
+    .sidebar .sidebar-content {
+        padding: .5cm .5cm 1cm .5cm;
+    }
+
+    .sidebar .rules {
+        margin: 2cm 0 0;
+        padding: 1cm .5cm .5cm 1cm;
+        border: 2px solid black;
+        border-radius: .5cm;
+        background: hsl(220, 50%, 97%);
+        position: relative;
+    }
+
+        .sidebar .rules .rules-text {
+            white-space: pre-wrap;
+            overflow: auto;
+            padding-right: .5cm;
+            font-size: 18pt;
+        }
+
+            .sidebar .rules .rules-text p {
+                margin: 0 0 .5cm 0;
+            }
+
+        .sidebar .rules::before {
+            content: 'RULES';
+            display: block;
+            font-size: 48pt;
+            font-weight: bold;
+            text-align: center;
+            position: absolute;
+            bottom: 100%;
+            line-height: .7;
+            left: 1cm;
+            color: black;
+        }
+
+    .sidebar .options {
+        margin-top: 1cm;
+        font-size: 18pt;
+    }
+
+.puzzle-container, .sidebar {
+    outline: none;
+}
+
+    .puzzle:not(.solved) .puzzle-container:focus, .sidebar:focus {
+        background: hsl(220, 50%, 90%);
+    }
+
+.puzzle.sidebar-on .sidebar {
+    display: block;
+}
+
+.puzzle.sidebar-on .puzzle-container {
+    right: 35vw;
 }

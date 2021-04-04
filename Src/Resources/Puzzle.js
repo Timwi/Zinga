@@ -54,17 +54,24 @@
                     diagonals.some(c => grid[c] === null) ? null : true;
             }
 
-            case 'AntiKnight': {
-                let x = constr.Cell % 9;
-                let y = (constr.Cell / 9) | 0;
-                let knightsMoves = [];
-                for (let dx of [-2, -1, 1, 2])
-                    if (inRange(x + dx))
-                        for (let dy of (dx === 1 || dx === -1) ? [-2, 2] : [-1, 1])
-                            if (inRange(y + dy))
-                                knightsMoves.push(x + dx + 9 * (y + dy));
-                return knightsMoves.some(c => grid[c] !== null && grid[c] === grid[constr.Cell]) ? false :
-                    knightsMoves.some(c => grid[c] === null) ? null : true;
+            case 'AntiKnight':
+            case 'GlobalAntiKnight': {
+                let anyNull = false;
+                for (let cell of constr[':type'] === 'AntiKnight' ? [constr.Cell] : Array(81).fill(null).map((_, c) => c))
+                {
+                    let x = cell % 9;
+                    let y = (cell / 9) | 0;
+                    let knightsMoves = [];
+                    for (let dx of [-2, -1, 1, 2])
+                        if (inRange(x + dx))
+                            for (let dy of (dx === 1 || dx === -1) ? [-2, 2] : [-1, 1])
+                                if (inRange(y + dy))
+                                    knightsMoves.push(x + dx + 9 * (y + dy));
+                    if (knightsMoves.some(c => grid[c] !== null && grid[c] === grid[cell]))
+                        return false;
+                    anyNull = anyNull || grid[cell] === null || knightsMoves.some(c => grid[c] === null);
+                }
+                return anyNull ? null : true;
             }
 
             case 'AntiKing':
@@ -340,39 +347,45 @@
     }
 
     let first = true;
-    let draggingMode = null;
-    document.body.onmouseup = handler(document.body.ontouchend = function(ev)
-    {
-        if (ev.type !== 'touchend' || ev.touches.length === 0)
-            draggingMode = null;
-        remoteLog(`${ev.type} document.body null`);
-    });
 
     Array.from(document.getElementsByClassName('puzzle')).forEach(puzzleDiv =>
     {
-        let puzzleId = puzzleDiv.dataset.puzzleid | 0;
+        let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
+        let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
         let constraints = JSON.parse(puzzleDiv.dataset.constraints || null) || [];
+        let givens = Array(81).fill(null);
+        for (let givenInf of JSON.parse(puzzleDiv.dataset.givens || null) || [])
+            givens[givenInf[0]] = givenInf[1];
 
         if (first)
         {
-            puzzleDiv.focus();
+            puzzleContainer.focus();
             first = false;
         }
 
+        let draggingMode = null;
+        puzzleContainer.onmouseup = handler(puzzleContainer.ontouchend = function(ev)
+        {
+            if (ev.type !== 'touchend' || ev.touches.length === 0)
+                draggingMode = null;
+            remoteLog(`${ev.type} puzzleContainer`);
+        });
+
         let state = {
-            colors: Array(81).fill(null),
+            colors: Array(81).fill(null).map(_ => []),
             cornerNotation: Array(81).fill(null).map(_ => []),
             centerNotation: Array(81).fill(null).map(_ => []),
             enteredDigits: Array(81).fill(null)
         };
-        let undoBuffer = [JSON.parse(JSON.stringify(state))];
+        let undoBuffer = [encodeState(state)];
         let redoBuffer = [];
 
         let mode = 'normal';
         let selectedCells = [];
         let highlightedDigits = [];
-        let showErrors = 1;
-        let sidebarMode = 'off';
+        let showErrors = true;
+        let multiColorMode = false;
+        let sidebarOn = true;
 
         function remoteLog2(msg)
         {
@@ -404,10 +417,17 @@
                     val = (val * 11n) + 10n;
                 }
 
-                if (st.colors[cell] === null)
-                    val = (val * 2n);
-                else
-                    val = (val * 9n + BigInt(st.colors[cell])) * 2n + 1n;
+                // Encode colors
+                if (st.colors[cell].length === 0)   // Common case: no color
+                    val = (val * 3n);
+                else if (st.colors[cell].length === 1)  // Single color: one of 9
+                    val = (val * 9n + BigInt(st.colors[cell][0])) * 3n + 1n;
+                else    // Multiple colors: bitfield
+                {
+                    for (let color = 0; color < 9; color++)
+                        val = (val * 2n) + (st.colors[cell].includes(color) ? 1n : 0n);
+                    val = val * 3n + 2n;
+                }
             }
 
             // Safe characters to use: 0x21 - 0xD7FF and 0xE000 - 0xFFFD
@@ -445,15 +465,30 @@
             // Decode Sudoku grid
             for (let cell = 81 - 1; cell >= 0; cell--)
             {
-                let hasColor = (val % 2n !== 0n);
-                val = val / 2n;
-                if (hasColor)
+                let colorCode = val % 3n;
+                val = val / 3n;
+                switch (Number(colorCode))
                 {
-                    st.colors[cell] = Number(val % 9n);
-                    val = val / 9n;
+                    case 1: // single color
+                        st.colors[cell] = [Number(val % 9n)];
+                        val = val / 9n;
+                        break;
+
+                    case 2: // multi-color
+                        st.colors[cell] = [];
+                        for (let color = 9 - 1; color >= 0; color--)
+                        {
+                            if (val % 2n != 0n)
+                                st.colors[cell].push(color);
+                            val = val / 2n;
+                        }
+                        st.colors[cell].sort();
+                        break;
+
+                    default:    // no color
+                        st.colors[cell] = [];
+                        break;
                 }
-                else
-                    st.colors[cell] = null;
 
                 let code = val % 11n;
                 val = val / 11n;
@@ -484,11 +519,18 @@
 
         try
         {
-            let undoB = localStorage.getItem(`su${puzzleId}-undo`);
-            let redoB = localStorage.getItem(`su${puzzleId}-redo`);
+            let optB = localStorage.getItem(`zinga-${puzzleId}-opt`);
+            let opt = optB && JSON.parse(optB);
 
-            undoBuffer = undoB ? undoB.split(' ').map(decodeState) : [JSON.parse(JSON.stringify(state))];
-            redoBuffer = redoB ? redoB.split(' ').map(decodeState) : [];
+            showErrors = opt ? !!opt.showErrors : true;
+            multiColorMode = opt ? !!opt.multiColorMode : false;
+            sidebarOn = opt ? !!opt.sidebarOn : true;
+
+            let undoB = localStorage.getItem(`zinga-${puzzleId}-undo`);
+            let redoB = localStorage.getItem(`zinga-${puzzleId}-redo`);
+
+            undoBuffer = undoB ? undoB.split(' ') : [encodeState(state)];
+            redoBuffer = redoB ? redoB.split(' ') : [];
 
             let item = null;
             if (puzzleDiv.dataset.progress)
@@ -500,9 +542,9 @@
 
             if (item === null)
             {
-                str = localStorage.getItem(`su${puzzleId}`);
+                str = localStorage.getItem(`zinga-${puzzleId}`);
                 if (str !== null)
-                    try { item = JSON.parse(localStorage.getItem(`su${puzzleId}`)); }
+                    try { item = JSON.parse(localStorage.getItem(`zinga-${puzzleId}`)); }
                     catch { item = decodeState(str); }
             }
             if (item && item.cornerNotation && item.centerNotation && item.enteredDigits)
@@ -520,12 +562,12 @@
 
         function getDisplayedSudokuDigit(st, cell)
         {
-            return st.enteredDigits[cell];
+            return givens[cell] !== null ? givens[cell] : st.enteredDigits[cell];
         }
 
         function isSudokuValid()
         {
-            let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c)).map(x => x === false ? null : x);
+            let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
 
             // Check the Sudoku rules (rows, columns and regions)
             for (let i = 0; i < 9; i++)
@@ -533,22 +575,34 @@
                 for (let colA = 0; colA < 9; colA++)
                     for (let colB = colA + 1; colB < 9; colB++)
                         if (grid[colA + 9 * i] !== null && grid[colA + 9 * i] === grid[colB + 9 * i])
+                        {
+                            console.log(`Row ${i + 1} is violated.`);
                             return false;
+                        }
                 for (let rowA = 0; rowA < 9; rowA++)
                     for (let rowB = rowA + 1; rowB < 9; rowB++)
                         if (grid[i + 9 * rowA] !== null && grid[i + 9 * rowA] === grid[i + 9 * rowB])
+                        {
+                            console.log(`Column ${i + 1} is violated.`);
                             return false;
+                        }
                 for (let cellA = 0; cellA < 9; cellA++)
                     for (let cellB = cellA + 1; cellB < 9; cellB++)
                         if (grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] !== null &&
                             grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] === grid[cellB % 3 + 3 * (i % 3) + 9 * (((cellB / 3) | 0) + 3 * ((i / 3) | 0))])
+                        {
+                            console.log(`Box ${i + 1} is violated.`);
                             return false;
+                        }
             }
 
             // Check if any constraints are violated
             for (let constr of constraints)
                 if (validateConstraint(grid, constr) === false)
+                {
+                    console.log(`Constraint ${constr[':type']} is violated.`);
                     return false;
+                }
 
             // Check that all cells in the Sudoku grid have a digit
             return grid.some(c => c === null) ? null : true;
@@ -559,33 +613,17 @@
             // Update localStorage (only do this when necessary because encodeState() is relatively slow on Firefox)
             if (localStorage && udpateStorage)
             {
-                localStorage.setItem(`su${puzzleId}`, encodeState(state));
-                localStorage.setItem(`su${puzzleId}-undo`, undoBuffer.map(encodeState).join(' '));
-                localStorage.setItem(`su${puzzleId}-redo`, redoBuffer.map(encodeState).join(' '));
+                localStorage.setItem(`zinga-${puzzleId}`, encodeState(state));
+                localStorage.setItem(`zinga-${puzzleId}-undo`, undoBuffer.join(' '));
+                localStorage.setItem(`zinga-${puzzleId}-redo`, redoBuffer.join(' '));
+                localStorage.setItem(`zinga-${puzzleId}-opt`, JSON.stringify({ showErrors: showErrors, multiColorMode: multiColorMode, sidebarOn: sidebarOn }));
             }
             resetClearButton();
 
             // Check if there are any conflicts (red glow) and/or the puzzle is solved
-            let isSolved = true;
-            switch (isSudokuValid())
-            {
-                case false:
-                    isSolved = false;
-                    if (showErrors)
-                        document.getElementById(`sudoku-frame`).classList.add('invalid');
-                    break;
-
-                case true:
-                    document.getElementById(`sudoku-frame`).classList.remove('invalid');
-                    break;
-
-                case null:
-                    isSolved = false;
-                    document.getElementById(`sudoku-frame`).classList.remove('invalid');
-                    break;
-            }
-
-            setClass(puzzleDiv, 'solved', isSolved);
+            let isValid = isSudokuValid();  // note: could be null
+            setClass(document.getElementById(`sudoku-frame`), 'invalid', showErrors && isValid === false);
+            setClass(puzzleDiv, 'solved', isValid === true);
 
             // Sudoku grid (digits, highlights — not red glow, that’s done further up)
             let digitCounts = Array(9).fill(0);
@@ -616,7 +654,40 @@
                     document.getElementById(`sudoku-corner-text-${cell}-${i}`).textContent = intendedCornerDigits !== null && i < intendedCornerDigits.length ? intendedCornerDigits[i] : '';
 
                 for (let color = 0; color < 9; color++)
-                    setClass(sudokuCell, `c${color}`, state.colors[cell] === color);
+                    setClass(sudokuCell, `c${color}`, state.colors[cell].length === 1 && state.colors[cell][0] === color);
+
+                let multiColorSvg = '';
+                if (state.colors[cell].length > 1)
+                {
+                    function getPerimeterPoint(angle)
+                    {
+                        function tan(θ) { return Math.tan(θ * Math.PI / 180); }
+                        if (angle > -45 && angle <= 45)
+                            return ` .5 ${.5 * tan(angle)}`;
+                        if (angle > 45 && angle <= 135)
+                            return ` ${-.5 * tan(angle - 90)} .5`;
+                        if (angle > 135 && angle <= 225)
+                            return ` -.5 ${-.5 * tan(angle - 180)}`;
+                        return ` ${.5 * tan(angle - 270)} -.5`;
+                    }
+                    for (let i = 0; i < state.colors[cell].length; i++)
+                    {
+                        let angle1 = -70 + 360 * i / state.colors[cell].length;
+                        let angle2 = -70 + 360 * (i + 1) / state.colors[cell].length;
+                        let path = 'M 0 0' + getPerimeterPoint(angle1);
+                        if (angle1 < -45 && angle2 > -45)
+                            path += ' .5 -.5';
+                        if (angle1 < 45 && angle2 > 45)
+                            path += ' .5 .5';
+                        if (angle1 < 135 && angle2 > 135)
+                            path += ' -.5 .5';
+                        if (angle1 < 225 && angle2 > 225)
+                            path += ' -.5 -.5';
+                        path += getPerimeterPoint(angle2);
+                        multiColorSvg += `<path d='${path}z' class='c${state.colors[cell][i]}' />`;
+                    }
+                }
+                puzzleDiv.querySelector(`#sudoku-multicolor-${cell}`).innerHTML = multiColorSvg;
             }
 
             // Button highlights
@@ -631,12 +702,17 @@
                 setClass(document.getElementById(`btn-${digit + 1}`), 'selected', highlightedDigits.includes(digit + 1));
                 setClass(document.getElementById(`btn-${digit + 1}`), 'success', digitCounts[digit] === 9);
             }
+
+            setClass(puzzleDiv, 'sidebar-on', sidebarOn);
+            puzzleDiv.querySelector('#btn-sidebar>text').textContent = sidebarOn ? 'Less' : 'More';
+            puzzleDiv.querySelector('#opt-show-errors').checked = showErrors;
+            puzzleDiv.querySelector('#opt-multi-color').checked = multiColorMode;
         }
         updateVisuals(true);
 
         function saveUndo()
         {
-            undoBuffer.push(JSON.parse(JSON.stringify(state)));
+            undoBuffer.push(encodeState(state));
             redoBuffer = [];
         }
 
@@ -644,9 +720,8 @@
         {
             if (undoBuffer.length > 0)
             {
-                redoBuffer.push(state);
-                let item = undoBuffer.pop();
-                state = item;
+                redoBuffer.push(encodeState(state));
+                state = decodeState(undoBuffer.pop());
                 updateVisuals(true);
             }
         }
@@ -655,9 +730,8 @@
         {
             if (redoBuffer.length > 0)
             {
-                undoBuffer.push(state);
-                let item = redoBuffer.pop();
-                state = item;
+                undoBuffer.push(encodeState(state));
+                state = decodeState(redoBuffer.pop());
                 updateVisuals(true);
             }
         }
@@ -705,15 +779,24 @@
             if (selectedCells.length === 0)
                 return;
             saveUndo();
-            if (selectedCells.every(cell => state.colors[cell] === color))
+            if (selectedCells.every(cell => state.colors[cell].includes(color)))
             {
                 for (let cell of selectedCells)
-                    state.colors[cell] = null;
+                    state.colors[cell].splice(state.colors[cell].indexOf(color), 1);
             }
             else
             {
                 for (let cell of selectedCells)
-                    state.colors[cell] = color;
+                    if (multiColorMode)
+                    {
+                        if (!state.colors[cell].includes(color))
+                        {
+                            state.colors[cell].push(color);
+                            state.colors[cell].sort();
+                        }
+                    }
+                    else
+                        state.colors[cell] = [color];
             }
             updateVisuals(true);
         }
@@ -782,6 +865,7 @@
             cellRect.onclick = handler(function() { remoteLog2(`onclick ${cell}`); });
             cellRect.onmousedown = cellRect.ontouchstart = handler(function(ev)
             {
+                puzzleContainer.focus();
                 if (draggingMode !== null)
                 {
                     remoteLog2(`${ev.type} ${cell} (canceled)`);
@@ -908,11 +992,11 @@
 
         function clearCells()
         {
-            if (mode === 'color' && selectedCells.some(c => state.colors[c] !== null))
+            if (mode === 'color' && selectedCells.some(c => state.colors[c].length > 0))
             {
                 saveUndo();
                 for (let cell of selectedCells)
-                    state.colors[cell] = null;
+                    state.colors[cell] = [];
                 updateVisuals(true);
             }
             else if (mode !== 'color' && selectedCells.some(c => state.enteredDigits[c] !== null || state.centerNotation[c].length > 0 || state.cornerNotation[c].length > 0))
@@ -954,6 +1038,10 @@
         setButtonHandler(puzzleDiv.querySelector(`#btn-undo>rect`), undo);
         setButtonHandler(puzzleDiv.querySelector(`#btn-redo>rect`), redo);
 
+        setButtonHandler(puzzleDiv.querySelector(`#btn-sidebar>rect`), function() { sidebarOn = !sidebarOn; updateVisuals(true); });
+        document.getElementById(`opt-show-errors`).onchange = function() { showErrors = !showErrors; updateVisuals(true); };
+        document.getElementById(`opt-multi-color`).onchange = function() { multiColorMode = !multiColorMode; updateVisuals(true); };
+
         function selectCell(cell, mode)
         {
             if (mode === 'toggle')
@@ -990,7 +1078,7 @@
         }
 
         let keepMove = false;
-        puzzleDiv.addEventListener("keydown", ev =>
+        puzzleContainer.addEventListener("keydown", ev =>
         {
             let str = ev.code;
             if (ev.shiftKey)
@@ -1083,7 +1171,7 @@
 
                 case 'Ctrl+KeyC':
                 case 'Ctrl+Insert':
-                    navigator.clipboard.writeText(selectedCells.map(c => state.enteredDigits[c] || '.').join(''));
+                    navigator.clipboard.writeText(selectedCells.map(c => getDisplayedSudokuDigit(state, c) || '.').join(''));
                     break;
 
                 // Navigation
@@ -1097,6 +1185,11 @@
                     updateVisuals();
                     break;
                 }
+
+                case 'Slash':
+                    sidebarOn = !sidebarOn;
+                    updateVisuals(true);
+                    break;
 
                 case 'ArrowUp': ArrowMovement(0, -1, 'clear'); break;
                 case 'ArrowDown': ArrowMovement(0, 1, 'clear'); break;
@@ -1159,28 +1252,54 @@
             }
         });
 
-        puzzleDiv.onmousedown = function(ev)
+        puzzleContainer.onmousedown = function(ev)
         {
             if (!ev.shiftKey && !ev.ctrlKey)
             {
                 selectedCells = [];
                 highlightedDigits = [];
                 updateVisuals();
-                remoteLog2(`onmousedown puzzleDiv`);
+                remoteLog2(`onmousedown puzzleContainer`);
             }
             else
-                remoteLog2(`onmousedown puzzleDiv (canceled)`);
+                remoteLog2(`onmousedown puzzleContainer (canceled)`);
         };
 
-        let puzzleSvg = puzzleDiv.getElementsByTagName('svg')[0];
+        let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
 
         // Step 1: move the button row so that it’s below the puzzle
-        let buttonRow = document.getElementById('button-row');
-        let extraBBox = document.getElementById('sudoku').getBBox();
+        let buttonRow = puzzleDiv.querySelector('.button-row');
+        let extraBBox = puzzleDiv.querySelector('.sudoku').getBBox();
         buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, extraBBox.y + extraBBox.height) + .25})`);
 
-        // Step 2: change the viewBox so that it includes everything
-        let fullBBox = document.getElementById('full-puzzle').getBBox();
+        // Step 2: move the global constraints so they’re to the left of the puzzle
+        let globalBox = puzzleDiv.querySelector('.global-constraints');
+        globalBox.setAttribute('transform', `translate(${extraBBox.x - 1.5}, 0)`);
+
+        // Step 3: change the viewBox so that it includes everything
+        let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
         puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
+
+        window.addEventListener('resize', function()
+        {
+            let rulesDiv = puzzleDiv.querySelector('.rules-text');
+            let sidebar = puzzleDiv.querySelector('.sidebar');
+            let sidebarContent = puzzleDiv.querySelector('.sidebar-content');
+            let min = 8;
+            let max = 18;
+
+            while (max - min > .1)
+            {
+                let mid = (max + min) / 2;
+                rulesDiv.style.fontSize = `${mid}pt`;
+                if (sidebarContent.scrollHeight > sidebar.offsetHeight)
+                    max = mid;
+                else
+                    min = mid;
+            }
+            rulesDiv.style.fontSize = `${min}pt`;
+        });
+
+        window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 100);
     });
 });
