@@ -13,6 +13,7 @@
         Plus,
         Minus,
         Times,
+        Modulo,
         Power
     }
 }

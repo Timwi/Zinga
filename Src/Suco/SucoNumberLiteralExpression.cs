@@ -6,10 +6,14 @@ namespace Zinga.Suco
     {
         public BigInteger NumericalValue { get; private set; }
 
-        public SucoNumberLiteralExpression(int startIndex, int endIndex, BigInteger numericalValue)
-            : base(startIndex, endIndex)
+        public SucoNumberLiteralExpression(int startIndex, int endIndex, BigInteger numericalValue, SucoType type = null)
+            : base(startIndex, endIndex, type)
         {
             NumericalValue = numericalValue;
         }
+
+        public override SucoExpression WithNewIndexes(int startIndex, int endIndex) => new SucoNumberLiteralExpression(startIndex, endIndex, NumericalValue);
+        public override SucoExpression WithType(SucoType type) => new SucoNumberLiteralExpression(StartIndex, EndIndex, NumericalValue, type);
+        //public override SucoExpression DeduceTypes() => WithType(SucoIntegerType.Instance);
     }
 }

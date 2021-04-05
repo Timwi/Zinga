@@ -28,8 +28,8 @@ namespace Zinga.Suco
                 try
                 {
                     // Try parsing as a list comprehension (e.g. “a: a.odd”).
-                    var parser = new Parser { _ix = 0, _source = $"{{{source}}}" };
-                    var ret = parser.parseExpression();
+                    var parser = new Parser { _ix = 0, _source = source };
+                    var ret = parser.parseListComprehension();
                     if (parser.getToken().Type != SucoTokenType.Eof)
                         throw new ParseException("There is extra code. End of code expected.", parser._ix);
                     return ret;
@@ -117,7 +117,7 @@ namespace Zinga.Suco
         private SucoExpression parseExpressionMultiplicative()
         {
             var left = parseExpressionExponential();
-            while (tokens(out var op, ("*", BinaryOperator.Times), ("×", BinaryOperator.Times)))
+            while (tokens(out var op, ("*", BinaryOperator.Times), ("×", BinaryOperator.Times), ("%", BinaryOperator.Modulo)))
             {
                 var right = parseExpressionExponential();
                 left = new SucoBinaryOperatorExpression(left.StartIndex, right.EndIndex, left, right, op);
@@ -171,7 +171,7 @@ namespace Zinga.Suco
                         var arguments = parseExpressionList();
                         if (!token(")"))
                             throw new ParseException("List of arguments: expecting ‘)’ (to end the list) or ‘,’ (to continue the list).", _ix, new ParseExceptionHighlight[] { oldIx }.Concat(arguments.Select(arg => (ParseExceptionHighlight) arg)).ToArray());
-                        left = new SucoCallExpression(left.StartIndex, arguments.Last().EndIndex, left, arguments);
+                        left = new SucoCallExpression(left.StartIndex, _ix, left, arguments);
                     }
                 }
                 else
@@ -207,7 +207,7 @@ namespace Zinga.Suco
                 var inner = parseExpression();
                 if (!token(")"))
                     throw new ParseException("Unmatched ‘(’: missing ‘)’.", _ix, startIx);
-                return inner;
+                return inner.WithNewIndexes(startIx, _ix);
             }
 
             var tok = getToken();
@@ -280,9 +280,26 @@ namespace Zinga.Suco
             else if (token("v", out oldIx) || token("↓", out oldIx)) { conditions.Add(new SucoListShortcutCondition(oldIx, _ix, "↓")); goto nextCondition; }
 
             var tok = getToken();
+            if (tok.Type == SucoTokenType.Identifier && tok.StringValue == "from")
+            {
+                _ix = tok.EndIndex;
+                var tok2 = getToken();
+                if (tok.Type != SucoTokenType.Identifier)
+                    throw new ParseException("“from” must be followed by the name of a collection to select items from.", _ix, tok);
+                conditions.Add(new SucoListFromCondition(tok.StartIndex, tok2.EndIndex, tok2.StringValue));
+                _ix = tok2.EndIndex;
+                goto nextCondition;
+            }
             if (tok.Type == SucoTokenType.Identifier)
             {
                 conditions.Add(new SucoListShortcutCondition(tok.StartIndex, tok.EndIndex, tok.StringValue));
+                _ix = tok.EndIndex;
+                goto nextCondition;
+            }
+            else if (tok.Type == SucoTokenType.Number)
+            {
+                conditions.Add(new SucoListNumberCondition(tok.StartIndex, tok.EndIndex, tok.NumericalValue));
+                _ix = tok.EndIndex;
                 goto nextCondition;
             }
 
@@ -312,17 +329,17 @@ namespace Zinga.Suco
 
         private static readonly string[] _tokens = {
             // Arithmetic
-            "+", "-", "−", "*", "×", "^",
+            "+", "-", "−", "*", "×", "^", "%",
             // Relational
             "<", "<=", "≤", ">", ">=", "≥", "=", "!=", "≠",
             // Logical
             "&", "|", "?", ":", "!",
             // Structural
-            "{", "}", ",", "(", ")", ".",
+            "{", "}", ",", "(", ")", ".", "[", "]",
             // Selectors
             "$",    // "+" is listed in Arithmetic
             // Filters
-            "←", "→", "↑", "↓"    // “v” parses as an identifier; “<”/“>” are in Relational; “^” is in Arithmetic
+            "~", "←", "→", "↑", "↓"    // “v” parses as an identifier; “<”/“>” are in Relational; “^” is in Arithmetic
         };
 
         /// <summary>
@@ -366,7 +383,7 @@ namespace Zinga.Suco
             }
             else if (char.IsDigit(_source, i))
             {
-                var j = i + 1;
+                var j = i;
                 var numerical = BigInteger.Zero;
                 while (j < _source.Length && char.IsDigit(_source, j))
                 {
@@ -377,7 +394,7 @@ namespace Zinga.Suco
             }
 
             foreach (var token in _tokens)
-                if (_source.Length > i + token.Length && _source.Substring(i, token.Length) == token)
+                if (i + token.Length <= _source.Length && _source.Substring(i, token.Length) == token)
                     return new SucoToken(SucoTokenType.BuiltIn, token, startIndex, i + token.Length);
             return default;
         }

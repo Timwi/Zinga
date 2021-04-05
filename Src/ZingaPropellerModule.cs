@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using RT.PropellerApi;
 using RT.Servers;
@@ -11,6 +13,7 @@ using RT.Util;
 using RT.Util.ExtensionMethods;
 using SvgPuzzleConstraints;
 using Zinga.Database;
+using Zinga.Suco;
 
 namespace Zinga
 {
@@ -30,6 +33,9 @@ namespace Zinga
 
         public override HttpResponse Handle(HttpRequest req)
         {
+            if (req.Url.Path == "/tmp")
+                return PlayWithSuco(req);
+
             var url = req.Url.Path.SubstringSafe(1);
             if (url.Length == 0)
                 return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
@@ -155,6 +161,87 @@ namespace Zinga
                                 new DIV { class_ = "options" }._(
                                     new DIV(new INPUT { type = itype.checkbox, id = "opt-show-errors" }, new LABEL { for_ = "opt-show-errors" }._(" Show conflicts")),
                                     new DIV(new INPUT { type = itype.checkbox, id = "opt-multi-color" }, new LABEL { for_ = "opt-multi-color" }._(" Multi-color mode")))))))));
+        }
+
+        private HttpResponse PlayWithSuco(HttpRequest req)
+        {
+            object parseTreeHtml = null;
+            var code = req.Post["code"].Value;
+            if (code != null)
+            {
+                var parseTree = Parser.ParseConstraint(code);
+
+                object span(SucoExpression expr) => new SPAN { class_ = "node" }.Data("type", Regex.Replace(expr.GetType().Name, @"^Suco|Expression$", ""))._(visit(expr));
+                IEnumerable<object> visit(SucoExpression expr)
+                {
+                    var properties = expr.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                    var ix = expr.StartIndex;
+                    foreach (var inner in properties.Where(p => typeof(SucoExpression).IsAssignableFrom(p.PropertyType)).Select(p => (SucoExpression) p.GetValue(expr))
+                        .Concat(properties.Where(p => typeof(IEnumerable<SucoExpression>).IsAssignableFrom(p.PropertyType)).SelectMany(p => (IEnumerable<SucoExpression>) p.GetValue(expr)))
+                        .Where(expr => expr != null)
+                        .OrderBy(expr => expr.StartIndex))
+                    {
+                        yield return code.Substring(ix, inner.StartIndex - ix);
+                        yield return span(inner);
+                        ix = inner.EndIndex;
+                    }
+                    yield return code.Substring(ix, expr.EndIndex - ix);
+                }
+                parseTreeHtml = new PRE { class_ = "parse-tree" }._(span(parseTree));
+            }
+
+            return HttpResponse.Html(new HTML(
+                new HEAD(
+                    new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
+                    new META { name = "viewport", content = "width=device-width,initial-scale=1.0" },
+                    new TITLE("Suco parse tree"),
+                    new STYLELiteral(@"
+                        body, * {
+                            font-family: 'Roboto';
+                        }
+                        .parse-tree {
+                            font-size: 18pt;
+                            font-weight: 400;
+                        }
+                        .node {
+                            display: inline-block;
+                            padding: .5cm .1cm .1cm;
+                            margin: 0 .1cm;
+                            border: 1px solid transparent;
+                            position: relative;
+                            box-sizing: border-box;
+                            background: white;
+                        }
+                        .node:hover {
+                            border-color: black;
+                            background: #def;
+                        }
+                        .node:hover::after {
+                            content: attr(data-type);
+                            position: absolute;
+                            left: 100%;
+                            top: -1px;
+                            font-size: 9pt;
+                            font-weight: 300;
+                            background: #bdf;
+                            padding: 1px 4px 1px 1px;
+                            border: 1px solid black;
+                            border-left: none;
+                            border-top-right-radius: .1cm;
+                            border-bottom-right-radius: .1cm;
+                            box-sizing: border-box;
+                            z-index: 1;
+                        }
+                        textarea {
+                            width: 100%;
+                            height: 15em;
+                        }
+                    ")),
+                new BODY(
+                    parseTreeHtml,
+                    new DIV(new FORM { method = method.post, action = "/tmp" }._(
+                        new DIV(new TEXTAREA { accesskey = ",", name = "code" }._(code)),
+                        new DIV(new BUTTON { type = btype.submit, accesskey = "p" }._("Parse")))))));
         }
     }
 }

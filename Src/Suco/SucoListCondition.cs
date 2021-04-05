@@ -2,7 +2,7 @@
 {
     public abstract class SucoListCondition : SucoExpression
     {
-        protected SucoListCondition(int startIndex, int endIndex) : base(startIndex, endIndex)
+        protected SucoListCondition(int startIndex, int endIndex, SucoType type = null) : base(startIndex, endIndex, type)
         {
         }
     }
