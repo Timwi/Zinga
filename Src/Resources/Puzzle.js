@@ -79,8 +79,16 @@
                     Adjacent(constr.Cell).some(c => grid[c] === null) ? null : true;
 
             case 'NoConsecutive':
-                return grid[constr.Cell] !== null && Orthogonal(constr.Cell).some(c => grid[c] !== null && Math.abs(grid[c] - grid[constr.Cell]) === 1) ? false :
-                    grid[constr.Cell] === null || Orthogonal(constr.Cell).some(c => grid[c] === null) ? null : true;
+            case 'GlobalNoConsecutive': {
+                let anyNull = false;
+                for (let cell of constr[':type'] === 'NoConsecutive' ? [constr.Cell] : Array(81).fill(null).map((_, c) => c))
+                {
+                    if (grid[cell] !== null && Orthogonal(cell).some(c => grid[c] !== null && Math.abs(grid[c] - grid[cell]) === 1))
+                        return false;
+                    anyNull = anyNull || grid[cell] === null || Orthogonal(cell).some(c => grid[c] === null);
+                }
+                return anyNull ? null : true;
+            }
 
             case 'MaximumCell':
                 return grid[constr.Cell] !== null && Orthogonal(constr.Cell).some(c => grid[c] !== null && grid[c] >= grid[constr.Cell]) ? false :

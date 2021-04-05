@@ -141,8 +141,59 @@ Standard Killer Sudoku rules apply: The digits in a cage sum to the number in th
                         new Thermometer(new[] { 36, 37 }),
                         new Thermometer(new[] { 49, 58 }),
                         new Thermometer(new[] { 55, 64 }),
-                        new Thermometer(new[] { 69, 70, 71 })
-                    ),
+                        new Thermometer(new[] { 69, 70, 71 })),
+                    LastAccessed = DateTime.UtcNow
+                },
+
+                new Puzzle
+                {
+                    Title = "Consequences",
+                    Author = "fuxia",
+                    UrlName = "Consequences-by-fuxia",
+                    Links = new[] { new Link { Text = "Consequences (Logic Masters Germany)", Url = "https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=0005VS" } },
+                    Rules = @"Normal Sudoku rules apply.
+
+Orthogonally adjacent digits are not consecutive. For example a 2 cannot be placed directly next to, above or below a 1 or a 3.
+
+Every digit in a quadruple clue must be placed in one of the four surrounding cells.",
+                    Constraints = Ut.NewArray<SvgConstraint>(
+                        new GlobalNoConsecutive(),
+                        new Inclusion(4, new[] { 2, 6, 8, 9 }),
+                        new Inclusion(10, new[] { 2, 3, 5, 8 }),
+                        new Inclusion(15, new[] { 1, 2, 4, 9 }),
+                        new Inclusion(27, new[] { 1, 3, 6, 7 }),
+                        new Inclusion(43, new[] { 3, 4, 7, 8 }),
+                        new Inclusion(55, new[] { 1, 5, 7, 9 }),
+                        new Inclusion(60, new[] { 3, 4, 7, 8 }),
+                        new Inclusion(66, new[] { 1, 2, 4, 9 })),
+                    LastAccessed = DateTime.UtcNow
+                },
+
+                new Puzzle
+                {
+                    Title = "Hubble Deep Field Sudoku",
+                    Author = "Azireo",
+                    UrlName = "Hubble-Deep-Field-Sudoku-by-Azireo",
+                    Links = new[] { new Link { Text = "Hubble Deep Field Sudoku (Logic Masters Germany)", Url = "https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=0005VR" } },
+                    Rules = @"Normal sudoku rules apply. Digits must increase along thermo, from the bulb to the end. Along arrows, digits must sum to the digit in the corresponding circle.",
+                    Constraints = Ut.NewArray(
+                        Ut.NewArray(
+                            new[] { 11, 2, 3, 4 },
+                            new[] { 11, 20, 19, 18 },
+                            new[] { 6, 7, 8 },
+                            new[] { 34, 33, 42 },
+                            new[] { 56, 57, 48, 47, 46 },
+                            new[] { 56, 55, 64, 65, 66 },
+                            new[] { 76, 67, 77 }
+                        ).Select(arr => new Arrow(arr)).ToArray<SvgConstraint>(),
+                        Ut.NewArray(
+                            new[] { 10, 0, 9, 1 },
+                            new[] { 16, 17, 26, 25, 24, 15 },
+                            new[] { 22, 21, 30, 31 },
+                            new[] { 60, 59, 50, 51, 52, 61, 70 },
+                            new[] { 64, 65, 74, 73 }
+                        ).Select(arr => new Thermometer(arr)).ToArray<SvgConstraint>()
+                    ).SelectMany(x => x).ToArray(),
                     LastAccessed = DateTime.UtcNow
                 });
         }
