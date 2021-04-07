@@ -1,4 +1,6 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
 {
@@ -12,7 +14,18 @@ namespace Zinga.Suco
             Elements = elements;
         }
 
-        public override SucoExpression WithNewIndexes(int startIndex, int endIndex) => new SucoArrayExpression(startIndex, endIndex, Elements);
+        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoArrayExpression(startIndex, endIndex, Elements);
         public override SucoExpression WithType(SucoType type) => new SucoArrayExpression(StartIndex, EndIndex, Elements, type);
+
+        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        {
+            var newElements = Elements.Select(e => e.DeduceTypes(env)).ToList();
+            for (var i = 0; i < newElements.Count; i++)
+                if (newElements.All(e => e.Type.ImplicitlyConvertibleTo(newElements[i].Type)))
+                    return new SucoArrayExpression(StartIndex, EndIndex, newElements.Select(e => e.ImplicitlyConvertTo(newElements[i].Type)).ToList(), newElements[i].Type);
+            throw new SucoCompileException("This array contains elements that are not compatible with one another.", StartIndex, EndIndex);
+        }
+
+        public override SucoJsResult GetJavaScript(SucoEnvironment env) => $"[{Elements.Select(e => e.GetJavaScript(env).Code).JoinString(", ")}]";
     }
 }

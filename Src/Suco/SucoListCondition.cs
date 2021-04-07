@@ -1,9 +1,12 @@
 ﻿namespace Zinga.Suco
 {
-    public abstract class SucoListCondition : SucoExpression
+    public abstract class SucoListCondition : SucoNode
     {
-        protected SucoListCondition(int startIndex, int endIndex, SucoType type = null) : base(startIndex, endIndex, type)
+        protected SucoListCondition(int startIndex, int endIndex)
+            : base(startIndex, endIndex)
         {
         }
+
+        public abstract string GetJavaScript(SucoEnvironment env);
     }
 }

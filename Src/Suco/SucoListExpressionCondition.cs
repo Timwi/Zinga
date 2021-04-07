@@ -4,13 +4,14 @@
     {
         public SucoExpression Expression { get; private set; }
 
-        public SucoListExpressionCondition(int startIndex, int endIndex, SucoExpression expression, SucoType type = null)
-            : base(startIndex, endIndex, type)
+        public SucoListExpressionCondition(int startIndex, int endIndex, SucoExpression expression)
+            : base(startIndex, endIndex)
         {
             Expression = expression;
         }
 
-        public override SucoExpression WithNewIndexes(int startIndex, int endIndex) => new SucoListExpressionCondition(startIndex, endIndex, Expression);
-        public override SucoExpression WithType(SucoType type) => new SucoListExpressionCondition(StartIndex, EndIndex, Expression, type);
+        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoListExpressionCondition(startIndex, endIndex, Expression);
+
+        public override string GetJavaScript(SucoEnvironment env) => $"if ({Expression.GetJavaScript(env)})";
     }
 }

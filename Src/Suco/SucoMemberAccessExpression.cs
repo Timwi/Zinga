@@ -12,7 +12,18 @@
             MemberName = memberName;
         }
 
-        public override SucoExpression WithNewIndexes(int startIndex, int endIndex) => new SucoMemberAccessExpression(startIndex, endIndex, Operand, MemberName);
+        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoMemberAccessExpression(startIndex, endIndex, Operand, MemberName);
         public override SucoExpression WithType(SucoType type) => new SucoMemberAccessExpression(StartIndex, EndIndex, Operand, MemberName, type);
+
+        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        {
+            var op = Operand.DeduceTypes(env);
+            var memberType = op.Type.GetMemberType(MemberName);
+            if (memberType == null)
+                throw new SucoCompileException($"“{MemberName}” is not a valid member name on type “{op.Type}”.", Operand.EndIndex, EndIndex);
+            return new SucoMemberAccessExpression(StartIndex, EndIndex, op, MemberName, memberType);
+        }
+
+        public override SucoJsResult GetJavaScript(SucoEnvironment env) => Operand.Type.GetMemberJs(MemberName, env, Operand);
     }
 }

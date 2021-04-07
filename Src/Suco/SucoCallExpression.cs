@@ -1,8 +1,9 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 
 namespace Zinga.Suco
 {
-    internal class SucoCallExpression : SucoExpression
+    public class SucoCallExpression : SucoExpression
     {
         public SucoExpression Operand { get; private set; }
         public List<SucoExpression> Arguments { get; private set; }
@@ -14,7 +15,35 @@ namespace Zinga.Suco
             Arguments = arguments;
         }
 
-        public override SucoExpression WithNewIndexes(int startIndex, int endIndex) => new SucoCallExpression(startIndex, endIndex, Operand, Arguments);
+        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoCallExpression(startIndex, endIndex, Operand, Arguments);
         public override SucoExpression WithType(SucoType type) => new SucoCallExpression(StartIndex, EndIndex, Operand, Arguments, type);
+
+        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        {
+            try
+            {
+                var operand = Operand.DeduceTypes(env);
+                if (operand.Type is not SucoFunctionType fnc)
+                    throw new SucoCompileException($"“{operand.Type}” is not a function.", operand.StartIndex, operand.EndIndex);
+
+                var newArguments = Arguments.Select(arg => arg.DeduceTypes(env)).ToList();
+                var returnType = fnc.GetReturnType(newArguments.Select(a => a.Type).ToArray());
+                return new SucoCallExpression(StartIndex, EndIndex, operand, newArguments, returnType);
+            }
+            catch (SucoFunctionResolutionException re)
+            {
+                throw new SucoCompileException(re.Message, StartIndex, EndIndex);
+            }
+        }
+
+        public override SucoJsResult GetJavaScript(SucoEnvironment env)
+        {
+            if (Operand.Type is not SucoFunctionType)
+                throw new SucoCompileException($"This is not a callable function.", StartIndex, EndIndex);
+            var fnc = Operand.GetJavaScript(env);
+            if (fnc is not SucoJsFunctionResult fncResult)
+                throw new SucoCompileException($"This is not a callable function.", StartIndex, EndIndex);
+            return fncResult.Function.GetJavaScript(env, Arguments.ToArray());
+        }
     }
 }

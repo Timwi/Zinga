@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using RT.Util;
 using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
@@ -207,7 +206,7 @@ namespace Zinga.Suco
                 var inner = parseExpression();
                 if (!token(")"))
                     throw new ParseException("Unmatched ‘(’: missing ‘)’.", _ix, startIx);
-                return inner.WithNewIndexes(startIx, _ix);
+                return (SucoExpression) inner.WithNewIndexes(startIx, _ix);
             }
 
             var tok = getToken();
@@ -225,7 +224,7 @@ namespace Zinga.Suco
             throw new ParseException($"Unexpected code: ‘{_source.Substring(tok.StartIndex, tok.EndIndex - tok.StartIndex)}’.", tok.StartIndex);
         }
 
-        private static readonly string[] _selectors = new[] { "$", "+" };
+        private static readonly string[] _flags = new[] { "$", "+", "1" };
         private SucoExpression parseListComprehension(int? startIx = null, bool consumeCloseCurly = false)
         {
             var rStartIx = startIx ?? _ix;
@@ -235,23 +234,32 @@ namespace Zinga.Suco
 
             nextClause:
             var clauseStartIx = _ix;
-            var selectors = new Dictionary<string, int>();
+            var flags = new Dictionary<string, int>();
             nextSelector:
-            foreach (var sel in _selectors)
+            foreach (var sel in _flags)
                 if (token(sel, out var ix))
                 {
-                    if (selectors.ContainsKey(sel))
-                        throw new ParseException($"Duplicate selector: ‘{sel}’.", _ix, selectors[sel]);
-                    selectors[sel] = ix;
+                    if (flags.ContainsKey(sel))
+                        throw new ParseException($"Duplicate flag: ‘{sel}’.", _ix, flags[sel]);
+                    flags[sel] = ix;
                     goto nextSelector;
                 }
             var variableName = getToken();
             if (variableName.Type != SucoTokenType.Identifier)
-                throw new ParseException($"Expected variable name{_selectors.Except(selectors.Keys).ToArray().Select(s => $" or ‘{s}’").JoinString()}.", variableName.StartIndex);
+                throw new ParseException($"Expected variable name{_flags.Except(flags.Keys).ToArray().Select(s => $" or ‘{s}’").JoinString()}.", variableName.StartIndex);
             _ix = variableName.EndIndex;
 
             var conditions = new List<SucoListCondition>();
-            void commitClause(int endIndex) { clauses.Add(new SucoListClause(clauseStartIx, endIndex, variableName.StringValue, selectors.ContainsKey("$"), selectors.ContainsKey("+"), conditions)); }
+            string fromVariable = null;
+            SucoToken fromVariableToken = default;
+            void commitClause(int endIndex)
+            {
+                if (!flags.ContainsKey("1") && clauses.Any(c => c.HasSingleton))
+                    throw new ParseException("A clause without a “1” flag cannot follow a clause with a “1” flag.", clauseStartIx, endIndex);
+                if (flags.ContainsKey("$") && fromVariable != null)
+                    throw new ParseException("A clause with a “$” flag cannot also have a “from” condition.", clauseStartIx, endIndex);
+                clauses.Add(new SucoListClause(clauseStartIx, endIndex, variableName.StringValue, flags.ContainsKey("$"), flags.ContainsKey("+"), flags.ContainsKey("1"), fromVariable, conditions));
+            }
 
             nextCondition:
             if (token(":", out var oldIx))
@@ -282,23 +290,22 @@ namespace Zinga.Suco
             var tok = getToken();
             if (tok.Type == SucoTokenType.Identifier && tok.StringValue == "from")
             {
+                if (fromVariable != null)
+                    throw new ParseException("Duplicate “from” condition.", _ix, fromVariableToken);
+
                 _ix = tok.EndIndex;
                 var tok2 = getToken();
                 if (tok.Type != SucoTokenType.Identifier)
                     throw new ParseException("“from” must be followed by the name of a collection to select items from.", _ix, tok);
-                conditions.Add(new SucoListFromCondition(tok.StartIndex, tok2.EndIndex, tok2.StringValue));
+
+                fromVariable = tok2.StringValue;
+                fromVariableToken = tok2;
                 _ix = tok2.EndIndex;
                 goto nextCondition;
             }
             if (tok.Type == SucoTokenType.Identifier)
             {
                 conditions.Add(new SucoListShortcutCondition(tok.StartIndex, tok.EndIndex, tok.StringValue));
-                _ix = tok.EndIndex;
-                goto nextCondition;
-            }
-            else if (tok.Type == SucoTokenType.Number)
-            {
-                conditions.Add(new SucoListNumberCondition(tok.StartIndex, tok.EndIndex, tok.NumericalValue));
                 _ix = tok.EndIndex;
                 goto nextCondition;
             }
@@ -321,7 +328,7 @@ namespace Zinga.Suco
         {
             var token = getToken();
             oldIx = token.StartIndex;
-            if (token.StringValue != expected)
+            if (_source.Substring(token.StartIndex, token.EndIndex - token.StartIndex) != expected)
                 return false;
             _ix = token.EndIndex;
             return true;
@@ -336,8 +343,8 @@ namespace Zinga.Suco
             "&", "|", "?", ":", "!",
             // Structural
             "{", "}", ",", "(", ")", ".", "[", "]",
-            // Selectors
-            "$",    // "+" is listed in Arithmetic
+            // Flags
+            "$",    // "+" is listed in Arithmetic; "1" is parsed as a numeral
             // Filters
             "~", "←", "→", "↑", "↓"    // “v” parses as an identifier; “<”/“>” are in Relational; “^” is in Arithmetic
         };

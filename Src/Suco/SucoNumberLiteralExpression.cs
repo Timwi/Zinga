@@ -12,8 +12,9 @@ namespace Zinga.Suco
             NumericalValue = numericalValue;
         }
 
-        public override SucoExpression WithNewIndexes(int startIndex, int endIndex) => new SucoNumberLiteralExpression(startIndex, endIndex, NumericalValue);
+        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoNumberLiteralExpression(startIndex, endIndex, NumericalValue);
         public override SucoExpression WithType(SucoType type) => new SucoNumberLiteralExpression(StartIndex, EndIndex, NumericalValue, type);
-        //public override SucoExpression DeduceTypes() => WithType(SucoIntegerType.Instance);
+        public override SucoExpression DeduceTypes(SucoEnvironment env) => WithType(SucoIntegerType.Instance);
+        public override SucoJsResult GetJavaScript(SucoEnvironment env) => NumericalValue.ToString();
     }
 }

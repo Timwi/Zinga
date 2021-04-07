@@ -167,17 +167,34 @@ namespace Zinga
         {
             object parseTreeHtml = null;
             var code = req.Post["code"].Value;
+            var environment = new SucoEnvironment()
+                // built-ins
+                .DeclareVariable("cells", new SucoListType(SucoCellType.Instance))
+                .DeclareVariable("between", new SucoFunction(
+                    (parameters: new[] { SucoCellType.Instance, SucoCellType.Instance },
+                    returnType: new SucoListType(SucoCellType.Instance),
+                    generator: (exprs, env) => $@"(function(c1, c2) {{ return cells.filter((c, ix) => (ix > c1 && ix < c2) || (ix > c2 && ix < c1)); }})(cells.indexOf({exprs[0].GetJavaScript(env)}), cells.indexOf({exprs[1].GetJavaScript(env)}))")))
+                .DeclareVariable("outside", new SucoFunction(
+                    (parameters: new[] { SucoCellType.Instance, SucoCellType.Instance },
+                    returnType: new SucoListType(SucoCellType.Instance),
+                    generator: (exprs, env) => $@"(function(c1, c2) {{ return cells.filter((c, ix) => (ix < c1 || ix > c2) && (ix < c2 || ix > c1)); }})(cells.indexOf({exprs[0].GetJavaScript(env)}), cells.indexOf({exprs[1].GetJavaScript(env)}))")))
+
+                // sandwich constraint
+                .DeclareVariable("crust1", SucoIntegerType.Instance)
+                .DeclareVariable("crust2", SucoIntegerType.Instance)
+                .DeclareVariable("sum", SucoIntegerType.Instance);
+
             if (code != null)
             {
-                var parseTree = Parser.ParseConstraint(code);
+                var parseTree = Parser.ParseConstraint(code).DeduceTypes(environment);
 
-                object span(SucoExpression expr) => new SPAN { class_ = "node" }.Data("type", Regex.Replace(expr.GetType().Name, @"^Suco|Expression$", ""))._(visit(expr));
-                IEnumerable<object> visit(SucoExpression expr)
+                object span(SucoNode node) => new SPAN { class_ = "node" }.Data("type", $"{Regex.Replace(node.GetType().Name, @"^Suco|Expression$", "")}{(node is SucoExpression expr ? $" — {expr.Type}" : null)}")._(visit(node));
+                IEnumerable<object> visit(SucoNode expr)
                 {
                     var properties = expr.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
                     var ix = expr.StartIndex;
-                    foreach (var inner in properties.Where(p => typeof(SucoExpression).IsAssignableFrom(p.PropertyType)).Select(p => (SucoExpression) p.GetValue(expr))
-                        .Concat(properties.Where(p => typeof(IEnumerable<SucoExpression>).IsAssignableFrom(p.PropertyType)).SelectMany(p => (IEnumerable<SucoExpression>) p.GetValue(expr)))
+                    foreach (var inner in properties.Where(p => typeof(SucoNode).IsAssignableFrom(p.PropertyType)).Select(p => (SucoNode) p.GetValue(expr))
+                        .Concat(properties.Where(p => typeof(IEnumerable<SucoNode>).IsAssignableFrom(p.PropertyType)).SelectMany(p => (IEnumerable<SucoNode>) p.GetValue(expr)))
                         .Where(expr => expr != null)
                         .OrderBy(expr => expr.StartIndex))
                     {
