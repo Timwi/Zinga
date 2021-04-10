@@ -165,7 +165,7 @@ namespace Zinga
 
         private HttpResponse PlayWithSuco(HttpRequest req)
         {
-            object parseTreeHtml = null;
+            List<object> htmlBlocks = null;
             var code = req.Post["code"].Value;
             var environment = new SucoEnvironment()
                 // built-ins
@@ -173,11 +173,11 @@ namespace Zinga
                 .DeclareVariable("between", new SucoFunction(
                     (parameters: new[] { SucoCellType.Instance, SucoCellType.Instance },
                     returnType: new SucoListType(SucoCellType.Instance),
-                    generator: (exprs, env) => $@"(function(c1, c2) {{ return cells.filter((c, ix) => (ix > c1 && ix < c2) || (ix > c2 && ix < c1)); }})(cells.indexOf({exprs[0].GetJavaScript(env)}), cells.indexOf({exprs[1].GetJavaScript(env)}))")))
+                    generator: (exprs, env) => $@"(function($a, $b) {{ return cells.filter((_, $i) => ($i > $a && $i < $b) || ($i > $b && $i < $a)); }})(cells.indexOf({exprs[0].GetJavaScript(env).Code}), cells.indexOf({exprs[1].GetJavaScript(env).Code}))")))
                 .DeclareVariable("outside", new SucoFunction(
                     (parameters: new[] { SucoCellType.Instance, SucoCellType.Instance },
                     returnType: new SucoListType(SucoCellType.Instance),
-                    generator: (exprs, env) => $@"(function(c1, c2) {{ return cells.filter((c, ix) => (ix < c1 || ix > c2) && (ix < c2 || ix > c1)); }})(cells.indexOf({exprs[0].GetJavaScript(env)}), cells.indexOf({exprs[1].GetJavaScript(env)}))")))
+                    generator: (exprs, env) => $@"(function($a, $b) {{ return cells.filter((_, $i) => ($i < $a || $i > $b) && ($i < $b || $i > $a)); }})(cells.indexOf({exprs[0].GetJavaScript(env).Code}), cells.indexOf({exprs[1].GetJavaScript(env).Code}))")))
 
                 // sandwich constraint
                 .DeclareVariable("crust1", SucoIntegerType.Instance)
@@ -186,25 +186,63 @@ namespace Zinga
 
             if (code != null)
             {
-                var parseTree = Parser.ParseConstraint(code).DeduceTypes(environment);
+                htmlBlocks = new List<object>();
 
-                object span(SucoNode node) => new SPAN { class_ = "node" }.Data("type", $"{Regex.Replace(node.GetType().Name, @"^Suco|Expression$", "")}{(node is SucoExpression expr ? $" — {expr.Type}" : null)}")._(visit(node));
-                IEnumerable<object> visit(SucoNode expr)
+                object exceptionBox(Exception exc, (int start, int? end)[] highlights)
                 {
-                    var properties = expr.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
-                    var ix = expr.StartIndex;
-                    foreach (var inner in properties.Where(p => typeof(SucoNode).IsAssignableFrom(p.PropertyType)).Select(p => (SucoNode) p.GetValue(expr))
-                        .Concat(properties.Where(p => typeof(IEnumerable<SucoNode>).IsAssignableFrom(p.PropertyType)).SelectMany(p => (IEnumerable<SucoNode>) p.GetValue(expr)))
-                        .Where(expr => expr != null)
-                        .OrderBy(expr => expr.StartIndex))
+                    var pieces = new List<object>();
+                    var ix = 0;
+                    for (var i = 0; i < highlights.Length; i++)
                     {
-                        yield return code.Substring(ix, inner.StartIndex - ix);
-                        yield return span(inner);
-                        ix = inner.EndIndex;
+                        if (highlights[i].start > ix)
+                            pieces.Add(code.Substring(ix, highlights[i].start - ix));
+                        if (highlights[i].end == null)
+                            pieces.Add(new STRONG { class_ = "single" });
+                        else
+                            pieces.Add(new STRONG(code.Substring(highlights[i].start, highlights[i].end.Value - highlights[i].start)));
+                        ix = highlights[i].end ?? highlights[i].start;
                     }
-                    yield return code.Substring(ix, expr.EndIndex - ix);
+                    if (code.Length > ix)
+                        pieces.Add(code.Substring(ix));
+                    return new DIV { class_ = "exception" }._(
+                        new DIV { class_ = "message" }._(exc.Message),
+                        new DIV { class_ = "type" }._(exc.GetType().Name),
+                        new DIV { class_ = "code" }._(new PRE(pieces)));
                 }
-                parseTreeHtml = new PRE { class_ = "parse-tree" }._(span(parseTree));
+
+                object parseExceptionBox(SucoParseException exc) => exceptionBox(exc, (exc.Highlights?.OrderBy(h => h.StartIndex).Select(h => (start: h.StartIndex, end: h.EndIndex)).ToArray() ?? Enumerable.Empty<(int start, int? end)>()).Concat((start: exc.Index, end: null)).ToArray());
+                object compileExceptionBox(SucoCompileException exc) => exceptionBox(exc, new[] { (start: exc.StartIndex, end: exc.EndIndex.Nullable()) });
+
+                // Parse tree
+                try
+                {
+                    var parseTree = Parser.ParseConstraint(code).DeduceTypes(environment);
+
+                    object span(SucoNode node) => new SPAN { class_ = "node" }.Data("type", $"{Regex.Replace(node.GetType().Name, @"^Suco|Expression$", "")}{(node is SucoExpression expr ? $" — {expr.Type}" : null)}")._(visit(node));
+                    IEnumerable<object> visit(SucoNode expr)
+                    {
+                        var properties = expr.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                        var ix = expr.StartIndex;
+                        foreach (var inner in properties.Where(p => typeof(SucoNode).IsAssignableFrom(p.PropertyType)).Select(p => (SucoNode) p.GetValue(expr))
+                            .Concat(properties.Where(p => typeof(IEnumerable<SucoNode>).IsAssignableFrom(p.PropertyType)).SelectMany(p => (IEnumerable<SucoNode>) p.GetValue(expr)))
+                            .Where(expr => expr != null)
+                            .OrderBy(expr => expr.StartIndex))
+                        {
+                            yield return code.Substring(ix, inner.StartIndex - ix);
+                            yield return span(inner);
+                            ix = inner.EndIndex;
+                        }
+                        yield return code.Substring(ix, expr.EndIndex - ix);
+                    }
+                    htmlBlocks.Add(new PRE { class_ = "parse-tree" }._(span(parseTree)));
+
+                    try
+                    {
+                        htmlBlocks.Add(new PRE { class_ = "javascript" }._(parseTree.GetJavaScript(environment).Code));
+                    }
+                    catch (SucoCompileException ce) { htmlBlocks.Add(compileExceptionBox(ce)); }
+                }
+                catch (SucoParseException pe) { htmlBlocks.Add(parseExceptionBox(pe)); }
             }
 
             return HttpResponse.Html(new HTML(
@@ -253,9 +291,37 @@ namespace Zinga
                             width: 100%;
                             height: 15em;
                         }
+                        .exception {
+                            border: 2px solid black;
+                            border-radius: .25cm;
+                            overflow: hidden;
+                            margin-bottom: 1cm;
+                        }
+                            .exception .message {
+                                background: #fdd;
+                                padding: .1cm .25cm;
+                                font-weight: bold;
+                                text-align: center;
+                            }
+                            .exception .type {
+                                background: #ffd;
+                                font-size: 9pt;
+                                padding: .05cm .1cm;
+                                text-align: center;
+                            }
+                            .exception .code {
+                                padding: .1cm .25cm;
+                            }
+                        strong {
+                            background: #fdd;
+                            padding: 0 .05cm;
+                        }
+                        pre.javascript {
+                            white-space: pre-wrap;
+                        }
                     ")),
                 new BODY(
-                    parseTreeHtml,
+                    htmlBlocks,
                     new DIV(new FORM { method = method.post, action = "/tmp" }._(
                         new DIV(new TEXTAREA { accesskey = ",", name = "code" }._(code)),
                         new DIV(new BUTTON { type = btype.submit, accesskey = "p" }._("Parse")))))));

@@ -29,7 +29,7 @@ namespace Zinga.Suco
             var candidates = overloads.SelectIndexWhere(paramTypes => paramTypes.Length == argumentTypes.Length && Enumerable.Range(0, paramTypes.Length).All(ix => argumentTypes[ix].ImplicitlyConvertibleTo(paramTypes[ix]))).ToArray();
             if (candidates.Length == 0)
                 throw new SucoFunctionResolutionException($"The function does not accept this number of arguments of these types.");
-            var perfectCandidate = candidates.FirstOrNull(ix => overloads[ix].Length == argumentTypes.Length && Enumerable.Range(0, overloads[ix].Length).All(ix => argumentTypes[ix].ImplicitlyConvertibleTo(overloads[ix][ix])));
+            var perfectCandidate = candidates.FirstOrNull(oIx => overloads[oIx].Length == argumentTypes.Length && Enumerable.Range(0, overloads[oIx].Length).All(aIx => argumentTypes[aIx].ImplicitlyConvertibleTo(overloads[oIx][aIx])));
             if (perfectCandidate != null)
                 return perfectCandidate.Value;
             if (candidates.Length != 1)

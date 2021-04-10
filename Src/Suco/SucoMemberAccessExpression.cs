@@ -18,12 +18,23 @@
         public override SucoExpression DeduceTypes(SucoEnvironment env)
         {
             var op = Operand.DeduceTypes(env);
-            var memberType = op.Type.GetMemberType(MemberName);
-            if (memberType == null)
-                throw new SucoCompileException($"“{MemberName}” is not a valid member name on type “{op.Type}”.", Operand.EndIndex, EndIndex);
-            return new SucoMemberAccessExpression(StartIndex, EndIndex, op, MemberName, memberType);
+            try
+            {
+                var memberType = op.Type.GetMemberType(MemberName);
+                if (memberType == null)
+                    throw new SucoCompileException($"“{MemberName}” is not a valid member name on type “{op.Type}”.", Operand.EndIndex, EndIndex);
+                return new SucoMemberAccessExpression(StartIndex, EndIndex, op, MemberName, memberType);
+            }
+            catch (SucoTempCompileException ce)
+            {
+                throw new SucoCompileException(ce.Message, StartIndex, EndIndex);
+            }
         }
 
-        public override SucoJsResult GetJavaScript(SucoEnvironment env) => Operand.Type.GetMemberJs(MemberName, env, Operand);
+        public override SucoJsResult GetJavaScript(SucoEnvironment env)
+        {
+            try { return Operand.Type.GetMemberJs(MemberName, env, Operand); }
+            catch (SucoTempCompileException ce) { throw new SucoCompileException(ce.Message, StartIndex, EndIndex); }
+        }
     }
 }

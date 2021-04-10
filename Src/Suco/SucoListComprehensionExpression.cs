@@ -27,6 +27,7 @@ namespace Zinga.Suco
             var anySingleton = false;
             foreach (var clause in Clauses)
             {
+                // Deduce the type of the iterator variable
                 SucoType collectionType;
                 if (clause.FromVariable != null)
                 {
@@ -34,15 +35,27 @@ namespace Zinga.Suco
                     if (collection == null)
                         throw new SucoCompileException($"The variable “{clause.FromVariable}” is not defined.", clause.StartIndex, clause.EndIndex);
                     collectionType = collection.Type;
-                    if (collectionType is not SucoListType)
-                        throw new SucoCompileException($"The variable “{clause.FromVariable}” does not refer to a list.", clause.StartIndex, clause.EndIndex);
                 }
                 else
                     collectionType = env.GetVariable("cells").Type;
 
+                if (collectionType is not SucoListType { Inner: SucoType elementType })
+                    throw new SucoCompileException($"The variable “{clause.FromVariable}” does not refer to a list.", clause.StartIndex, clause.EndIndex);
+
+                // Ensure the inner condition expressions are all implicitly convertible to booleans
                 newEnv = newEnv.DeclareVariable(clause.VariableName, ((SucoListType) collectionType).Inner);
-                var newConditions = clause.Conditions.Select(cond => cond is SucoListExpressionCondition expr ? new SucoListExpressionCondition(expr.StartIndex, expr.EndIndex, expr.Expression.DeduceTypes(newEnv)) : cond).ToList();
-                newClauses.Add(new SucoListClause(clause.StartIndex, clause.EndIndex, clause.VariableName, clause.HasDollar, clause.HasPlus, clause.HasSingleton, clause.FromVariable, newConditions));
+                var newConditions = clause.Conditions.Select(cond =>
+                {
+                    if (cond is SucoListExpressionCondition expr)
+                    {
+                        var innerExpression = expr.Expression.DeduceTypes(newEnv);
+                        if (!innerExpression.Type.ImplicitlyConvertibleTo(SucoBooleanType.Instance))
+                            throw new SucoCompileException($"A condition expression must be a boolean (or implicitly convertible to one).", expr.StartIndex, expr.EndIndex);
+                        return new SucoListExpressionCondition(expr.StartIndex, expr.EndIndex, innerExpression.ImplicitlyConvertTo(SucoBooleanType.Instance));
+                    }
+                    return cond;
+                }).ToList();
+                newClauses.Add(new SucoListClause(clause.StartIndex, clause.EndIndex, clause.VariableName, clause.HasDollar, clause.HasPlus, clause.HasSingleton, clause.FromVariable, newConditions, elementType));
                 if (clause.HasSingleton)
                     anySingleton = true;
             }
@@ -68,16 +81,64 @@ namespace Zinga.Suco
         public override SucoJsResult GetJavaScript(SucoEnvironment env)
         {
             var js = new StringBuilder();
+            var allSingletons = Clauses.All(cl => cl.HasSingleton);
+            var anyNonSingletons = Clauses.Any(cl => !cl.HasSingleton);
+            if (!allSingletons)
+                js.AppendLine($"let $result = [];");
+            var closeCurlies = 0;
+            var newEnv = env;
             for (var i = 0; i < Clauses.Count; i++)
             {
                 var clause = Clauses[i];
-                js.AppendLine($"for (let {clause.VariableName} of {clause.FromVariable ?? (clause.HasDollar ? "allCells" : "cells")})");
+                newEnv = newEnv.DeclareVariable(clause.VariableName, clause.VariableType);
+                var conditions = new List<string>();
                 if (!clause.HasPlus && i > 0)
-                    js.AppendLine($"if ({Clauses.Take(i).Select(priorClause => $"{clause.VariableName} != {priorClause.VariableName}").JoinString(" && ")})");
-                foreach (var condition in clause.Conditions)
-                    js.AppendLine(condition.GetJavaScript(env));
-#error Unfinished
+                    conditions.AddRange(Clauses.Take(i).Select(priorClause => $"{clause.VariableName} != {priorClause.VariableName}"));
+                foreach (var cond in clause.Conditions)
+                    conditions.Add(cond.GetJavaScript(newEnv));
+                var condition = conditions.Count > 0 ? conditions.JoinString(" && ") : null;
+                var collection = clause.FromVariable ?? (clause.HasDollar ? "allCells" : "cells");
+
+                if (clause.HasSingleton)
+                {
+                    var returnFalse = allSingletons ? "return [false];" : $"{{ $result.push(false); continue; }}";
+                    if (anyNonSingletons)
+                        js.AppendLine("{");
+                    if (condition == null)
+                    {
+                        js.AppendLine($"if ({collection}.length !== 1) {returnFalse}");
+                        js.AppendLine($"let {clause.VariableName} = {collection}[0];");
+                    }
+                    else
+                    {
+                        js.AppendLine($"let {clause.VariableName}$ix = {collection}.findIndex({clause.VariableName} => {condition});");
+                        js.AppendLine($"if ({clause.VariableName}$ix === -1) {returnFalse}");
+                        js.AppendLine($"let {clause.VariableName} = {collection}[{clause.VariableName}$ix];");
+                    }
+                    if (anyNonSingletons)
+                        closeCurlies++;
+                }
+                else
+                {
+                    js.AppendLine($"for (let {clause.VariableName} of {collection})");
+                    if (condition != null)
+                        js.AppendLine($"if ({condition})");
+                }
             }
+            if (allSingletons)
+            {
+                js.AppendLine($"return {(Selector == null ? Clauses[0].VariableName : Selector.GetJavaScript(newEnv).Code)};");
+                if (closeCurlies > 0)
+                    js.AppendLine(new string('}', closeCurlies));
+            }
+            else
+            {
+                js.AppendLine($"$result.push({(Selector == null ? Clauses[0].VariableName : Selector.GetJavaScript(newEnv).Code)});");
+                if (closeCurlies > 0)
+                    js.AppendLine(new string('}', closeCurlies));
+                js.AppendLine("return $result;");
+            }
+            return $"(function() {{ {js} }})()";
         }
     }
 }

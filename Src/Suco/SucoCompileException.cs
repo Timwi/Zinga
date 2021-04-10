@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace Zinga.Suco
 {
     [Serializable]
-    internal class SucoCompileException : Exception
+    public class SucoCompileException : Exception
     {
         public int StartIndex { get; private set; }
         public int EndIndex { get; private set; }

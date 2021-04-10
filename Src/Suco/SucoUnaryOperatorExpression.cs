@@ -18,12 +18,23 @@
         public override SucoExpression DeduceTypes(SucoEnvironment env)
         {
             var op = Operand.DeduceTypes(env);
-            var resultType = op.Type.GetUnaryOperatorType(Operator);
-            if (resultType == null)
-                throw new SucoCompileException($"Type “{op.Type}” does not support the “{Operator}” unary operator.", StartIndex, EndIndex);
-            return new SucoUnaryOperatorExpression(StartIndex, EndIndex, op, Operator, resultType);
+            try
+            {
+                var resultType = op.Type.GetUnaryOperatorType(Operator);
+                if (resultType == null)
+                    throw new SucoCompileException($"Type “{op.Type}” does not support the “{Operator}” unary operator.", StartIndex, EndIndex);
+                return new SucoUnaryOperatorExpression(StartIndex, EndIndex, op, Operator, resultType);
+            }
+            catch (SucoTempCompileException ce)
+            {
+                throw new SucoCompileException(ce.Message, StartIndex, EndIndex);
+            }
         }
 
-        public override SucoJsResult GetJavaScript(SucoEnvironment env) => Operand.Type.GetUnaryOperatorJs(Operator, env, Operand);
+        public override SucoJsResult GetJavaScript(SucoEnvironment env)
+        {
+            try { return Operand.Type.GetUnaryOperatorJs(Operator, env, Operand); }
+            catch (SucoTempCompileException ce) { throw new SucoCompileException(ce.Message, StartIndex, EndIndex); }
+        }
     }
 }

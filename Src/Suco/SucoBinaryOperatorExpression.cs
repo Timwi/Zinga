@@ -21,12 +21,23 @@
         {
             var left = Left.DeduceTypes(env);
             var right = Right.DeduceTypes(env);
-            var resultType = left.Type.GetBinaryOperatorType(Operator, right.Type);
-            if (resultType == null)
-                throw new SucoCompileException($"Types “{left.Type}” and “{right.Type}” do not support the “{Operator}” operator.", left.StartIndex, right.EndIndex);
-            return new SucoBinaryOperatorExpression(StartIndex, EndIndex, left, right, Operator, resultType);
+            try
+            {
+                var resultType = left.Type.GetBinaryOperatorType(Operator, right.Type);
+                if (resultType == null)
+                    throw new SucoCompileException($"Types “{left.Type}” and “{right.Type}” do not support the “{Operator}” operator.", left.StartIndex, right.EndIndex);
+                return new SucoBinaryOperatorExpression(StartIndex, EndIndex, left, right, Operator, resultType);
+            }
+            catch (SucoTempCompileException ce)
+            {
+                throw new SucoCompileException(ce.Message, StartIndex, EndIndex);
+            }
         }
 
-        public override SucoJsResult GetJavaScript(SucoEnvironment env) => Left.Type.GetBinaryOperatorJs(Operator, env, Left, Right);
+        public override SucoJsResult GetJavaScript(SucoEnvironment env)
+        {
+            try { return Left.Type.GetBinaryOperatorJs(Operator, env, Left, Right); }
+            catch (SucoTempCompileException ce) { throw new SucoCompileException(ce.Message, StartIndex, EndIndex); }
+        }
     }
 }

@@ -108,14 +108,15 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="Suco\BinaryOperator.cs" />
-    <Compile Include="Suco\ParseException.cs" />
-    <Compile Include="Suco\ParseExceptionHighlight.cs" />
+    <Compile Include="Suco\SucoParseException.cs" />
+    <Compile Include="Suco\SucoParseExceptionHighlight.cs" />
     <Compile Include="Suco\Parser.cs" />
     <Compile Include="Suco\SucoArrayExpression.cs" />
     <Compile Include="Suco\SucoBinaryOperatorExpression.cs" />
     <Compile Include="Suco\SucoBooleanType.cs" />
     <Compile Include="Suco\SucoCallExpression.cs" />
     <Compile Include="Suco\SucoCellType.cs" />
+    <Compile Include="Suco\SucoTempCompileException.cs" />
     <Compile Include="Suco\SucoCompileException.cs" />
     <Compile Include="Suco\SucoConditionalExpression.cs" />
     <Compile Include="Suco\SucoEnumType.cs" />

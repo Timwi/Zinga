@@ -1,7 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.Entity.Migrations;
 using System.Linq;
-using RT.Serialization;
 using RT.Util;
 using SvgPuzzleConstraints;
 
@@ -171,6 +171,39 @@ Every digit in a quadruple clue must be placed in one of the four surrounding ce
 
                 new Puzzle
                 {
+                    Title = "REDRUM",
+                    Author = "grkles",
+                    UrlName = "REDRUM-by-grkles",
+                    Links = new[] { new Link { Text = "REDRUM (Logic Masters Germany)", Url = "https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=0005W1" } },
+                    Rules = @"Normal Sudoku rules apply.
+
+Little killer: Digits along the indicated diagonals sum to the given total, and may repeat (subject to the rules of Sudoku).
+
+Palindromes: Digits along grey lines form palindromes, and read the same in both directions.",
+                    Constraints = Ut.NewArray<IEnumerable<SvgConstraint>>(
+                        Ut.NewArray<SvgConstraint>(
+                            new LittleKiller(DiagonalDirection.SouthEast, 0, 39),
+                            new LittleKiller(DiagonalDirection.NorthEast, 7, 10, opposite: true),
+                            new LittleKiller(DiagonalDirection.SouthEast, 7, 10),
+                            new LittleKiller(DiagonalDirection.SouthWest, 3, 42),
+                            new LittleKiller(DiagonalDirection.SouthWest, 4, 15),
+                            new LittleKiller(DiagonalDirection.SouthWest, 5, 21),
+                            new LittleKiller(DiagonalDirection.NorthEast, 3, 47),
+                            new LittleKiller(DiagonalDirection.NorthEast, 4, 32),
+                            new LittleKiller(DiagonalDirection.NorthEast, 5, 17)),
+                        Ut.NewArray(
+                            new Palindrome(new[] { 3, 12, 20, 28, 27 }),
+                            new Palindrome(new[] { 14, 23, 33, 34 }),
+                            new Palindrome(new[] { 22, 32, 42 }))
+                            .SelectMany(p => new[] { p, new Palindrome(p.Cells.Select(c => 80 - c).ToArray()) })
+                            .ToArray())
+                        .SelectMany(x => x)
+                        .ToArray(),
+                    LastAccessed = DateTime.UtcNow
+                },
+
+                new Puzzle
+                {
                     Title = "Hubble Deep Field Sudoku",
                     Author = "Azireo",
                     UrlName = "Hubble-Deep-Field-Sudoku-by-Azireo",
@@ -194,6 +227,33 @@ Every digit in a quadruple clue must be placed in one of the four surrounding ce
                             new[] { 64, 65, 74, 73 }
                         ).Select(arr => new Thermometer(arr)).ToArray<SvgConstraint>()
                     ).SelectMany(x => x).ToArray(),
+                    LastAccessed = DateTime.UtcNow
+                },
+
+                new Puzzle
+                {
+                    Title = "Wheel of Arrows",
+                    Author = "Aspartagcus",
+                    UrlName = "Wheel-of-Arrows-by-Aspartagcus",
+                    Links = new[] { new Link { Text = "Wheel of Arrows (Logic Masters Germany)", Url = "https://logic-masters.de/Raetselportal/Raetsel/zeigen.php?id=0005WD" } },
+                    Rules = @"Standard Sudoku rules apply.
+Digits on an arrow sum up to the digit in the circle of that arrow.
+Clues outside the grid indicate the sum of the digits in the direction of the arrow.",
+                    Constraints = Ut.NewArray<SvgConstraint>(
+                        new LittleKiller(DiagonalDirection.SouthEast, 0, 55),
+                        new LittleKiller(DiagonalDirection.SouthEast, 3, 26, opposite: true),
+                        new LittleKiller(DiagonalDirection.SouthWest, 6, 15, opposite: true),
+                        new LittleKiller(DiagonalDirection.NorthWest, 3, 31, opposite: true),
+                        new LittleKiller(DiagonalDirection.NorthEast, 6, 8, opposite: true),
+                        new LittleKiller(DiagonalDirection.NorthEast, 0, 53, opposite: true),
+                        new Arrow(new[] { 20, 30 }),
+                        new Arrow(new[] { 20, 28, 37, 46 }),
+                        new Arrow(new[] { 24, 14, 13, 12 }),
+                        new Arrow(new[] { 24, 32 }),
+                        new Arrow(new[] { 56, 48 }),
+                        new Arrow(new[] { 56, 66, 67, 68 }),
+                        new Arrow(new[] { 60, 50 }),
+                        new Arrow(new[] { 60, 52, 43, 34 })),
                     LastAccessed = DateTime.UtcNow
                 });
         }
