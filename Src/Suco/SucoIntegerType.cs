@@ -5,7 +5,7 @@
         public override bool Equals(SucoType other) => other is SucoIntegerType;
         public static readonly SucoType Instance = new SucoIntegerType();
         private SucoIntegerType() { }
-        public override string ToString() => "integer";
+        public override string ToString() => "int";
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand) => (op, rightOperand) switch
         {

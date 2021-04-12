@@ -102,6 +102,7 @@
     <Compile Include="Database\Puzzle.cs" />
     <Compile Include="Database\PuzzleConstraint.cs" />
     <Compile Include="Link.cs" />
+    <Compile Include="Suco\Parser.cs" />
     <Compile Include="ZingaPlayWithSuco.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -113,7 +114,7 @@
     <Compile Include="Suco\BinaryOperator.cs" />
     <Compile Include="Suco\SucoParseException.cs" />
     <Compile Include="Suco\SucoParseExceptionHighlight.cs" />
-    <Compile Include="Suco\Parser.cs" />
+    <Compile Include="Suco\SucoParser.cs" />
     <Compile Include="Suco\SucoArrayExpression.cs" />
     <Compile Include="Suco\SucoBinaryOperatorExpression.cs" />
     <Compile Include="Suco\SucoBooleanType.cs" />

@@ -5,7 +5,7 @@ namespace Zinga.Suco
 {
     public class SucoEnvironment
     {
-        private readonly Dictionary<string, SucoVariable> _variables = new Dictionary<string, SucoVariable>();
+        private readonly Dictionary<string, SucoVariable> _variables = new();
         private readonly string _prevVar;
         private readonly string _curVar;
 
@@ -24,13 +24,6 @@ namespace Zinga.Suco
         {
             var copy = _variables.ToDictionary();
             copy[name] = new SucoVariable(name, type);
-            return new SucoEnvironment(copy, _curVar, name);
-        }
-
-        public SucoEnvironment DeclareVariable(string name, SucoFunction function)
-        {
-            var copy = _variables.ToDictionary();
-            copy[name] = new SucoVariable(name, function.Type, function);
             return new SucoEnvironment(copy, _curVar, name);
         }
 

@@ -21,14 +21,6 @@ namespace Zinga
             var environment = new SucoEnvironment()
                 // built-ins
                 .DeclareVariable("cells", new SucoListType(SucoCellType.Instance))
-                .DeclareVariable("between", new SucoFunction(
-                    (parameters: new[] { SucoCellType.Instance, SucoCellType.Instance },
-                    returnType: new SucoListType(SucoCellType.Instance),
-                    generator: (exprs, env) => $@"(function($a, $b) {{ return cells.filter((_, $i) => ($i > $a && $i < $b) || ($i > $b && $i < $a)); }})(cells.indexOf({exprs[0].GetJavaScript(env).Code}), cells.indexOf({exprs[1].GetJavaScript(env).Code}))")))
-                .DeclareVariable("outside", new SucoFunction(
-                    (parameters: new[] { SucoCellType.Instance, SucoCellType.Instance },
-                    returnType: new SucoListType(SucoCellType.Instance),
-                    generator: (exprs, env) => $@"(function($a, $b) {{ return cells.filter((_, $i) => ($i < $a || $i > $b) && ($i < $b || $i > $a)); }})(cells.indexOf({exprs[0].GetJavaScript(env).Code}), cells.indexOf({exprs[1].GetJavaScript(env).Code}))")))
 
                 // sandwich constraint
                 .DeclareVariable("crust1", SucoIntegerType.Instance)
@@ -67,7 +59,7 @@ namespace Zinga
                 // Parse tree
                 try
                 {
-                    var parseTree = Parser.ParseConstraint(code).DeduceTypes(environment);
+                    var parseTree = SucoParser.ParseConstraint(code).DeduceTypes(environment);
 
                     object span(SucoNode node) => new SPAN { class_ = "node" }.Data("type", $"{Regex.Replace(node.GetType().Name, @"^Suco|Expression$", "")}{(node is SucoExpression expr ? $" — {expr.Type}" : null)}")._(visit(node));
                     IEnumerable<object> visit(SucoNode expr)

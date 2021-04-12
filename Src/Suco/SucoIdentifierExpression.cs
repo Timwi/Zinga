@@ -26,8 +26,6 @@
             var variable = env.GetVariable(Name);
             if (variable == null)
                 throw new SucoCompileException($"Variable “{Name}” is not defined.", StartIndex, EndIndex);
-            if (variable.Function is SucoFunction fnc)
-                return fnc;
             return Name;
         }
     }

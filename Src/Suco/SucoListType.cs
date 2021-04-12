@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public class SucoListType : SucoType
     {
@@ -12,7 +10,7 @@ namespace Zinga.Suco
         }
 
         public override bool Equals(SucoType other) => other is SucoListType list && list.Inner.Equals(Inner);
-        public override string ToString() => $"list of {Inner}";
+        public override string ToString() => $"list({Inner})";
 
         public override SucoType GetMemberType(string memberName) => (memberName, Inner) switch
         {
