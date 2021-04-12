@@ -46,7 +46,5 @@ namespace Zinga
 
             return new SucoConditionalExpression(StartIndex, EndIndex, condition, trueExpr, falseExpr, thisType);
         }
-
-        public override SucoJsResult GetJavaScript(SucoEnvironment env) => $"{Condition.GetJavaScript(env)} ? {True.GetJavaScript(env)} : {False.GetJavaScript(env)}";
     }
 }

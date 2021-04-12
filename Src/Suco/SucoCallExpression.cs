@@ -35,15 +35,5 @@ namespace Zinga.Suco
                 throw new SucoCompileException(re.Message, StartIndex, EndIndex);
             }
         }
-
-        public override SucoJsResult GetJavaScript(SucoEnvironment env)
-        {
-            if (Operand.Type is not SucoFunctionType)
-                throw new SucoCompileException($"This is not a callable function.", StartIndex, EndIndex);
-            var fnc = Operand.GetJavaScript(env);
-            if (fnc is not SucoJsFunctionResult fncResult)
-                throw new SucoCompileException($"This is not a callable function.", StartIndex, EndIndex);
-            return fncResult.Function.GetJavaScript(env, Arguments.ToArray());
-        }
     }
 }

@@ -6,7 +6,5 @@
             : base(startIndex, endIndex)
         {
         }
-
-        public abstract string GetJavaScript(SucoEnvironment env);
     }
 }

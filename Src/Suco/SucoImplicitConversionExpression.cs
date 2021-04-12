@@ -13,6 +13,5 @@
         public override SucoExpression WithType(SucoType type) => new SucoImplicitConversionExpression(StartIndex, EndIndex, Expression, type);
         public override SucoExpression DeduceTypes(SucoEnvironment env) => this;
         public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoImplicitConversionExpression(startIndex, endIndex, Expression, Type);
-        public override SucoJsResult GetJavaScript(SucoEnvironment env) => Expression.Type.GetImplicitConversionTo(Type, env, Expression);
     }
 }

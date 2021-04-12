@@ -34,7 +34,7 @@ namespace Zinga
 
             _resolver = new UrlResolver(
                 new UrlMapping(path: "/tmp", handler: PlayWithSuco),
-                //new UrlMapping(path: "/edit", handler: PuzzleEditPage),
+                new UrlMapping(path: "/edit", handler: PuzzleEditPage),
                 new UrlMapping(path: null, handler: PuzzlePage));
         }
 

@@ -23,7 +23,6 @@ namespace Zinga.Database
         public bool Generated { get; set; }
 
         // Logic
-        public string ConstraintsJson { get; set; }
         public string GivensJson { get; set; }
         public string UnderSvg { get; set; }
         public string OverSvg { get; set; }
@@ -39,13 +38,6 @@ namespace Zinga.Database
         {
             get => _linksCache ??= LinksJson.NullOr(l => ClassifyJson.Deserialize<Link[]>(l));
             set { LinksJson = ClassifyJson.Serialize(value).ToString(); _linksCache = value; }
-        }
-
-        private SvgConstraint[] _constraintsCache;
-        public SvgConstraint[] Constraints
-        {
-            get => _constraintsCache ??= ConstraintsJson.NullOr(cstr => ClassifyJson.Deserialize<SvgConstraint[]>(cstr));
-            set { ConstraintsJson = ClassifyJson.Serialize(value).ToString(); _constraintsCache = value; }
         }
 
         private (int cell, int value)[] _givensCache;

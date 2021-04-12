@@ -78,12 +78,6 @@ namespace Zinga
                         yield return code.Substring(ix, expr.EndIndex - ix);
                     }
                     htmlBlocks.Add(new PRE { class_ = "parse-tree" }._(span(parseTree)));
-
-                    try
-                    {
-                        htmlBlocks.Add(new PRE { class_ = "javascript" }._(parseTree.GetJavaScript(environment).Code));
-                    }
-                    catch (SucoCompileException ce) { htmlBlocks.Add(compileExceptionBox(ce)); }
                 }
                 catch (SucoParseException pe) { htmlBlocks.Add(parseExceptionBox(pe)); }
             }

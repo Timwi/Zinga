@@ -11,7 +11,5 @@
         }
 
         public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoListExpressionCondition(startIndex, endIndex, Expression);
-
-        public override string GetJavaScript(SucoEnvironment env) => Expression.GetJavaScript(env).Code;
     }
 }

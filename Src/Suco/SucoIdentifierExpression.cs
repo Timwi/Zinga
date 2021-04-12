@@ -20,13 +20,5 @@
                 throw new SucoCompileException($"Unknown variable “{Name}”.", StartIndex, EndIndex);
             return WithType(variable.Type);
         }
-
-        public override SucoJsResult GetJavaScript(SucoEnvironment env)
-        {
-            var variable = env.GetVariable(Name);
-            if (variable == null)
-                throw new SucoCompileException($"Variable “{Name}” is not defined.", StartIndex, EndIndex);
-            return Name;
-        }
     }
 }

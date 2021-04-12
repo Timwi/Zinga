@@ -103,6 +103,7 @@
     <Compile Include="Database\PuzzleConstraint.cs" />
     <Compile Include="Link.cs" />
     <Compile Include="Suco\Parser.cs" />
+    <Compile Include="Suco\SucoExtensionMethods.cs" />
     <Compile Include="ZingaPlayWithSuco.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -152,6 +153,7 @@
     <Compile Include="Suco\SucoVariable.cs" />
     <Compile Include="Suco\UnaryOperator.cs" />
     <Compile Include="ZingaPropellerModule.cs" />
+    <Compile Include="ZingaPuzzleEditPage.cs" />
     <Compile Include="ZingaPuzzlePage.cs" />
     <Compile Include="ZingaSettings.cs" />
   </ItemGroup>

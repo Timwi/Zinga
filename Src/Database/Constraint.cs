@@ -1,5 +1,8 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using RT.Serialization;
+using RT.Util;
+using Zinga.Suco;
 
 namespace Zinga.Database
 {
@@ -15,5 +18,13 @@ namespace Zinga.Database
         public string SvgDefsSuco { get; set; }
         public string SvgSuco { get; set; }
         public string PreviewSvg { get; set; }
+
+        [ClassifyIgnore]
+        private SucoVariable[] _variablesCache;
+        public SucoVariable[] Variables
+        {
+            get => _variablesCache ??= VariablesJson.NullOr(v => ClassifyJson.Deserialize<SucoVariable[]>(v));
+            set { VariablesJson = ClassifyJson.Serialize(value).ToString(); _variablesCache = value; }
+        }
     }
 }

@@ -25,7 +25,5 @@ namespace Zinga.Suco
                     return new SucoArrayExpression(StartIndex, EndIndex, newElements.Select(e => e.ImplicitlyConvertTo(newElements[i].Type)).ToList(), newElements[i].Type);
             throw new SucoCompileException("This array contains elements that are not compatible with one another.", StartIndex, EndIndex);
         }
-
-        public override SucoJsResult GetJavaScript(SucoEnvironment env) => $"[{Elements.Select(e => e.GetJavaScript(env).Code).JoinString(", ")}]";
     }
 }

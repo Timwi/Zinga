@@ -17,16 +17,6 @@
             _ => base.GetMemberType(memberName)
         };
 
-        public override SucoJsResult GetMemberJs(string memberName, SucoEnvironment env, SucoExpression callee) => memberName switch
-        {
-            "value" => $"{callee.GetJavaScript(env).Code}.value",
-            "pos" => $"{callee.GetJavaScript(env).Code}.pos",
-            "x" => $"{callee.GetJavaScript(env).Code}.x",
-            "y" => $"{callee.GetJavaScript(env).Code}.y",
-            "box" => $"{callee.GetJavaScript(env).Code}.box",
-            _ => base.GetMemberJs(memberName, env, callee)
-        };
-
         public override int GetHashCode() => 2;
     }
 }

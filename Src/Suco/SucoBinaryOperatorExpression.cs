@@ -33,11 +33,5 @@
                 throw new SucoCompileException(ce.Message, StartIndex, EndIndex);
             }
         }
-
-        public override SucoJsResult GetJavaScript(SucoEnvironment env)
-        {
-            try { return Left.Type.GetBinaryOperatorJs(Operator, env, Left, Right); }
-            catch (SucoTempCompileException ce) { throw new SucoCompileException(ce.Message, StartIndex, EndIndex); }
-        }
     }
 }

@@ -12,7 +12,6 @@
 
         public abstract SucoExpression WithType(SucoType type);
         public abstract SucoExpression DeduceTypes(SucoEnvironment env);
-        public abstract SucoJsResult GetJavaScript(SucoEnvironment env);
 
         public SucoExpression ImplicitlyConvertTo(SucoType type) => Type.Equals(type) ? this : new SucoImplicitConversionExpression(StartIndex, EndIndex, this, type);
     }
