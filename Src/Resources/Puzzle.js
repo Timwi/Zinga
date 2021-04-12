@@ -662,38 +662,35 @@
                     document.getElementById(`sudoku-corner-text-${cell}-${i}`).textContent = intendedCornerDigits !== null && i < intendedCornerDigits.length ? intendedCornerDigits[i] : '';
 
                 for (let color = 0; color < 9; color++)
-                    setClass(sudokuCell, `c${color}`, state.colors[cell].length === 1 && state.colors[cell][0] === color);
+                    setClass(sudokuCell, `c${color}`, state.colors[cell].length >= 1 && state.colors[cell][0] === color);
 
-                let multiColorSvg = '';
-                if (state.colors[cell].length > 1)
+                function getPerimeterPoint(angle)
                 {
-                    function getPerimeterPoint(angle)
-                    {
-                        function tan(θ) { return Math.tan(θ * Math.PI / 180); }
-                        if (angle > -45 && angle <= 45)
-                            return ` .5 ${.5 * tan(angle)}`;
-                        if (angle > 45 && angle <= 135)
-                            return ` ${-.5 * tan(angle - 90)} .5`;
-                        if (angle > 135 && angle <= 225)
-                            return ` -.5 ${-.5 * tan(angle - 180)}`;
-                        return ` ${.5 * tan(angle - 270)} -.5`;
-                    }
-                    for (let i = 0; i < state.colors[cell].length; i++)
-                    {
-                        let angle1 = -70 + 360 * i / state.colors[cell].length;
-                        let angle2 = -70 + 360 * (i + 1) / state.colors[cell].length;
-                        let path = 'M 0 0' + getPerimeterPoint(angle1);
-                        if (angle1 < -45 && angle2 > -45)
-                            path += ' .5 -.5';
-                        if (angle1 < 45 && angle2 > 45)
-                            path += ' .5 .5';
-                        if (angle1 < 135 && angle2 > 135)
-                            path += ' -.5 .5';
-                        if (angle1 < 225 && angle2 > 225)
-                            path += ' -.5 -.5';
-                        path += getPerimeterPoint(angle2);
-                        multiColorSvg += `<path d='${path}z' class='c${state.colors[cell][i]}' />`;
-                    }
+                    function tan(θ) { return Math.tan(θ * Math.PI / 180); }
+                    if (angle > -45 && angle <= 45)
+                        return ` .5 ${.5 * tan(angle)}`;
+                    if (angle > 45 && angle <= 135)
+                        return ` ${-.5 * tan(angle - 90)} .5`;
+                    if (angle > 135 && angle <= 225)
+                        return ` -.5 ${-.5 * tan(angle - 180)}`;
+                    return ` ${.5 * tan(angle - 270)} -.5`;
+                }
+                let multiColorSvg = '';
+                for (let i = 1; i < state.colors[cell].length; i++)
+                {
+                    let angle1 = -70 + 360 * i / state.colors[cell].length;
+                    let angle2 = i === state.colors[cell].length - 1 ? 290 : 270;
+                    let path = 'M 0 0' + getPerimeterPoint(angle1);
+                    if (angle1 < -45 && angle2 > -45)
+                        path += ' .5 -.5';
+                    if (angle1 < 45 && angle2 > 45)
+                        path += ' .5 .5';
+                    if (angle1 < 135 && angle2 > 135)
+                        path += ' -.5 .5';
+                    if (angle1 < 225 && angle2 > 225)
+                        path += ' -.5 -.5';
+                    path += getPerimeterPoint(angle2);
+                    multiColorSvg += `<path d='${path}z' class='c${state.colors[cell][i]}' />`;
                 }
                 puzzleDiv.querySelector(`#sudoku-multicolor-${cell}`).innerHTML = multiColorSvg;
             }
