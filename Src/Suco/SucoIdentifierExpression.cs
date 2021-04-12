@@ -1,4 +1,6 @@
-﻿namespace Zinga.Suco
+﻿using System.Collections.Generic;
+
+namespace Zinga.Suco
 {
     public class SucoIdentifierExpression : SucoExpression
     {
@@ -20,5 +22,8 @@
                 throw new SucoCompileException($"Unknown variable “{Name}”.", StartIndex, EndIndex);
             return WithType(variable.Type);
         }
+
+        public override object Interpret(Dictionary<string, object> values) =>
+            values.TryGetValue(Name, out object value) ? value : throw new SucoCompileException($"The variable “{Name}” is not defined.", StartIndex, EndIndex);
     }
 }

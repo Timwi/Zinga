@@ -2,7 +2,6 @@
 using RT.CommandLine;
 using RT.PostBuild;
 using RT.PropellerApi;
-using RT.Serialization;
 
 namespace Zinga
 {

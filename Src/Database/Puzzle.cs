@@ -21,11 +21,8 @@ namespace Zinga.Database
         public DateTime LastUpdated { get; set; }
         public DateTime LastAccessed { get; set; }
         public bool Generated { get; set; }
-
-        // Logic
         public string GivensJson { get; set; }
-        public string UnderSvg { get; set; }
-        public string OverSvg { get; set; }
+        public string ExtraSvg { get; set; }
 
         public Puzzle()
         {

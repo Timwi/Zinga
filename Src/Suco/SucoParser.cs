@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using RT.Util;
 using RT.Util.ExtensionMethods;
@@ -18,6 +19,8 @@ namespace Zinga.Suco
             "{", "}", ",", "(", ")", ".", "[", "]",
             // Flags
             "$",    // "+" is listed in Arithmetic; "1" is parsed as a numeral
+                    // String literals
+            "\"",
 
             // Shortcut filters
             "~", "←", "→", "↑", "↓"    // “v” parses as an identifier; “<”/“>” are in Relational; “^” is in Arithmetic
@@ -25,15 +28,20 @@ namespace Zinga.Suco
         {
         }
 
-        public static SucoExpression ParseConstraint(string source)
+        public static SucoExpression ParseCode(string source, SucoType expectedResultType = null)
         {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
+
             try
             {
                 // Try parsing as a standalone expression (e.g. “cells.unique”).
                 var parser = new SucoParser(source);
                 var ret = parser.parseExpression();
                 parser.EnforceEof();
-                return ret;
+                if (expectedResultType != null && !ret.Type.ImplicitlyConvertibleTo(expectedResultType))
+                    throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", parser._ix);
+                return expectedResultType == null ? ret : ret.ImplicitlyConvertTo(expectedResultType);
             }
             catch (SucoParseException pe1)
             {
@@ -43,7 +51,9 @@ namespace Zinga.Suco
                     var parser = new SucoParser(source);
                     var ret = parser.parseListComprehension();
                     parser.EnforceEof();
-                    return ret;
+                    if (expectedResultType != null && !ret.Type.ImplicitlyConvertibleTo(expectedResultType))
+                        throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", parser._ix);
+                    return expectedResultType == null ? ret : ret.ImplicitlyConvertTo(expectedResultType);
                 }
                 catch (SucoParseException pe2) when (pe2.Index < pe1.Index)
                 {
@@ -219,11 +229,40 @@ namespace Zinga.Suco
                 return (SucoExpression) inner.WithNewIndexes(startIx, _ix);
             }
 
+            if (token("\"", out startIx))
+            {
+                var pieces = new List<SucoStringLiteralPiece>();
+                while (true)
+                {
+                    var i = _ix;
+                    while (i < _source.Length && _source[i] != '"' && _source[i] != '{')
+                        i++;
+                    if (i == _source.Length)
+                        throw new SucoParseException("Unterminated string literal.", _ix);
+                    if (i > _ix)
+                        pieces.Add(_source.Substring(_ix, i - _ix));
+                    _ix = i;
+                    if (token("\""))
+                        break;
+                    _ix++;
+                    var interpolatedExpression = parseExpression();
+                    if (!token("}"))
+                        throw new SucoParseException("Unterminated interpolated expression inside string.", _ix);
+                    pieces.Add(interpolatedExpression);
+                }
+                return new SucoStringLiteralExpression(startIx, _ix, pieces.ToArray());
+            }
+
             var tok = getToken();
-            if (tok.Type == SucoTokenType.Number)
+            if (tok.Type == SucoTokenType.Integer)
             {
                 _ix = tok.EndIndex;
-                return new SucoNumberLiteralExpression(tok.StartIndex, tok.EndIndex, tok.NumericalValue);
+                return new SucoIntegerLiteralExpression(tok.StartIndex, tok.EndIndex, tok.NumericalValue);
+            }
+            else if (tok.Type == SucoTokenType.Decimal)
+            {
+                _ix = tok.EndIndex;
+                return new SucoDecimalLiteralExpression(tok.StartIndex, tok.EndIndex, tok.DecimalValue);
             }
             else if (tok.Type == SucoTokenType.Identifier)
             {

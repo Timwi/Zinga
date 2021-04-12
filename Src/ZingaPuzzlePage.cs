@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.IO;
@@ -11,7 +12,7 @@ using RT.Util;
 using RT.Util.ExtensionMethods;
 using SvgPuzzleConstraints;
 using Zinga.Database;
-
+using Zinga.Suco;
 using DbConstraint = Zinga.Database.Constraint;
 
 namespace Zinga
@@ -20,22 +21,18 @@ namespace Zinga
     {
         public HttpResponse PuzzlePage(HttpRequest req)
         {
-            Puzzle puzzle;
-            DbConstraint[] constraintTypes;
-            PuzzleConstraint[] constraints;
-
             var url = req.Url.Path.SubstringSafe(1);
             if (url.Length == 0)
                 return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
 
             using var db = new Db();
             url = url.UrlUnescape();
-            puzzle = db.Puzzles.FirstOrDefault(p => p.UrlName == url);
+            var puzzle = db.Puzzles.FirstOrDefault(p => p.UrlName == url);
             if (puzzle == null)
                 return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
-            constraints = db.PuzzleConstraints.Where(c => c.PuzzleID == puzzle.PuzzleID).ToArray();
+            var constraints = db.PuzzleConstraints.Where(c => c.PuzzleID == puzzle.PuzzleID).ToArray();
             var constraintIds = constraints.Select(c => c.ConstraintID).Distinct().ToArray();
-            constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).ToArray();
+            var constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).AsEnumerable().ToDictionary(c => c.ConstraintID);
             puzzle.LastAccessed = DateTime.UtcNow;
             db.SaveChanges();
 
@@ -74,9 +71,9 @@ namespace Zinga
 
             var constraintTypesJson = ClassifyJson.Serialize(constraintTypes);
             // Avoid transmitting the preview SVG as we don’t need that and it can be a bit much
-            for (var i = 0; i < constraintTypesJson.Count; i++)
-                if (constraintTypesJson[i].ContainsKey("PreviewSvg"))
-                    constraintTypesJson[i].Remove("PreviewSvg");
+            foreach (var kvp in constraintTypesJson.GetDict())
+                if (kvp.Value.ContainsKey("PreviewSvg"))
+                    kvp.Value.Remove("PreviewSvg");
 
             return HttpResponse.Html(new HTML(
                 new HEAD(
@@ -96,13 +93,13 @@ namespace Zinga
                     new DIV { id = "topbar" }._(
                         new DIV { class_ = "title" }._(puzzle.Title),
                         puzzle.Author == null ? null : new DIV { class_ = "author" }._("by ", puzzle.Author)),
-                    new DIV { class_ = "puzzle" }.Data("constraints", puzzle.ConstraintsJson).Data("givens", puzzle.GivensJson).Data("puzzleid", puzzle.UrlName)._(
+                    new DIV { class_ = "puzzle" }.Data("constraints", constraintTypesJson).Data("givens", puzzle.GivensJson).Data("puzzleid", puzzle.UrlName)._(
                         new DIV { class_ = "puzzle-container", tabindex = 0 }._(new RawTag($@"
                             <svg viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
-                                <defs>{puzzle.Constraints?.SelectMany(c => c.SvgDefs).Distinct().JoinString()}</defs>
+                                <defs>{constraints.SelectMany(c => constraintTypes[c.ConstraintID].GetSvgDefs(c.Values)).Distinct().JoinString()}</defs>
                                 <g class='full-puzzle'>
                                     <g transform='translate(0, 9.5)' class='button-row'>{renderButtonArea(btns, 9)}</g>
-                                    <g class='global-constraints'>{puzzle.Constraints.OfType<SvgGlobalConstraint>().Select(c => c.Svg).JoinString()}</g>
+                                    <g class='global-constraints'>{constraints.Where(c => constraintTypes[c.ConstraintID].Global).Select(c => constraintTypes[c.ConstraintID].GetSvg(c.Values)).JoinString()}</g>
 
                                     <g class='sudoku'>
                                         <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
@@ -124,8 +121,6 @@ namespace Zinga
                                             <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % 9 + .1}' y='{cell / 9 + .6125}' text-anchor='start'></text>
                                         </g>").JoinString()}
 
-                                        <g>{puzzle.UnderSvg}{puzzle.Constraints?.Where(c => !(c is SvgGlobalConstraint) && !c.SvgAboveLines).Select(c => c.Svg).JoinString()}</g>
-
                                         <line x1='1' y1='0' x2='1' y2='9' stroke='black' stroke-width='.01' />
                                         <line x1='2' y1='0' x2='2' y2='9' stroke='black' stroke-width='.01' />
                                         <line x1='3' y1='0' x2='3' y2='9' stroke='black' stroke-width='.05' />
@@ -144,7 +139,7 @@ namespace Zinga
                                         <line x1='0' y1='8' x2='9' y2='8' stroke='black' stroke-width='.01' />
                                         <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
 
-                                        <g>{puzzle.OverSvg}{puzzle.Constraints?.Where(c => !(c is SvgGlobalConstraint) && c.SvgAboveLines).Select(c => c.Svg).JoinString()}</g>
+                                        <g>{constraints.Where(c => !constraintTypes[c.ConstraintID].Global).Select(c => constraintTypes[c.ConstraintID].GetSvg(c.Values)).JoinString()}{puzzle.ExtraSvg}</g>
                                     </g>
                                 </g>
                             </svg>")),

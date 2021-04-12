@@ -7,6 +7,7 @@ namespace Zinga.Suco
         public SucoTokenType Type { get; private set; }
         public string StringValue { get; private set; }
         public BigInteger NumericalValue { get; private set; }
+        public double DecimalValue { get; private set; }
         public int StartIndex { get; private set; }
         public int EndIndex { get; private set; }
 
@@ -17,10 +18,10 @@ namespace Zinga.Suco
             EndIndex = endIndex;
         }
 
-        public SucoToken(SucoTokenType type, string identifier, int startIndex, int endIndex) : this()
+        public SucoToken(SucoTokenType type, string stringValue, int startIndex, int endIndex) : this()
         {
             Type = type;
-            StringValue = identifier;
+            StringValue = stringValue;
             StartIndex = startIndex;
             EndIndex = endIndex;
         }
@@ -29,6 +30,14 @@ namespace Zinga.Suco
         {
             Type = type;
             NumericalValue = numericalValue;
+            StartIndex = startIndex;
+            EndIndex = endIndex;
+        }
+
+        public SucoToken(SucoTokenType type, double decimalValue, int startIndex, int endIndex) : this()
+        {
+            Type = type;
+            DecimalValue = decimalValue;
             StartIndex = startIndex;
             EndIndex = endIndex;
         }

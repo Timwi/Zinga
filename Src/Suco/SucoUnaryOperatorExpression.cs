@@ -1,4 +1,6 @@
-﻿namespace Zinga.Suco
+﻿using System.Collections.Generic;
+
+namespace Zinga.Suco
 {
     public class SucoUnaryOperatorExpression : SucoExpression
     {
@@ -14,6 +16,7 @@
 
         public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoUnaryOperatorExpression(startIndex, endIndex, Operand, Operator);
         public override SucoExpression WithType(SucoType type) => new SucoUnaryOperatorExpression(StartIndex, EndIndex, Operand, Operator, type);
+        public override object Interpret(Dictionary<string, object> values) => Operand.Type.InterpretUnaryOperator(values, Operator, Operand);
 
         public override SucoExpression DeduceTypes(SucoEnvironment env)
         {

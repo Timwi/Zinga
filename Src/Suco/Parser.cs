@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Numerics;
+using System.Text;
 
 namespace Zinga.Suco
 {
@@ -67,16 +68,22 @@ namespace Zinga.Suco
                     j += char.IsSurrogate(_source, j) ? 2 : 1;
                 return new SucoToken(SucoTokenType.Identifier, _source.Substring(i, j - i), startIndex, j);
             }
-            else if (char.IsDigit(_source, i))
+            else if ((_source[i] == '.' && i < _source.Length - 1 && char.IsDigit(_source, i + 1)) || char.IsDigit(_source, i))
             {
                 var j = i;
-                var numerical = BigInteger.Zero;
-                while (j < _source.Length && char.IsDigit(_source, j))
+                var sb = new StringBuilder();
+                while (j < _source.Length && (_source[j] == '.' || char.IsDigit(_source, j)))
                 {
-                    numerical = (numerical * 10 + (int) char.GetNumericValue(_source, j));
+                    sb.Append(_source.Substring(j, char.IsSurrogate(_source, j) ? 2 : 1));
                     j += char.IsSurrogate(_source, j) ? 2 : 1;
                 }
-                return new SucoToken(SucoTokenType.Number, numerical, startIndex, j);
+                var str = sb.ToString();
+                if (str.Contains(".") && double.TryParse(str, out var dblResult))
+                    return new SucoToken(SucoTokenType.Decimal, dblResult, startIndex, j);
+                else if (BigInteger.TryParse(str, out var intResult))
+                    return new SucoToken(SucoTokenType.Integer, intResult, startIndex, j);
+                else
+                    throw new SucoParseException($"“{str}” is not a valid numerical literal.", i);
             }
 
             foreach (var token in _tokens)

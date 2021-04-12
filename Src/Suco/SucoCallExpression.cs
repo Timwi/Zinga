@@ -35,5 +35,13 @@ namespace Zinga.Suco
                 throw new SucoCompileException(re.Message, StartIndex, EndIndex);
             }
         }
+
+        public override object Interpret(Dictionary<string, object> values)
+        {
+            var result = Operand.Interpret(values);
+            if (result is SucoFunction fnc)
+                return fnc.Interpret(Arguments.Select(a => a.Type).ToArray(), Arguments.Select(a => a.Interpret(values)).ToArray());
+            throw new SucoCompileException($"Operand isn’t a function.", Operand.StartIndex, Operand.EndIndex);
+        }
     }
 }

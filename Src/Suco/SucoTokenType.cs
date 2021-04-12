@@ -4,7 +4,9 @@
     {
         Eof,
         Identifier,
-        Number,
+        Integer,
+        Decimal,
+        String,
         BuiltIn
     }
 }

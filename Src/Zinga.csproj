@@ -102,8 +102,17 @@
     <Compile Include="Database\Puzzle.cs" />
     <Compile Include="Database\PuzzleConstraint.cs" />
     <Compile Include="Link.cs" />
+    <Compile Include="Suco\Cell.cs" />
     <Compile Include="Suco\Parser.cs" />
+    <Compile Include="Suco\SucoStringLiteralExpression.cs" />
+    <Compile Include="Suco\SucoDecimalType.cs" />
+    <Compile Include="Suco\SucoDecimalLiteralExpression.cs" />
+    <Compile Include="Suco\SucoStringLiteralPiece.cs" />
+    <Compile Include="Suco\SucoStringLiteralPieceExpression.cs" />
+    <Compile Include="Suco\SucoStringLiteralPieceString.cs" />
+    <Compile Include="Suco\SucoStringType.cs" />
     <Compile Include="Suco\SucoExtensionMethods.cs" />
+    <Compile Include="Suco\SucoTypeClassifySubstitute.cs" />
     <Compile Include="ZingaPlayWithSuco.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -130,9 +139,6 @@
     <Compile Include="Suco\SucoFunctionResolutionException.cs" />
     <Compile Include="Suco\SucoFunctionType.cs" />
     <Compile Include="Suco\SucoImplicitConversionExpression.cs" />
-    <Compile Include="Suco\SucoJsCodeResult.cs" />
-    <Compile Include="Suco\SucoJsFunctionResult.cs" />
-    <Compile Include="Suco\SucoJsResult.cs" />
     <Compile Include="Suco\SucoNode.cs" />
     <Compile Include="Suco\SucoExpression.cs" />
     <Compile Include="Suco\SucoIdentifierExpression.cs" />
@@ -143,7 +149,7 @@
     <Compile Include="Suco\SucoListShortcutCondition.cs" />
     <Compile Include="Suco\SucoListType.cs" />
     <Compile Include="Suco\SucoMemberAccessExpression.cs" />
-    <Compile Include="Suco\SucoNumberLiteralExpression.cs" />
+    <Compile Include="Suco\SucoIntegerLiteralExpression.cs" />
     <Compile Include="Suco\SucoTokenType.cs" />
     <Compile Include="Suco\SucoType.cs" />
     <Compile Include="Suco\SucoIntegerType.cs" />

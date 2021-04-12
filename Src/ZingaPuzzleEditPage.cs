@@ -72,9 +72,9 @@ namespace Zinga
 
             var constraintTypesJson = ClassifyJson.Serialize(constraintTypes);
             // Avoid transmitting the preview SVG as we don’t need that and it can be a bit much
-            for (var i = 0; i < constraintTypesJson.Count; i++)
-                if (constraintTypesJson[i].ContainsKey("PreviewSvg"))
-                    constraintTypesJson[i].Remove("PreviewSvg");
+            foreach (var kvp in constraintTypesJson.GetDict())
+                if (kvp.Value.ContainsKey("PreviewSvg"))
+                    kvp.Value.Remove("PreviewSvg");
 
             return HttpResponse.Html(new HTML(
                 new HEAD(

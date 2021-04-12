@@ -1,4 +1,6 @@
-﻿namespace Zinga.Suco
+﻿using System.Collections.Generic;
+
+namespace Zinga.Suco
 {
     public class SucoMemberAccessExpression : SucoExpression
     {
@@ -30,5 +32,7 @@
                 throw new SucoCompileException(ce.Message, StartIndex, EndIndex);
             }
         }
+
+        public override object Interpret(Dictionary<string, object> values) => Type.InterpretMemberAccess(MemberName, Operand, values);
     }
 }

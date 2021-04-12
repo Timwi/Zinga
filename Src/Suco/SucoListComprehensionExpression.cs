@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using RT.Util;
 using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
@@ -76,6 +77,40 @@ namespace Zinga.Suco
                 throw new SucoCompileException("A list comprehension with a “1” extra must have a boolean selector.", StartIndex, EndIndex);
 
             return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, selectorType);
+        }
+
+        public override object Interpret(Dictionary<string, object> values)
+        {
+            var collections = new IList[Clauses.Count];
+            var indexes = new int[Clauses.Count];
+            var elements = new object[Clauses.Count];
+            IEnumerable<object> recurse(int clIx, Dictionary<string, object> newValues)
+            {
+                if (clIx == Clauses.Count)
+                {
+                    yield return Selector.Interpret(newValues);
+                    yield break;
+                }
+
+                var dic = newValues.ToDictionary();
+                var collection = (IList) newValues[Clauses[clIx].FromVariableResolved];
+                collections[clIx] = collection;
+                for (var i = 0; i < collection.Count; i++)
+                {
+                    if (!Clauses[clIx].HasPlus && indexes.Take(clIx).Contains(i))
+                        continue;
+                    indexes[clIx] = i;
+                    elements[clIx] = collection[i];
+                    dic[Clauses[clIx].VariableName] = collection[i];
+                    foreach (var condition in Clauses[clIx].Conditions)
+                        if (!condition.Interpret(dic, collection[i], i, collection.Count, clIx == 0 ? null : elements[clIx - 1], clIx == 0 ? null : indexes[clIx - 1], clIx == 0 ? null : collections[clIx - 1].Count))
+                            goto skipped;
+                    foreach (var result in recurse(clIx + 1, dic))
+                        yield return result;
+                    skipped:;
+                }
+            }
+            return recurse(0, values);
         }
     }
 }

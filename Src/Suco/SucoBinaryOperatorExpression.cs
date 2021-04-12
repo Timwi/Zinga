@@ -1,6 +1,8 @@
-﻿namespace Zinga.Suco
+﻿using System.Collections.Generic;
+
+namespace Zinga.Suco
 {
-    internal class SucoBinaryOperatorExpression : SucoExpression
+    public class SucoBinaryOperatorExpression : SucoExpression
     {
         public SucoExpression Left { get; private set; }
         public SucoExpression Right { get; private set; }
@@ -33,5 +35,7 @@
                 throw new SucoCompileException(ce.Message, StartIndex, EndIndex);
             }
         }
+
+        public override object Interpret(Dictionary<string, object> values) => Left.Type.InterpretBinaryOperator(values, Left, Operator, Right);
     }
 }

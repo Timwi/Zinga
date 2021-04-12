@@ -25,5 +25,6 @@ namespace Zinga.Suco
         }
 
         public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoListClause(startIndex, endIndex, VariableName, HasDollar, HasPlus, HasSingleton, FromVariable, Conditions);
+        public string FromVariableResolved => FromVariable ?? (HasDollar ? "allcells" : "cells");
     }
 }

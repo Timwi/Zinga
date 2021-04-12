@@ -59,7 +59,7 @@ namespace Zinga
                 // Parse tree
                 try
                 {
-                    var parseTree = SucoParser.ParseConstraint(code).DeduceTypes(environment);
+                    var parseTree = SucoParser.ParseCode(code).DeduceTypes(environment);
 
                     object span(SucoNode node) => new SPAN { class_ = "node" }.Data("type", $"{Regex.Replace(node.GetType().Name, @"^Suco|Expression$", "")}{(node is SucoExpression expr ? $" — {expr.Type}" : null)}")._(visit(node));
                     IEnumerable<object> visit(SucoNode expr)

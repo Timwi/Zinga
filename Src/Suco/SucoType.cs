@@ -10,13 +10,18 @@ namespace Zinga.Suco
         public virtual SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand) => throw new SucoTempCompileException($"Binary operator “{op}” is not defined on type “{this}”.");
 
         public virtual bool ImplicitlyConvertibleTo(SucoType other) => Equals(other);
-
-        public abstract override string ToString();
+        public virtual object InterpretUnaryOperator(Dictionary<string, object> values, UnaryOperator op, SucoExpression operand) => throw new SucoTempCompileException($"Unary operator “{op}” not defined on type “{operand.Type}”.");
+        public virtual object InterpretBinaryOperator(Dictionary<string, object> values, SucoExpression left, BinaryOperator op, SucoExpression right) => throw new SucoTempCompileException($"Binary operator “{op}” not defined on types “{left.Type}” and “{right.Type}”.");
+        public virtual object InterpretImplicitConversionTo(SucoType type, SucoExpression expr, Dictionary<string, object> values) => Equals(type) ? expr : throw new SucoTempCompileException($"Implicit conversion not defined from type “{this}” to “{type}”.");
+        public virtual object InterpretMemberAccess(string name, SucoExpression operand, Dictionary<string, object> values) => throw new SucoTempCompileException($"Member “{name}” not defined on type “{this}”.");
         public abstract override int GetHashCode();
         public abstract bool Equals(SucoType other);
+        public abstract override string ToString();
 
         public static SucoType Parse(string source)
         {
+            if (source == null)
+                throw new ArgumentNullException(nameof(source));
             var parser = new SucoTypeParser(source);
             var ret = parser.ParseType();
             parser.EnforceEof();
@@ -42,8 +47,10 @@ namespace Zinga.Suco
                 switch (tok.StringValue)
                 {
                     case "bool": return SucoBooleanType.Instance;
-                    case "int": return SucoIntegerType.Instance;
                     case "cell": return SucoCellType.Instance;
+                    case "decimal": return SucoDecimalType.Instance;
+                    case "int": return SucoIntegerType.Instance;
+                    case "string": return SucoStringType.Instance;
 
                     case "list":
                         if (!token("(", out int oldIx))
