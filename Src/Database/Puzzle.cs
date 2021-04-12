@@ -12,18 +12,27 @@ namespace Zinga.Database
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int PuzzleID { get; set; }
 
+        // Metadata
         public string UrlName { get; set; }
-        public string ConstraintsJson { get; set; }
-        public string GivensJson { get; set; }
-        public string LinksJson { get; set; }
-        public string UnderSvg { get; set; }
-        public string OverSvg { get; set; }
         public string Title { get; set; }
         public string Author { get; set; }
         public string Rules { get; set; }
-
+        public string LinksJson { get; set; }
+        public DateTime LastUpdated { get; set; }
         public DateTime LastAccessed { get; set; }
         public bool Generated { get; set; }
+
+        // Logic
+        public string ConstraintsJson { get; set; }
+        public string GivensJson { get; set; }
+        public string UnderSvg { get; set; }
+        public string OverSvg { get; set; }
+
+        public Puzzle()
+        {
+            LastUpdated = DateTime.UtcNow;
+            LastAccessed = DateTime.UtcNow;
+        }
 
         private Link[] _linksCache;
         public Link[] Links

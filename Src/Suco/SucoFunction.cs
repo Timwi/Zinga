@@ -7,8 +7,7 @@ namespace Zinga.Suco
 {
     public class SucoFunction
     {
-        private readonly Dictionary<SucoType[], (SucoType returnType, Func<SucoExpression[], SucoEnvironment, SucoJsResult> generator)> _dic =
-            new Dictionary<SucoType[], (SucoType returnType, Func<SucoExpression[], SucoEnvironment, SucoJsResult> generator)>(SucoTypeArrayComparer.Instance);
+        private readonly Dictionary<SucoType[], (SucoType returnType, Func<SucoExpression[], SucoEnvironment, SucoJsResult> generator)> _dic = new(SucoTypeArrayComparer.Instance);
 
         public SucoFunction(params (SucoType[] parameters, SucoType returnType, Func<SucoExpression[], SucoEnvironment, SucoJsResult> generator)[] overloads)
         {

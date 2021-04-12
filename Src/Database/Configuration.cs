@@ -33,8 +33,7 @@ namespace Zinga.Database
                         new[] { 7, 45, 25, 10, 21, 8, 1, 36, 45 }.Select((clue, ix) => new YSum(true, ix, true, clue, SvgRowColNumberConstraint.RowColDisplay.BottomRight)),
                         new[] { 11, 27, 1, 14, 21, 32, 33, 28, 7 }.Select((clue, ix) => new YSum(false, ix, false, clue, SvgRowColNumberConstraint.RowColDisplay.TopLeft)),
                         new[] { 1, 11, 23, 40, 33, 15, 5, 14, 38 }.Select((clue, ix) => new YSum(false, ix, true, clue, SvgRowColNumberConstraint.RowColDisplay.BottomRight))
-                    ).SelectMany(x => x).ToArray<SvgConstraint>(),
-                    LastAccessed = DateTime.UtcNow
+                    ).SelectMany(x => x).ToArray<SvgConstraint>()
                 },
 
                 new Puzzle
@@ -71,8 +70,7 @@ The cell with the down-pointing arrow must state how far in the indicated direct
                         new KillerCage(Enumerable.Range(0, 9).Select(i => i % 3 + 2 + 9 * (i / 3 + 2)).ToArray(), shaded: true),
                         new Arrow(new[] { 23, 33, 43, 53 }),
                         new Thermometer(new[] { 58, 49, 50, 41, 42 }),
-                        new Sandwich(false, 7, 1, 9, 23, omitCrust: true)),
-                    LastAccessed = DateTime.UtcNow
+                        new Sandwich(false, 7, 1, 9, 23, omitCrust: true))
                 },
 
                 new Puzzle
@@ -95,8 +93,7 @@ The cell with the down-pointing arrow must state how far in the indicated direct
                         new Sandwich(false, 2, 1, 9, 6, SvgRowColNumberConstraint.RowColDisplay.TopLeft),
                         new Sandwich(false, 4, 1, 9, 16, SvgRowColNumberConstraint.RowColDisplay.TopLeft),
                         new Sandwich(false, 8, 1, 9, 0, SvgRowColNumberConstraint.RowColDisplay.TopLeft)),
-                    Givens = new (int cell, int value)[] { (73, 1), (79, 7) },
-                    LastAccessed = DateTime.UtcNow
+                    Givens = new (int cell, int value)[] { (73, 1), (79, 7) }
                 },
 
                 new Puzzle
@@ -141,8 +138,7 @@ Standard Killer Sudoku rules apply: The digits in a cage sum to the number in th
                         new Thermometer(new[] { 36, 37 }),
                         new Thermometer(new[] { 49, 58 }),
                         new Thermometer(new[] { 55, 64 }),
-                        new Thermometer(new[] { 69, 70, 71 })),
-                    LastAccessed = DateTime.UtcNow
+                        new Thermometer(new[] { 69, 70, 71 }))
                 },
 
                 new Puzzle
@@ -165,8 +161,7 @@ Every digit in a quadruple clue must be placed in one of the four surrounding ce
                         new Inclusion(43, new[] { 3, 4, 7, 8 }),
                         new Inclusion(55, new[] { 1, 5, 7, 9 }),
                         new Inclusion(60, new[] { 3, 4, 7, 8 }),
-                        new Inclusion(66, new[] { 1, 2, 4, 9 })),
-                    LastAccessed = DateTime.UtcNow
+                        new Inclusion(66, new[] { 1, 2, 4, 9 }))
                 },
 
                 new Puzzle
@@ -198,8 +193,7 @@ Palindromes: Digits along grey lines form palindromes, and read the same in both
                             .SelectMany(p => new[] { p, new Palindrome(p.Cells.Select(c => 80 - c).ToArray()) })
                             .ToArray())
                         .SelectMany(x => x)
-                        .ToArray(),
-                    LastAccessed = DateTime.UtcNow
+                        .ToArray()
                 },
 
                 new Puzzle
@@ -226,8 +220,7 @@ Palindromes: Digits along grey lines form palindromes, and read the same in both
                             new[] { 60, 59, 50, 51, 52, 61, 70 },
                             new[] { 64, 65, 74, 73 }
                         ).Select(arr => new Thermometer(arr)).ToArray<SvgConstraint>()
-                    ).SelectMany(x => x).ToArray(),
-                    LastAccessed = DateTime.UtcNow
+                    ).SelectMany(x => x).ToArray()
                 },
 
                 new Puzzle
@@ -253,8 +246,7 @@ Clues outside the grid indicate the sum of the digits in the direction of the ar
                         new Arrow(new[] { 56, 48 }),
                         new Arrow(new[] { 56, 66, 67, 68 }),
                         new Arrow(new[] { 60, 50 }),
-                        new Arrow(new[] { 60, 52, 43, 34 })),
-                    LastAccessed = DateTime.UtcNow
+                        new Arrow(new[] { 60, 52, 43, 34 }))
                 });
         }
     }

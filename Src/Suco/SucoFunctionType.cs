@@ -8,7 +8,7 @@ namespace Zinga.Suco
 {
     public class SucoFunctionType : SucoType
     {
-        private readonly Dictionary<SucoType[], SucoType> _dic = new Dictionary<SucoType[], SucoType>(SucoTypeArrayComparer.Instance);
+        private readonly Dictionary<SucoType[], SucoType> _dic = new(SucoTypeArrayComparer.Instance);
 
         public SucoFunctionType(params (SucoType[] parameters, SucoType returnType)[] overloads)
         {

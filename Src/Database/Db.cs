@@ -16,5 +16,7 @@ namespace Zinga.Database
         }
 
         public DbSet<Puzzle> Puzzles { get; set; }
+        public DbSet<Constraint> Constraints { get; set; }
+        public DbSet<PuzzleConstraint> PuzzleConstraints { get; set; }
     }
 }

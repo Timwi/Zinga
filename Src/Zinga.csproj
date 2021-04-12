@@ -97,9 +97,12 @@
   <ItemGroup>
     <Compile Include="CommandLine.cs" />
     <Compile Include="Database\Configuration.cs" />
+    <Compile Include="Database\Constraint.cs" />
     <Compile Include="Database\Db.cs" />
     <Compile Include="Database\Puzzle.cs" />
+    <Compile Include="Database\PuzzleConstraint.cs" />
     <Compile Include="Link.cs" />
+    <Compile Include="ZingaPlayWithSuco.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Resources.Designer.cs">
@@ -148,6 +151,7 @@
     <Compile Include="Suco\SucoVariable.cs" />
     <Compile Include="Suco\UnaryOperator.cs" />
     <Compile Include="ZingaPropellerModule.cs" />
+    <Compile Include="ZingaPuzzlePage.cs" />
     <Compile Include="ZingaSettings.cs" />
   </ItemGroup>
   <ItemGroup>
