@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace Zinga.Suco
@@ -13,9 +14,19 @@ namespace Zinga.Suco
             Pieces = pieces;
         }
 
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoStringLiteralExpression(startIndex, endIndex, Pieces);
-        public override SucoExpression WithType(SucoType type) => new SucoStringLiteralExpression(StartIndex, EndIndex, Pieces, type);
-        public override SucoExpression DeduceTypes(SucoEnvironment env) => WithType(SucoStringType.Instance);
+        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        {
+            var newPieces = Pieces.Select(p =>
+            {
+                if (p is not SucoStringLiteralPieceExpression expr)
+                    return p;
+                var typedExpr = expr.Expression.DeduceTypes(env);
+                if (!typedExpr.Type.ImplicitlyConvertibleTo(SucoStringType.Instance))
+                    throw new SucoCompileException($"Expression interpolated into a string literal is of type “{typedExpr.Type}”, which not implicitly convertible to string.", expr.Expression.StartIndex, expr.Expression.EndIndex);
+                return typedExpr.ImplicitlyConvertTo(SucoStringType.Instance);
+            }).ToArray();
+            return new SucoStringLiteralExpression(StartIndex, EndIndex, newPieces, SucoStringType.Instance);
+        }
 
         public override object Interpret(Dictionary<string, object> values)
         {

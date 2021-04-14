@@ -80,7 +80,7 @@ namespace Zinga.Suco
                 var str = sb.ToString();
                 if (str.Contains(".") && double.TryParse(str, out var dblResult))
                     return new SucoToken(SucoTokenType.Decimal, dblResult, startIndex, j);
-                else if (BigInteger.TryParse(str, out var intResult))
+                else if (int.TryParse(str, out var intResult))
                     return new SucoToken(SucoTokenType.Integer, intResult, startIndex, j);
                 else
                     throw new SucoParseException($"“{str}” is not a valid numerical literal.", i);

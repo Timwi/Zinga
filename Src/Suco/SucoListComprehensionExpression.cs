@@ -18,9 +18,6 @@ namespace Zinga.Suco
             Selector = selector;
         }
 
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoListComprehensionExpression(startIndex, endIndex, Clauses, Selector);
-        public override SucoExpression WithType(SucoType type) => new SucoListComprehensionExpression(StartIndex, EndIndex, Clauses, Selector, type);
-
         public override SucoExpression DeduceTypes(SucoEnvironment env)
         {
             var newEnv = env;

@@ -16,9 +16,6 @@ namespace Zinga.Suco
             Operator = op;
         }
 
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoBinaryOperatorExpression(startIndex, endIndex, Left, Right, Operator);
-        public override SucoExpression WithType(SucoType type) => new SucoBinaryOperatorExpression(StartIndex, EndIndex, Left, Right, Operator, type);
-
         public override SucoExpression DeduceTypes(SucoEnvironment env)
         {
             var left = Left.DeduceTypes(env);
@@ -36,6 +33,6 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(Dictionary<string, object> values) => Left.Type.InterpretBinaryOperator(values, Left, Operator, Right);
+        public override object Interpret(Dictionary<string, object> values) => Left.Type.InterpretBinaryOperator(Left.Interpret(values), Operator, Right.Type, Right.Interpret(values));
     }
 }

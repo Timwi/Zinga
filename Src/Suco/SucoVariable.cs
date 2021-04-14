@@ -14,5 +14,7 @@ namespace Zinga.Suco
             Name = name;
             Type = type;
         }
+
+        private SucoVariable() { }  // for Classify
     }
 }

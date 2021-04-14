@@ -74,6 +74,7 @@ namespace Zinga
             foreach (var kvp in constraintTypesJson.GetDict())
                 if (kvp.Value.ContainsKey("PreviewSvg"))
                     kvp.Value.Remove("PreviewSvg");
+            var decodedValues = constraints.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].Variables)).ToArray();
 
             return HttpResponse.Html(new HTML(
                 new HEAD(
@@ -96,10 +97,10 @@ namespace Zinga
                     new DIV { class_ = "puzzle" }.Data("constraints", constraintTypesJson).Data("givens", puzzle.GivensJson).Data("puzzleid", puzzle.UrlName)._(
                         new DIV { class_ = "puzzle-container", tabindex = 0 }._(new RawTag($@"
                             <svg viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
-                                <defs>{constraints.SelectMany(c => constraintTypes[c.ConstraintID].GetSvgDefs(c.Values)).Distinct().JoinString()}</defs>
+                                <defs>{constraints.SelectMany((c, cIx) => constraintTypes[c.ConstraintID].GetSvgDefs(decodedValues[cIx])).Distinct().JoinString()}</defs>
                                 <g class='full-puzzle'>
                                     <g transform='translate(0, 9.5)' class='button-row'>{renderButtonArea(btns, 9)}</g>
-                                    <g class='global-constraints'>{constraints.Where(c => constraintTypes[c.ConstraintID].Global).Select(c => constraintTypes[c.ConstraintID].GetSvg(c.Values)).JoinString()}</g>
+                                    <g class='global-constraints'>{constraints.Select((c, cIx) => constraintTypes[c.ConstraintID].Global ? constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx]) : null).JoinString()}</g>
 
                                     <g class='sudoku'>
                                         <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
@@ -139,7 +140,7 @@ namespace Zinga
                                         <line x1='0' y1='8' x2='9' y2='8' stroke='black' stroke-width='.01' />
                                         <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
 
-                                        <g>{constraints.Where(c => !constraintTypes[c.ConstraintID].Global).Select(c => constraintTypes[c.ConstraintID].GetSvg(c.Values)).JoinString()}{puzzle.ExtraSvg}</g>
+                                        <g>{constraints.Select((c, cIx) => constraintTypes[c.ConstraintID].Global ? null : constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])).JoinString()}{puzzle.ExtraSvg}</g>
                                     </g>
                                 </g>
                             </svg>")),

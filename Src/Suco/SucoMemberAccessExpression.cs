@@ -14,9 +14,6 @@ namespace Zinga.Suco
             MemberName = memberName;
         }
 
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoMemberAccessExpression(startIndex, endIndex, Operand, MemberName);
-        public override SucoExpression WithType(SucoType type) => new SucoMemberAccessExpression(StartIndex, EndIndex, Operand, MemberName, type);
-
         public override SucoExpression DeduceTypes(SucoEnvironment env)
         {
             var op = Operand.DeduceTypes(env);
@@ -33,6 +30,6 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(Dictionary<string, object> values) => Type.InterpretMemberAccess(MemberName, Operand, values);
+        public override object Interpret(Dictionary<string, object> values) => Operand.Type.InterpretMemberAccess(MemberName, Operand.Interpret(values));
     }
 }

@@ -104,6 +104,7 @@
     <Compile Include="Link.cs" />
     <Compile Include="Suco\Cell.cs" />
     <Compile Include="Suco\Parser.cs" />
+    <Compile Include="Suco\SucoLetExpression.cs" />
     <Compile Include="Suco\SucoStringLiteralExpression.cs" />
     <Compile Include="Suco\SucoDecimalType.cs" />
     <Compile Include="Suco\SucoDecimalLiteralExpression.cs" />

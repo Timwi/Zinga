@@ -10,7 +10,5 @@
             StartIndex = startIndex;
             EndIndex = endIndex;
         }
-
-        public abstract SucoNode WithNewIndexes(int startIndex, int endIndex);
     }
 }

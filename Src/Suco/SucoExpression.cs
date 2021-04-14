@@ -13,7 +13,6 @@ namespace Zinga.Suco
             Type = type;
         }
 
-        public abstract SucoExpression WithType(SucoType type);
         public abstract SucoExpression DeduceTypes(SucoEnvironment env);
 
         public SucoExpression ImplicitlyConvertTo(SucoType type) =>
@@ -22,5 +21,6 @@ namespace Zinga.Suco
             throw new InvalidOperationException("Unexpected implicit conversion. Call Type.ImplicitlyConvertibleTo first to ensure convertibility.");
 
         public abstract object Interpret(Dictionary<string, object> values);
+
     }
 }

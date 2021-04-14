@@ -6,17 +6,14 @@ namespace Zinga.Suco
     public class SucoCallExpression : SucoExpression
     {
         public SucoExpression Operand { get; private set; }
-        public List<SucoExpression> Arguments { get; private set; }
+        public SucoExpression[] Arguments { get; private set; }
 
-        public SucoCallExpression(int startIndex, int endIndex, SucoExpression operand, List<SucoExpression> arguments, SucoType type = null)
+        public SucoCallExpression(int startIndex, int endIndex, SucoExpression operand, SucoExpression[] arguments, SucoType type = null)
             : base(startIndex, endIndex, type)
         {
             Operand = operand;
             Arguments = arguments;
         }
-
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoCallExpression(startIndex, endIndex, Operand, Arguments);
-        public override SucoExpression WithType(SucoType type) => new SucoCallExpression(StartIndex, EndIndex, Operand, Arguments, type);
 
         public override SucoExpression DeduceTypes(SucoEnvironment env)
         {
@@ -26,8 +23,10 @@ namespace Zinga.Suco
                 if (operand.Type is not SucoFunctionType fnc)
                     throw new SucoCompileException($"“{operand.Type}” is not a function.", operand.StartIndex, operand.EndIndex);
 
-                var newArguments = Arguments.Select(arg => arg.DeduceTypes(env)).ToList();
-                var returnType = fnc.GetReturnType(newArguments.Select(a => a.Type).ToArray());
+                var newArguments = Arguments.Select(arg => arg.DeduceTypes(env)).ToArray();
+                var (parameterTypes, returnType) = fnc.Resolve(newArguments.Select(a => a.Type).ToArray());
+                for (var i = 0; i < newArguments.Length; i++)
+                    newArguments[i] = newArguments[i].ImplicitlyConvertTo(parameterTypes[i]);
                 return new SucoCallExpression(StartIndex, EndIndex, operand, newArguments, returnType);
             }
             catch (SucoFunctionResolutionException re)

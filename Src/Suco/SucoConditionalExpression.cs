@@ -17,8 +17,6 @@ namespace Zinga
             False = falsePart;
         }
 
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoConditionalExpression(startIndex, endIndex, Condition, True, False);
-        public override SucoExpression WithType(SucoType type) => new SucoConditionalExpression(StartIndex, EndIndex, Condition, True, False, type);
         public override object Interpret(Dictionary<string, object> values) => (bool) Condition.Interpret(values) ? True.Interpret(values) : False.Interpret(values);
 
         public override SucoExpression DeduceTypes(SucoEnvironment env)

@@ -13,8 +13,6 @@ namespace Zinga.Suco
             Name = name;
         }
 
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoListShortcutCondition(startIndex, endIndex, Name);
-
         public override bool Interpret(Dictionary<string, object> values, object cur, int curIx, int curCount, object prev, int? prevIx, int? prevCount) => Name switch
         {
             "first" => curIx == 0,

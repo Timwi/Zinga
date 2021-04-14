@@ -1,7 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using RT.Serialization;
+using System.Linq;
+using RT.Json;
+using Zinga.Suco;
 
 namespace Zinga.Database
 {
@@ -15,10 +18,31 @@ namespace Zinga.Database
         public string ValuesJson { get; set; }
 
         private Dictionary<string, object> _valuesCache;
-        public Dictionary<string, object> Values
+        private SucoVariable[] _valuesCacheVariables;
+        public Dictionary<string, object> DecodeValues(SucoVariable[] variables)
         {
-            get => _valuesCache ??= ClassifyJson.Deserialize<Dictionary<string, object>>(ValuesJson);
-            set { ValuesJson = ClassifyJson.Serialize(value).ToString(); _valuesCache = value; }
+            if (_valuesCache == null || _valuesCacheVariables != variables)
+            {
+                _valuesCache = new Dictionary<string, object>();
+                _valuesCacheVariables = variables;
+                var json = JsonDict.Parse(ValuesJson);
+                foreach (var variable in variables)
+                {
+                    var jsonValue = json.Safe[variable.Name];
+                    static object getValue(SucoType type, JsonValue j, int? position) => type switch
+                    {
+                        SucoBooleanType => j.GetBoolLenientSafe() ?? false,
+                        SucoCellType => new Cell(j.GetIntLenientSafe() ?? 0, position),
+                        SucoDecimalType => j.GetDoubleLenientSafe() ?? 0d,
+                        SucoIntegerType => j.GetIntLenientSafe() ?? 0,
+                        SucoStringType => j.GetStringLenientSafe() ?? "",
+                        SucoListType lst => (j.GetListSafe() ?? new JsonList()).Select((v, ix) => getValue(lst.Inner, v, ix + 1)).ToArray(),
+                        _ => throw new NotImplementedException($"Programmer has neglected to include code to deserialize “{type}”.")
+                    };
+                    _valuesCache[variable.Name] = getValue(variable.Type, jsonValue, null);
+                }
+            }
+            return _valuesCache;
         }
     }
 }

@@ -12,8 +12,6 @@ namespace Zinga.Suco
             Expression = expression;
         }
 
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoListExpressionCondition(startIndex, endIndex, Expression);
-
         public override bool Interpret(Dictionary<string, object> values, object cur, int curIx, int curCount, object prev, int? prevIx, int? prevCount) => (bool) Expression.Interpret(values);
     }
 }

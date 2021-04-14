@@ -24,25 +24,17 @@ namespace Zinga.Suco
 
         public override string ToString() => $"function: [{_dic.Select(kvp => $"({kvp.Key.JoinString(", ")}) → {kvp.Value}").JoinString(" | ")}]";
 
-        public static int Resolve(SucoType[][] overloads, SucoType[] argumentTypes)
+        public (SucoType[] parameterTypes, SucoType returnType) Resolve(SucoType[] argumentTypes)
         {
-            var candidates = overloads.SelectIndexWhere(paramTypes => paramTypes.Length == argumentTypes.Length && Enumerable.Range(0, paramTypes.Length).All(ix => argumentTypes[ix].ImplicitlyConvertibleTo(paramTypes[ix]))).ToArray();
+            var candidates = _dic.Where(kvp => kvp.Key.Length == argumentTypes.Length && Enumerable.Range(0, argumentTypes.Length).All(ix => argumentTypes[ix].ImplicitlyConvertibleTo(kvp.Key[ix]))).ToArray();
             if (candidates.Length == 0)
                 throw new SucoFunctionResolutionException($"The function does not accept this number of arguments of these types.");
-            var perfectCandidate = candidates.FirstOrNull(oIx => overloads[oIx].Length == argumentTypes.Length && Enumerable.Range(0, overloads[oIx].Length).All(aIx => argumentTypes[aIx].ImplicitlyConvertibleTo(overloads[oIx][aIx])));
+            var perfectCandidate = candidates.FirstOrNull(kvp => argumentTypes.Zip(kvp.Key, (t1, t2) => t1.Equals(t2)).All(b => b));
             if (perfectCandidate != null)
-                return perfectCandidate.Value;
+                return (perfectCandidate.Value.Key, perfectCandidate.Value.Value);
             if (candidates.Length != 1)
                 throw new SucoFunctionResolutionException($"The call to this function with these arguments is ambiguous.");
-            return candidates[0];
-        }
-
-        public SucoType GetReturnType(params SucoType[] argumentTypes)
-        {
-            if (argumentTypes == null)
-                throw new ArgumentNullException(nameof(argumentTypes));
-            var candidates = _dic.Keys.ToArray();
-            return _dic[candidates[Resolve(candidates, argumentTypes)]];
+            return (candidates[0].Key, candidates[0].Value);
         }
 
         public override int GetHashCode()

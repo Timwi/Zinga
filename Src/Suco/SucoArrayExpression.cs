@@ -14,8 +14,6 @@ namespace Zinga.Suco
             Elements = elements;
         }
 
-        public override SucoNode WithNewIndexes(int startIndex, int endIndex) => new SucoArrayExpression(startIndex, endIndex, Elements);
-        public override SucoExpression WithType(SucoType type) => new SucoArrayExpression(StartIndex, EndIndex, Elements, type);
         public override object Interpret(Dictionary<string, object> values) => Elements.Select(e => e.Interpret(values)).ToArray();
 
         public override SucoExpression DeduceTypes(SucoEnvironment env)

@@ -37,7 +37,7 @@ namespace Zinga.Database
         {
             if (SvgDefsSuco == null)
                 return Enumerable.Empty<string>();
-            _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, new SucoListType(SucoStringType.Instance)).DeduceTypes(Variables);
+            _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, Variables, new SucoListType(SucoStringType.Instance));
             return (IEnumerable<string>) _svgDefsCache.Interpret(values);
         }
 
@@ -47,7 +47,7 @@ namespace Zinga.Database
         {
             if (SvgSuco == null)
                 return null;
-            _svgCache ??= SucoParser.ParseCode(SvgSuco, SucoStringType.Instance).DeduceTypes(Variables);
+            _svgCache ??= SucoParser.ParseCode(SvgSuco, Variables, SucoStringType.Instance);
             return (string) _svgCache.Interpret(values);
         }
     }
