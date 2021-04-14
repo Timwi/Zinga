@@ -11,7 +11,7 @@ namespace Zinga.Suco
         public override string ToString() => "int";
         public override int GetHashCode() => 3;
 
-        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand) => (op, rightOperand) switch
+        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
         {
             // Comparison
             (BinaryOperator.Equal, SucoIntegerType) => SucoBooleanType.Instance,
@@ -26,6 +26,7 @@ namespace Zinga.Suco
             (BinaryOperator.Minus, SucoIntegerType) => SucoIntegerType.Instance,
             (BinaryOperator.Times, SucoIntegerType) => SucoIntegerType.Instance,
             (BinaryOperator.Modulo, SucoIntegerType) => SucoIntegerType.Instance,
+            (BinaryOperator.Divide, SucoIntegerType) => context != SucoContext.Constraint ? SucoDecimalType.Instance : throw new SucoTempCompileException("Suco does not allow the use of division in puzzle constraints. Rewrite the equation to use multiplication instead (for example: instead of a.value/b.value = 2, write a.value = 2*b.value)."),
             (BinaryOperator.Power, SucoIntegerType) => SucoIntegerType.Instance,
 
             // Decimal arithmetic
@@ -34,7 +35,7 @@ namespace Zinga.Suco
             (BinaryOperator.Times, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Modulo, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Power, SucoDecimalType) => SucoDecimalType.Instance,
-            _ => base.GetBinaryOperatorType(op, rightOperand),
+            _ => base.GetBinaryOperatorType(op, rightOperand, context),
         };
 
         public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch
@@ -52,6 +53,7 @@ namespace Zinga.Suco
             (BinaryOperator.Minus, SucoIntegerType) => (int) left - (int) right,
             (BinaryOperator.Times, SucoIntegerType) => (int) left * (int) right,
             (BinaryOperator.Modulo, SucoIntegerType) => ((int) left % (int) right + (int) right) % (int) right,
+            (BinaryOperator.Divide, SucoIntegerType) => (double) (int) left / (int) right,
             (BinaryOperator.Power, SucoIntegerType) => (int) BigInteger.Pow((int) left, (int) right),
 
             // Decimal arithmetic

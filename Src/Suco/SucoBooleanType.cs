@@ -10,13 +10,13 @@ namespace Zinga.Suco
         public override string ToString() => "bool";
         public override int GetHashCode() => 1;
 
-        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand) => (op, rightOperand) switch
+        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
         {
             (BinaryOperator.Equal, SucoBooleanType) => SucoBooleanType.Instance,
             (BinaryOperator.NotEqual, SucoBooleanType) => SucoBooleanType.Instance,
             (BinaryOperator.And, SucoBooleanType) => SucoBooleanType.Instance,
             (BinaryOperator.Or, SucoBooleanType) => SucoBooleanType.Instance,
-            _ => base.GetBinaryOperatorType(op, rightOperand)
+            _ => base.GetBinaryOperatorType(op, rightOperand, context)
         };
 
         public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch

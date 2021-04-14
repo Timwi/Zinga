@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using RT.Json;
+using RT.Serialization;
 using Zinga.Suco;
 
 namespace Zinga.Database
@@ -17,7 +18,9 @@ namespace Zinga.Database
         public int ConstraintID { get; set; }
         public string ValuesJson { get; set; }
 
+        [ClassifyIgnore]
         private Dictionary<string, object> _valuesCache;
+        [ClassifyIgnore]
         private SucoVariable[] _valuesCacheVariables;
         public Dictionary<string, object> DecodeValues(SucoVariable[] variables)
         {

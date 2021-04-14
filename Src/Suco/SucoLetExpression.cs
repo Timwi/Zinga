@@ -17,10 +17,10 @@ namespace Zinga.Suco
             InnerExpression = innerExpr;
         }
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
-            var valueExpr = ValueExpression.DeduceTypes(env);
-            var innerExpr = InnerExpression.DeduceTypes(env.DeclareVariable(VariableName, valueExpr.Type));
+            var valueExpr = ValueExpression.DeduceTypes(env, context);
+            var innerExpr = InnerExpression.DeduceTypes(env.DeclareVariable(VariableName, valueExpr.Type), context);
             return new SucoLetExpression(StartIndex, EndIndex, VariableName, valueExpr, innerExpr, innerExpr.Type);
         }
 

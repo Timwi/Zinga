@@ -12,7 +12,7 @@ namespace Zinga.Suco
             Name = name;
         }
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
             var variable = env.GetVariable(Name);
             if (variable == null)

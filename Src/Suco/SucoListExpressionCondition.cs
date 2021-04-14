@@ -12,6 +12,6 @@ namespace Zinga.Suco
             Expression = expression;
         }
 
-        public override bool Interpret(Dictionary<string, object> values, object cur, int curIx, int curCount, object prev, int? prevIx, int? prevCount) => (bool) Expression.Interpret(values);
+        public override bool Interpret(Dictionary<string, object> values, IEnumerable<object> curList, object cur, int curIx, IEnumerable<object> prevList, object prev, int? prevIx) => (bool) Expression.Interpret(values);
     }
 }

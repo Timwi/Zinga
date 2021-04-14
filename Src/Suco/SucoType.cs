@@ -7,7 +7,7 @@ namespace Zinga.Suco
     {
         public virtual SucoType GetMemberType(string memberName) => throw new SucoTempCompileException($"Member “{memberName}” is not defined on type “{this}”.");
         public virtual SucoType GetUnaryOperatorType(UnaryOperator op) => throw new SucoTempCompileException($"Unary operator “{op}” is not defined on type “{this}”.");
-        public virtual SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand) => throw new SucoTempCompileException($"Binary operator “{op}” is not defined on type “{this}”.");
+        public virtual SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => throw new SucoTempCompileException($"Binary operator “{op}” is not defined on type “{this}”.");
 
         public virtual bool ImplicitlyConvertibleTo(SucoType other) => Equals(other);
         public virtual object InterpretUnaryOperator(UnaryOperator op, object operand) => throw new SucoTempCompileException($"Unary operator “{op}” not defined on type “{this}”.");

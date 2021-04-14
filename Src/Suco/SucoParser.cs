@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using RT.KitchenSink.Lex;
 using RT.Util;
 using RT.Util.ExtensionMethods;
 
@@ -10,30 +9,32 @@ namespace Zinga.Suco
 {
     public class SucoParser : Parser
     {
-        public SucoParser(string source) : base(source, Ut.NewArray(
+        public SucoContext Context { get; private set; }
+
+        public SucoParser(string source, SucoContext context) : base(source, Ut.NewArray(
             // Arithmetic
-            "+", "-", "−", "*", "×", "^", "%",
+            "+", "-", "−", "*", "×", "^", "%", "/",
             // Relational
             "<", "<=", "≤", ">", ">=", "≥", "=", "!=", "≠",
             // Logical
             "&", "|", "?", ":", "!",
             // Structural
             "{", "}", ",", "(", ")", ".", "[", "]", ";",
-            // Flags
-            "$",    // "+" is listed in Arithmetic; "1" is parsed as a numeral
-                    // String literals
+            // Flags; "+" is listed in Arithmetic; "1" is parsed as a numeral
+            "$",
+            // String literals
             "\"",
-
             // Shortcut filters
             "~", "←", "→", "↑", "↓"    // “v” parses as an identifier; “<”/“>” are in Relational; “^” is in Arithmetic
         ))
         {
+            Context = context;
         }
 
-        public static SucoExpression ParseCode(string source, SucoVariable[] variables, SucoType expectedResultType = null) =>
-            ParseCode(source, variables.Aggregate(new SucoEnvironment(), (env, variable) => env.DeclareVariable(variable.Name, variable.Type)), expectedResultType);
+        public static SucoExpression ParseCode(string source, SucoVariable[] variables, SucoContext context, SucoType expectedResultType = null) =>
+            ParseCode(source, variables.Aggregate(new SucoEnvironment(), (env, variable) => env.DeclareVariable(variable.Name, variable.Type)), context, expectedResultType);
 
-        public static SucoExpression ParseCode(string source, SucoEnvironment env, SucoType expectedResultType = null)
+        public static SucoExpression ParseCode(string source, SucoEnvironment env, SucoContext context, SucoType expectedResultType = null)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -41,10 +42,10 @@ namespace Zinga.Suco
             try
             {
                 // Try parsing as a standalone expression (e.g. “cells.unique”).
-                var parser = new SucoParser(source);
+                var parser = new SucoParser(source, context);
                 var ret = parser.parseExpression();
                 parser.EnforceEof();
-                ret = ret.DeduceTypes(env);
+                ret = ret.DeduceTypes(env, context);
                 if (expectedResultType != null && !ret.Type.ImplicitlyConvertibleTo(expectedResultType))
                     throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", parser._ix);
                 return expectedResultType == null ? ret : ret.ImplicitlyConvertTo(expectedResultType);
@@ -54,10 +55,10 @@ namespace Zinga.Suco
                 try
                 {
                     // Try parsing as a list comprehension (e.g. “a: a.odd”).
-                    var parser = new SucoParser(source);
+                    var parser = new SucoParser(source, context);
                     var ret = parser.parseListComprehension();
                     parser.EnforceEof();
-                    ret = ret.DeduceTypes(env);
+                    ret = ret.DeduceTypes(env, context);
                     if (expectedResultType != null && !ret.Type.ImplicitlyConvertibleTo(expectedResultType))
                         throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", parser._ix);
                     return expectedResultType == null ? ret : ret.ImplicitlyConvertTo(expectedResultType);
@@ -238,6 +239,9 @@ namespace Zinga.Suco
 
             if (token("\"", out startIx))
             {
+                if (Context == SucoContext.Constraint)
+                    throw new SucoParseException("String literals cannot be used in Sudoku constraints.", startIx);
+
                 var pieces = new List<SucoStringLiteralPiece>();
                 var curStringPiece = new StringBuilder();
                 while (true)
@@ -316,6 +320,7 @@ namespace Zinga.Suco
         }
 
         private static readonly string[] _flags = new[] { "$", "+", "1" };
+
         private SucoExpression parseListComprehension(int? startIx = null, bool consumeCloseCurly = false)
         {
             var rStartIx = startIx ?? _ix;

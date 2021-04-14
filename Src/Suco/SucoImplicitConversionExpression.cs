@@ -12,7 +12,7 @@ namespace Zinga.Suco
             Expression = inner;
         }
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env) => this;
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context) => this;
         public override object Interpret(Dictionary<string, object> values) => Expression.Type.InterpretImplicitConversionTo(Type, Expression.Interpret(values));
     }
 }

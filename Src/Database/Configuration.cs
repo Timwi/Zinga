@@ -64,7 +64,59 @@ namespace Zinga.Database
                                     {l.cx + .3*endAngle.cos} {l.cy + .3*endAngle.sin}' />
                         <path d='M -.2 -.2 .3 0 -.2 .2' transform='translate({l.cx}, {l.cy}) rotate({endAngle})' />
                     </g>""}",
-                    //SvgSuco = @"""<text x='0' y='4' font-size='.5' text-anchor='start'>{{f first, s ~, +sl, l ~ last: let endAngle = (l.y-sl.y).atan2(l.x-sl.x); ""{f.index},{s.index},{sl.index},{l.index} || {l.y-sl.y}.atan2({l.x-sl.x}) = {endAngle}""}}</text>""",
+                    Variables = new[] { "cells".ListOfCellsVariable() },
+                    Public = true
+                },
+                new Constraint
+                {
+                    Name = "Killer cage (no sum)",
+                    LogicSuco = "cells.unique",
+                    SvgSuco = @"""<path d='{cells.outline(.06, .06)}' {shaded ? ""fill='rgba(0, 0, 0, .2)'"" : ""fill='none' stroke='black' stroke-width='.025' stroke-dasharray='.09,.07'""} />""",
+                    Variables = new[] { "cells".ListOfCellsVariable(), "shaded".BoolVariable() },
+                    Public = true
+                },
+                new Constraint
+                {
+                    Name = "Killer cage (sum)",
+                    LogicSuco = "cells.sum = sum & cells.unique",
+                    SvgSuco = @"{f topleft: ""<path d='{cells.outline(.06, .06, .275, .25)}' fill='none' stroke='black' stroke-width='.025' stroke-dasharray='.09,.07' /><text x='{f.x + .04}' y='{f.y + .25}' text-anchor='start' font-size='.25'>{sum}</text>""}",
+                    Variables = new[] { "cells".ListOfCellsVariable(), "sum".IntVariable() },
+                    Public = true
+                },
+                new Constraint
+                {
+                    Name = "Sum cage (no uniqueness)",
+                    LogicSuco = "cells.sum = sum",
+                    SvgSuco = @"""<path d='{cells.outline(.06, .06, .275, .25)}' fill='none' stroke='black' stroke-width='.025' stroke-dasharray='.09,.07' />""",
+                    Variables = new[] { "cells".ListOfCellsVariable(), "sum".IntVariable() },
+                    Public = true
+                },
+                new Constraint
+                {
+                    Name = "Snowball regions",
+                    LogicSuco = @"f first, oth: {a from f, b from oth (b.pos = a.pos): b.value - a.value}.same",
+                    SvgDefsSuco = @"[""<filter id='snowball-filter' color-interpolation-filters='sRGB'><feGaussianBlur result='fbSourceGraphic' stdDeviation='.03' /></filter>""] +
+                        {region: let p = region.outline(0, 0); ""<clipPath id='snowball-clip-{p.hash}' clipPathUnits='userSpaceOnUse'><path d='{p}' /></clipPath>""}",
+                    SvgSuco = @"region: let p = region.outline(0, 0);
+                        ""<path d='{p}' fill='none' opacity='.5' stroke='black' stroke-width='.08' filter='url(#snowball-filter)' clip-path='url(#snowball-clip-{p.hash})' />""",
+                    Variables = new[] { "cells".ListOfListOfCellsVariable() },
+                    Public = true
+                },
+                new Constraint
+                {
+                    Name = "Clone regions",
+                    LogicSuco = @"f first, oth: {a from f, b from oth (b.pos = a.pos): b.value = a.value}",
+                    SvgDefsSuco = @"region: let p = region.outline(0, 0); ""<clipPath id='clone-clip-{p.hash}' clipPathUnits='userSpaceOnUse'><path d='{p}' /></clipPath>""",
+                    SvgSuco = @"region: let p = region.outline(0, 0); ""<path d='{p}' fill='none' opacity='.2' stroke='black' stroke-width='.2' clip-path='url(#clone-clip-{p.hash})' />""",
+                    Variables = new[] { "cells".ListOfListOfCellsVariable() },
+                    Public = true
+                },
+                new Constraint
+                {
+                    Name = "Renban cage",
+                    LogicSuco = @"cells.unique & {c: {d: d.value = c.value + 1}.none}.count = 1",
+                    SvgDefsSuco = @"[""<pattern id='renban-pattern' width='2' height='2' patternTransform='rotate(45) scale(.35355) translate(.5, .5)' patternUnits='userSpaceOnUse'><path d='M0 0h1v1H0zM1 1h1v1H1z' /></pattern>""]",
+                    SvgSuco = @"""<path d='{cells.outline(.25, .25)}' fill='url(#renban-pattern)' stroke='none' opacity='.2' />""",
                     Variables = new[] { "cells".ListOfCellsVariable() },
                     Public = true
                 });

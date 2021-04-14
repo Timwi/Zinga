@@ -14,13 +14,13 @@ namespace Zinga.Suco
             Pieces = pieces;
         }
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
             var newPieces = Pieces.Select(p =>
             {
                 if (p is not SucoStringLiteralPieceExpression expr)
                     return p;
-                var typedExpr = expr.Expression.DeduceTypes(env);
+                var typedExpr = expr.Expression.DeduceTypes(env, context);
                 if (!typedExpr.Type.ImplicitlyConvertibleTo(SucoStringType.Instance))
                     throw new SucoCompileException($"Expression interpolated into a string literal is of type “{typedExpr.Type}”, which not implicitly convertible to string.", expr.Expression.StartIndex, expr.Expression.EndIndex);
                 return typedExpr.ImplicitlyConvertTo(SucoStringType.Instance);

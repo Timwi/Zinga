@@ -9,6 +9,6 @@ namespace Zinga.Suco
         {
         }
 
-        public abstract bool Interpret(Dictionary<string, object> values, object cur, int curIx, int curCount, object prev, int? prevIx, int? prevCount);
+        public abstract bool Interpret(Dictionary<string, object> values, IEnumerable<object> curList, object cur, int curIx, IEnumerable<object> prevList, object prev, int? prevIx);
     }
 }

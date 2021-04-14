@@ -16,13 +16,13 @@ namespace Zinga.Suco
             Operator = op;
         }
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
-            var left = Left.DeduceTypes(env);
-            var right = Right.DeduceTypes(env);
+            var left = Left.DeduceTypes(env, context);
+            var right = Right.DeduceTypes(env, context);
             try
             {
-                var resultType = left.Type.GetBinaryOperatorType(Operator, right.Type);
+                var resultType = left.Type.GetBinaryOperatorType(Operator, right.Type, context);
                 if (resultType == null)
                     throw new SucoCompileException($"Types “{left.Type}” and “{right.Type}” do not support the “{Operator}” operator.", left.StartIndex, right.EndIndex);
                 return new SucoBinaryOperatorExpression(StartIndex, EndIndex, left, right, Operator, resultType);

@@ -19,14 +19,14 @@ namespace Zinga
 
         public override object Interpret(Dictionary<string, object> values) => (bool) Condition.Interpret(values) ? True.Interpret(values) : False.Interpret(values);
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
-            var condition = Condition.DeduceTypes(env);
+            var condition = Condition.DeduceTypes(env, context);
             if (!(condition.Type is SucoBooleanType))
                 throw new SucoCompileException($"The condition in a ?: operator must be a boolean.", Condition.StartIndex, Condition.EndIndex);
 
-            var trueExpr = True.DeduceTypes(env);
-            var falseExpr = False.DeduceTypes(env);
+            var trueExpr = True.DeduceTypes(env, context);
+            var falseExpr = False.DeduceTypes(env, context);
             SucoType thisType;
 
             if (trueExpr.Type.Equals(falseExpr.Type))

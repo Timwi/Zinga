@@ -20,12 +20,7 @@ namespace Zinga
             var code = req.Post["code"].Value;
             var environment = new SucoEnvironment()
                 // built-ins
-                .DeclareVariable("cells", new SucoListType(SucoCellType.Instance))
-
-                // sandwich constraint
-                .DeclareVariable("crust1", SucoIntegerType.Instance)
-                .DeclareVariable("crust2", SucoIntegerType.Instance)
-                .DeclareVariable("sum", SucoIntegerType.Instance);
+                .DeclareVariable("cells", new SucoListType(new SucoListType(SucoCellType.Instance)));
 
             if (code != null)
             {
@@ -59,7 +54,7 @@ namespace Zinga
                 // Parse tree
                 try
                 {
-                    var parseTree = SucoParser.ParseCode(code, environment);
+                    var parseTree = SucoParser.ParseCode(code, environment, SucoContext.Svg);
 
                     object span(SucoNode node) => new SPAN { class_ = "node" }.Data("type", $"{Regex.Replace(node.GetType().Name, @"^Suco|Expression$", "")}{(node is SucoExpression expr ? $" — {expr.Type}" : null)}")._(visit(node));
                     IEnumerable<object> visit(SucoNode expr)
@@ -111,16 +106,16 @@ namespace Zinga
                         .node:hover::after {
                             content: attr(data-type);
                             position: absolute;
-                            left: 100%;
-                            top: -1px;
+                            left: 0;
+                            bottom: calc(100% + 1px);
                             font-size: 9pt;
                             font-weight: 300;
                             background: #bdf;
                             padding: 1px 4px 1px 1px;
                             border: 1px solid black;
-                            border-left: none;
+                            border-bottom: none;
+                            border-top-left-radius: .1cm;
                             border-top-right-radius: .1cm;
-                            border-bottom-right-radius: .1cm;
                             box-sizing: border-box;
                             z-index: 1;
                         }

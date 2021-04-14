@@ -1,4 +1,5 @@
-﻿using System.Data;
+﻿using System.Collections.Generic;
+using System.Data;
 using System.Data.Entity;
 using System.IO;
 using System.Linq;
@@ -19,14 +20,14 @@ namespace Zinga
         public HttpResponse PuzzleEditPage(HttpRequest req)
         {
             Puzzle puzzle;
-            DbConstraint[] constraintTypes;
+            Dictionary<int, DbConstraint> constraintTypes;
             PuzzleConstraint[] constraints;
 
             var url = req.Url.Path.SubstringSafe(1);
             if (url.Length == 0)
             {
                 puzzle = new Puzzle { Title = "Sudoku" };
-                constraintTypes = new DbConstraint[0];
+                constraintTypes = new Dictionary<int, DbConstraint>();
                 constraints = new PuzzleConstraint[0];
             }
             else
@@ -38,7 +39,7 @@ namespace Zinga
                     return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
                 constraints = db.PuzzleConstraints.Where(c => c.PuzzleID == puzzle.PuzzleID).ToArray();
                 var constraintIds = constraints.Select(c => c.ConstraintID).Distinct().ToArray();
-                constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).ToArray();
+                constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).AsEnumerable().ToDictionary(c => c.ConstraintID);
             }
 
             const double btnHeight = .8;
@@ -71,16 +72,19 @@ namespace Zinga
             }).JoinString();
 
             var constraintTypesJson = ClassifyJson.Serialize(constraintTypes);
-            // Avoid transmitting the preview SVG as we don’t need that and it can be a bit much
+            // Avoid transmitting the SVG code as we don’t need that and it can be a bit much
             foreach (var kvp in constraintTypesJson.GetDict())
-                if (kvp.Value.ContainsKey("PreviewSvg"))
-                    kvp.Value.Remove("PreviewSvg");
+                foreach (var removable in new[] { "SvgDefsSuco", "SvgSuco", "PreviewSvg" })
+                    if (kvp.Value.ContainsKey(removable))
+                        kvp.Value.Remove(removable);
+            var decodedValues = constraints.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].Variables)).ToArray();
+            var constraintsJson = ClassifyJson.Serialize(constraints);
 
             return HttpResponse.Html(new HTML(
                 new HEAD(
                     new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
                     new META { name = "viewport", content = "width=device-width,initial-scale=1.0" },
-                    new TITLE($"{puzzle.Title} by {puzzle.Author}"),
+                    new TITLE($"Editing: {puzzle.Title} by {puzzle.Author}"),
 
 #if DEBUG
                     new SCRIPTLiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "EditPuzzle.js"))),
@@ -110,8 +114,6 @@ namespace Zinga
                                             <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
                                             <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
                                         </g>").JoinString()}
-
-                                        <g class='under-svg'></g>
 
                                         <line x1='1' y1='0' x2='1' y2='9' stroke='black' stroke-width='.01' />
                                         <line x1='2' y1='0' x2='2' y2='9' stroke='black' stroke-width='.01' />

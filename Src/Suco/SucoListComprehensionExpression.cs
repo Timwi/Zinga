@@ -18,7 +18,7 @@ namespace Zinga.Suco
             Selector = selector;
         }
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
             var newEnv = env;
             var newClauses = new List<SucoListClause>();
@@ -46,7 +46,7 @@ namespace Zinga.Suco
                 {
                     if (cond is SucoListExpressionCondition expr)
                     {
-                        var innerExpression = expr.Expression.DeduceTypes(newEnv);
+                        var innerExpression = expr.Expression.DeduceTypes(newEnv, context);
                         if (!innerExpression.Type.ImplicitlyConvertibleTo(SucoBooleanType.Instance))
                             throw new SucoCompileException($"A condition expression must be a boolean (or implicitly convertible to one).", expr.StartIndex, expr.EndIndex);
                         return new SucoListExpressionCondition(expr.StartIndex, expr.EndIndex, innerExpression.ImplicitlyConvertTo(SucoBooleanType.Instance));
@@ -66,7 +66,7 @@ namespace Zinga.Suco
                 throw new SucoCompileException("A list comprehension without a selector cannot have more than one clause.", StartIndex, EndIndex);
             else
             {
-                newSelector = Selector.DeduceTypes(newEnv);
+                newSelector = Selector.DeduceTypes(newEnv, context);
                 selectorType = new SucoListType(newSelector.Type);
             }
 
@@ -78,7 +78,7 @@ namespace Zinga.Suco
 
         public override object Interpret(Dictionary<string, object> values)
         {
-            var collections = new IList[Clauses.Count];
+            var collections = new IEnumerable<object>[Clauses.Count];
             var indexes = new int[Clauses.Count];
             var elements = new object[Clauses.Count];
             IEnumerable<object> recurse(int clIx, Dictionary<string, object> newValues)
@@ -91,7 +91,7 @@ namespace Zinga.Suco
 
                 var dic = newValues.ToDictionary();
                 var collection = (IList) newValues[Clauses[clIx].FromVariableResolved];
-                collections[clIx] = collection;
+                collections[clIx] = (IEnumerable<object>) collection;
                 for (var i = 0; i < collection.Count; i++)
                 {
                     if (!Clauses[clIx].HasPlus && indexes.Take(clIx).Contains(i))
@@ -100,7 +100,10 @@ namespace Zinga.Suco
                     elements[clIx] = collection[i];
                     dic[Clauses[clIx].VariableName] = collection[i];
                     foreach (var condition in Clauses[clIx].Conditions)
-                        if (!condition.Interpret(dic, collection[i], i, collection.Count, clIx == 0 ? null : elements[clIx - 1], clIx == 0 ? null : indexes[clIx - 1], clIx == 0 ? null : collections[clIx - 1].Count))
+                        if (!condition.Interpret(dic, collections[clIx], elements[clIx], indexes[clIx],
+                            clIx == 0 ? null : collections[clIx - 1],
+                            clIx == 0 ? null : elements[clIx - 1],
+                            clIx == 0 ? null : indexes[clIx - 1]))
                             goto skipped;
                     foreach (var result in recurse(clIx + 1, dic))
                         yield return result;

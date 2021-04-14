@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.IO;
@@ -10,10 +9,7 @@ using RT.Servers;
 using RT.TagSoup;
 using RT.Util;
 using RT.Util.ExtensionMethods;
-using SvgPuzzleConstraints;
 using Zinga.Database;
-using Zinga.Suco;
-using DbConstraint = Zinga.Database.Constraint;
 
 namespace Zinga
 {
@@ -70,11 +66,13 @@ namespace Zinga
             }).JoinString();
 
             var constraintTypesJson = ClassifyJson.Serialize(constraintTypes);
-            // Avoid transmitting the preview SVG as we don’t need that and it can be a bit much
+            // Avoid transmitting the SVG code as we don’t need that and it can be a bit much
             foreach (var kvp in constraintTypesJson.GetDict())
-                if (kvp.Value.ContainsKey("PreviewSvg"))
-                    kvp.Value.Remove("PreviewSvg");
+                foreach (var removable in new[] { "SvgDefsSuco", "SvgSuco", "PreviewSvg" })
+                    if (kvp.Value.ContainsKey(removable))
+                        kvp.Value.Remove(removable);
             var decodedValues = constraints.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].Variables)).ToArray();
+            var constraintsJson = ClassifyJson.Serialize(constraints);
 
             return HttpResponse.Html(new HTML(
                 new HEAD(
@@ -94,7 +92,7 @@ namespace Zinga
                     new DIV { id = "topbar" }._(
                         new DIV { class_ = "title" }._(puzzle.Title),
                         puzzle.Author == null ? null : new DIV { class_ = "author" }._("by ", puzzle.Author)),
-                    new DIV { class_ = "puzzle" }.Data("constraints", constraintTypesJson).Data("givens", puzzle.GivensJson).Data("puzzleid", puzzle.UrlName)._(
+                    new DIV { class_ = "puzzle" }.Data("constrainttypes", constraintTypesJson).Data("constraints", constraintsJson).Data("givens", puzzle.GivensJson).Data("puzzleid", puzzle.UrlName)._(
                         new DIV { class_ = "puzzle-container", tabindex = 0 }._(new RawTag($@"
                             <svg viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
                                 <defs>{constraints.SelectMany((c, cIx) => constraintTypes[c.ConstraintID].GetSvgDefs(decodedValues[cIx])).Distinct().JoinString()}</defs>

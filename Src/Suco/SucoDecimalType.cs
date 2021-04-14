@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Zinga.Suco
 {
@@ -12,7 +10,7 @@ namespace Zinga.Suco
         public override string ToString() => "decimal";
         public override int GetHashCode() => 5;
 
-        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand) => (op, rightOperand) switch
+        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
         {
             (BinaryOperator.Equal, SucoDecimalType) => SucoBooleanType.Instance,
             (BinaryOperator.NotEqual, SucoDecimalType) => SucoBooleanType.Instance,
@@ -25,7 +23,7 @@ namespace Zinga.Suco
             (BinaryOperator.Times, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Modulo, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Power, SucoDecimalType) => SucoDecimalType.Instance,
-            _ => base.GetBinaryOperatorType(op, rightOperand),
+            _ => base.GetBinaryOperatorType(op, rightOperand, context),
         };
 
         public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch

@@ -13,7 +13,25 @@ namespace Zinga.Suco
             Type = type;
         }
 
-        public abstract SucoExpression DeduceTypes(SucoEnvironment env);
+        public SucoExpression DeduceTypes(SucoEnvironment env, SucoContext context)
+        {
+            var result = deduceTypes(env, context);
+            switch (context)
+            {
+                case SucoContext.Constraint:
+                    if (result.Type is SucoDecimalType)
+                        throw new SucoTempCompileException("You cannot use decimal numbers in a puzzle constraint.");
+                    if (result.Type is SucoStringType)
+                        throw new SucoTempCompileException("You cannot use strings in a puzzle constraint.");
+                    break;
+
+                case SucoContext.Svg:
+                    break;
+            }
+            return result;
+        }
+
+        protected abstract SucoExpression deduceTypes(SucoEnvironment env, SucoContext context);
 
         public SucoExpression ImplicitlyConvertTo(SucoType type) =>
             Type.Equals(type) ? this :

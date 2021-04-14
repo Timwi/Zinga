@@ -14,6 +14,7 @@
         Minus,
         Times,
         Modulo,
+        Divide,
         Power
     }
 }

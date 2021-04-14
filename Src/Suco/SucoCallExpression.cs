@@ -15,15 +15,15 @@ namespace Zinga.Suco
             Arguments = arguments;
         }
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
             try
             {
-                var operand = Operand.DeduceTypes(env);
+                var operand = Operand.DeduceTypes(env, context);
                 if (operand.Type is not SucoFunctionType fnc)
                     throw new SucoCompileException($"“{operand.Type}” is not a function.", operand.StartIndex, operand.EndIndex);
 
-                var newArguments = Arguments.Select(arg => arg.DeduceTypes(env)).ToArray();
+                var newArguments = Arguments.Select(arg => arg.DeduceTypes(env, context)).ToArray();
                 var (parameterTypes, returnType) = fnc.Resolve(newArguments.Select(a => a.Type).ToArray());
                 for (var i = 0; i < newArguments.Length; i++)
                     newArguments[i] = newArguments[i].ImplicitlyConvertTo(parameterTypes[i]);

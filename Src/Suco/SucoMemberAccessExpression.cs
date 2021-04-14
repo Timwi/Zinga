@@ -14,9 +14,9 @@ namespace Zinga.Suco
             MemberName = memberName;
         }
 
-        public override SucoExpression DeduceTypes(SucoEnvironment env)
+        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
-            var op = Operand.DeduceTypes(env);
+            var op = Operand.DeduceTypes(env, context);
             try
             {
                 var memberType = op.Type.GetMemberType(MemberName);
