@@ -39,7 +39,7 @@ namespace Zinga.Suco
             (BinaryOperator.Plus, SucoDecimalType) => (double) left + (double) right,
             (BinaryOperator.Minus, SucoDecimalType) => (double) left - (double) right,
             (BinaryOperator.Times, SucoDecimalType) => (double) left * (double) right,
-            (BinaryOperator.Modulo, SucoDecimalType) => (double) left % (double) right,
+            (BinaryOperator.Modulo, SucoDecimalType) => ((double) left % (double) right + (double) right) % (double) right,
             (BinaryOperator.Power, SucoDecimalType) => Math.Pow((double) left, (double) right),
             _ => base.InterpretBinaryOperator(left, op, rightType, right),
         };

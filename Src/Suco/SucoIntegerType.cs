@@ -51,14 +51,14 @@ namespace Zinga.Suco
             (BinaryOperator.Plus, SucoIntegerType) => (int) left + (int) right,
             (BinaryOperator.Minus, SucoIntegerType) => (int) left - (int) right,
             (BinaryOperator.Times, SucoIntegerType) => (int) left * (int) right,
-            (BinaryOperator.Modulo, SucoIntegerType) => (int) left % (int) right,
+            (BinaryOperator.Modulo, SucoIntegerType) => ((int) left % (int) right + (int) right) % (int) right,
             (BinaryOperator.Power, SucoIntegerType) => (int) BigInteger.Pow((int) left, (int) right),
 
             // Decimal arithmetic
             (BinaryOperator.Plus, SucoDecimalType) => (int) left + (double) right,
             (BinaryOperator.Minus, SucoDecimalType) => (int) left - (double) right,
             (BinaryOperator.Times, SucoDecimalType) => (int) left * (double) right,
-            (BinaryOperator.Modulo, SucoDecimalType) => (int) left % (double) right,
+            (BinaryOperator.Modulo, SucoDecimalType) => ((int) left % (double) right + (double) right) % (double) right,
             (BinaryOperator.Power, SucoDecimalType) => Math.Pow((int) left, (double) right),
 
             _ => base.InterpretBinaryOperator(left, op, rightType, right),
