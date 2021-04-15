@@ -29,5 +29,17 @@ namespace Zinga.Suco
             using var md5 = MD5.Create();
             return md5.ComputeHash(str.ToUtf8()).ToHex();
         }
+
+        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
+        {
+            (BinaryOperator.Plus, SucoStringType) => SucoStringType.Instance,
+            _ => GetBinaryOperatorType(op, rightOperand, context)
+        };
+
+        public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch
+        {
+            (BinaryOperator.Plus, SucoStringType) => (string) left + (string) right,
+            _ => base.InterpretBinaryOperator(left, op, rightType, right)
+        };
     }
 }

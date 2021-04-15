@@ -1,4 +1,4 @@
-﻿namespace Zinga
+﻿namespace Zinga.Suco
 {
     public enum SucoContext
     {

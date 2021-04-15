@@ -4,6 +4,8 @@ using System.Data;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using RT.Json;
+using RT.Serialization;
 using RT.Servers;
 using RT.TagSoup;
 using RT.Util;
@@ -157,6 +159,101 @@ namespace Zinga
                     new DIV(new FORM { method = method.post, action = "/tmp" }._(
                         new DIV(new TEXTAREA { accesskey = ",", name = "code" }._(code)),
                         new DIV(new BUTTON { type = btype.submit, accesskey = "p" }._("Parse")))))));
+        }
+
+        private HttpResponse PlayWithSuco2(HttpRequest req)
+        {
+            string results = null;
+            if (req.Method == HttpMethod.Post)
+                results = Lib.Commands.CompileSuco(req.Post["code"].Value, @"{""cells"":""list(cell)""}");
+
+            return HttpResponse.Html(new HTML(
+                new HEAD(
+                    new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
+                    new META { name = "viewport", content = "width=device-width,initial-scale=1.0" },
+                    new TITLE("Suco play thing"),
+                    new STYLELiteral(@"
+                        body, button, input {
+                            font-family: 'Roboto';
+                        }
+                        body {
+                            background: red;
+                        }
+                        body.ready {
+                            background: white;
+                        }
+                        textarea {
+                            width: 100%;
+                            height: 15em;
+                        }
+                        pre.javascript {
+                            white-space: pre-wrap;
+                        }
+                        #results {
+                            border: 2px solid black;
+                        }
+                            #results.error {
+                                background: #fee;
+                            }
+                            #results > .error {
+                                background: #fdd;
+                                border-bottom: 1px solid black;
+                                padding: 5px 10px;
+                                text-align: center;
+                            }
+                            #results > .code {
+                                font-family: monospace;
+                                padding: 5px 10px;
+                            }
+                                #results > .code .mark {
+                                    background: #800;
+                                    color: white;
+                                    padding: 1px 4px;
+                                    font-weight: bold;
+                                }
+                                #results > .code .marker {
+                                    background: #800;
+                                    padding: 1px 4px;
+                                }
+                    "),
+                    new RawTag(@"<script src=/_framework/blazor.webassembly.js autostart=false></script>"),
+                    new SCRIPTLiteral(@"
+                        Blazor.start({ })
+                            .then(() => {
+                                document.body.classList.add('ready');
+
+                                document.getElementById('btn-wasm').onclick = function(ev)
+                                {
+                                    let results = document.getElementById('results');
+                                    let code = document.getElementById('code').value;
+                                    results.innerHTML = `<pre class='code'></pre>`;
+                                    results.querySelector('.code').innerText = code;
+                                    DotNet.invokeMethodAsync('ZingaWasm', 'CompileSuco', code, JSON.stringify({""cells"":""list(cell)""}))
+                                        .then(resultStr => {
+                                            let result = JSON.parse(resultStr);
+                                            if (result.status === 'ok')
+                                                results.className = 'ok';
+                                            else
+                                            {
+                                                results.className = 'error';
+                                                results.innerHTML = `<div class='error'></div><pre class='code'></pre>`;
+                                                results.querySelector('.error').innerText = result.message;
+                                                results.querySelector('.code').innerHTML = result.html || result.type;
+                                            }
+                                        });
+                                    ev.stopPropagation();
+                                    ev.preventDefault();
+                                    return false;
+                                };
+                            });
+                    ")),
+                new BODY(
+                    new DIV { id = "results" }._(results),
+                    new DIV(new FORM { method = method.post, action = "/tmp" }._(
+                        new DIV(new TEXTAREA { accesskey = ",", name = "code", id = "code" }),
+                        new DIV(
+                            new BUTTON { type = btype.button, accesskey = "w", id = "btn-wasm" }._("Wasm"),
+                            new BUTTON { type = btype.submit, accesskey = "r" }._("Remote")))))));
         }
     }
 }

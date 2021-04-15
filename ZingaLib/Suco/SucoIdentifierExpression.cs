@@ -14,10 +14,17 @@ namespace Zinga.Suco
 
         protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
         {
-            var variable = env.GetVariable(Name);
-            if (variable == null)
-                throw new SucoCompileException($"Unknown variable “{Name}”.", StartIndex, EndIndex);
-            return new SucoIdentifierExpression(StartIndex, EndIndex, Name, variable.Type);
+            try
+            {
+                var variable = env.GetVariable(Name);
+                if (variable == null)
+                    throw new SucoCompileException($"Unknown variable “{Name}”.", StartIndex, EndIndex);
+                return new SucoIdentifierExpression(StartIndex, EndIndex, Name, variable.Type);
+            }
+            catch (SucoTempCompileException tc)
+            {
+                throw new SucoCompileException(tc.Message, StartIndex, EndIndex);
+            }
         }
 
         public override object Interpret(Dictionary<string, object> values) =>

@@ -22,8 +22,9 @@ namespace Zinga
             Log.Info($"Zinga: Number of puzzles in the database: {db.Puzzles.Count()}");
 
             _resolver = new UrlResolver(
-                new UrlMapping(path: "/tmp", handler: PlayWithSuco),
+                new UrlMapping(path: "/tmp", handler: PlayWithSuco2),
                 new UrlMapping(path: "/edit", handler: PuzzleEditPage),
+                new UrlMapping(path: "/_framework", handler: new FileSystemHandler(@"D:\c\Zinga\Builds\Debug-net5.0browser-wasm\wwwroot\_framework").Handle),
                 new UrlMapping(path: null, handler: PuzzlePage));
         }
 

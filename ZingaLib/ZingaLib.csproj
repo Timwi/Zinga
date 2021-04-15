@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <OutputPath>..\Builds\$(Configuration)-$(TargetFramework)$(RuntimeIdentifier)\</OutputPath>
+    <IntermediateOutputPath>$(BaseIntermediateOutputPath)\$(Configuration)-$(TargetFramework)$(RuntimeIdentifier)\</IntermediateOutputPath>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Zinga.Lib</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="RT.Serialization.Json" Version="2.0.1686" />
+    <PackageReference Include="RT.Util.Core" Version="2.0.1686" />
+  </ItemGroup>
+
+</Project>

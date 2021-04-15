@@ -102,19 +102,6 @@
     <Compile Include="Database\Puzzle.cs" />
     <Compile Include="Database\PuzzleConstraint.cs" />
     <Compile Include="Link.cs" />
-    <Compile Include="Suco\Cell.cs" />
-    <Compile Include="Suco\Parser.cs" />
-    <Compile Include="Suco\SucoLetExpression.cs" />
-    <Compile Include="Suco\SucoContext.cs" />
-    <Compile Include="Suco\SucoStringLiteralExpression.cs" />
-    <Compile Include="Suco\SucoDecimalType.cs" />
-    <Compile Include="Suco\SucoDecimalLiteralExpression.cs" />
-    <Compile Include="Suco\SucoStringLiteralPiece.cs" />
-    <Compile Include="Suco\SucoStringLiteralPieceExpression.cs" />
-    <Compile Include="Suco\SucoStringLiteralPieceString.cs" />
-    <Compile Include="Suco\SucoStringType.cs" />
-    <Compile Include="Suco\SucoExtensionMethods.cs" />
-    <Compile Include="Suco\SucoTypeClassifySubstitute.cs" />
     <Compile Include="ZingaPlayWithSuco.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -123,43 +110,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="Suco\BinaryOperator.cs" />
-    <Compile Include="Suco\SucoParseException.cs" />
-    <Compile Include="Suco\SucoParseExceptionHighlight.cs" />
-    <Compile Include="Suco\SucoParser.cs" />
-    <Compile Include="Suco\SucoArrayExpression.cs" />
-    <Compile Include="Suco\SucoBinaryOperatorExpression.cs" />
-    <Compile Include="Suco\SucoBooleanType.cs" />
-    <Compile Include="Suco\SucoCallExpression.cs" />
-    <Compile Include="Suco\SucoCellType.cs" />
-    <Compile Include="Suco\SucoTempCompileException.cs" />
-    <Compile Include="Suco\SucoCompileException.cs" />
-    <Compile Include="Suco\SucoConditionalExpression.cs" />
-    <Compile Include="Suco\SucoEnumType.cs" />
-    <Compile Include="Suco\SucoEnvironment.cs" />
-    <Compile Include="Suco\SucoFunction.cs" />
-    <Compile Include="Suco\SucoFunctionResolutionException.cs" />
-    <Compile Include="Suco\SucoFunctionType.cs" />
-    <Compile Include="Suco\SucoImplicitConversionExpression.cs" />
-    <Compile Include="Suco\SucoNode.cs" />
-    <Compile Include="Suco\SucoExpression.cs" />
-    <Compile Include="Suco\SucoIdentifierExpression.cs" />
-    <Compile Include="Suco\SucoListClause.cs" />
-    <Compile Include="Suco\SucoListComprehensionExpression.cs" />
-    <Compile Include="Suco\SucoListCondition.cs" />
-    <Compile Include="Suco\SucoListExpressionCondition.cs" />
-    <Compile Include="Suco\SucoListShortcutCondition.cs" />
-    <Compile Include="Suco\SucoListType.cs" />
-    <Compile Include="Suco\SucoMemberAccessExpression.cs" />
-    <Compile Include="Suco\SucoIntegerLiteralExpression.cs" />
-    <Compile Include="Suco\SucoTokenType.cs" />
-    <Compile Include="Suco\SucoType.cs" />
-    <Compile Include="Suco\SucoIntegerType.cs" />
-    <Compile Include="Suco\SucoTypeArrayComparer.cs" />
-    <Compile Include="Suco\SucoUnaryOperatorExpression.cs" />
-    <Compile Include="Suco\SucoToken.cs" />
-    <Compile Include="Suco\SucoVariable.cs" />
-    <Compile Include="Suco\UnaryOperator.cs" />
     <Compile Include="ZingaPropellerModule.cs" />
     <Compile Include="ZingaPuzzleEditPage.cs" />
     <Compile Include="ZingaPuzzlePage.cs" />
@@ -185,6 +135,10 @@
     <ProjectReference Include="..\..\SvgPuzzleConstraints\Src\SvgPuzzleConstraints.csproj">
       <Project>{592301f2-d4ea-4f45-9ba9-4f28c1dfd6bb}</Project>
       <Name>SvgPuzzleConstraints</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ZingaLib\ZingaLib.csproj">
+      <Project>{00eb7b3c-171e-4703-9443-2c900d242626}</Project>
+      <Name>ZingaLib</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

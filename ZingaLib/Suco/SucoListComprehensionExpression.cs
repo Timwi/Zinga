@@ -35,7 +35,16 @@ namespace Zinga.Suco
                     collectionType = collection.Type;
                 }
                 else
-                    collectionType = env.GetVariable("cells").Type;
+                {
+                    try
+                    {
+                        collectionType = env.GetVariable("cells").Type;
+                    }
+                    catch (SucoTempCompileException tc)
+                    {
+                        throw new SucoCompileException(tc.Message, clause.StartIndex, clause.EndIndex);
+                    }
+                }
 
                 if (collectionType is not SucoListType { Inner: SucoType elementType })
                     throw new SucoCompileException($"The variable “{clause.FromVariable}” does not refer to a list.", clause.StartIndex, clause.EndIndex);

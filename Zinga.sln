@@ -9,6 +9,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PuzzleSolvers", "..\PuzzleS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SvgPuzzleConstraints", "..\SvgPuzzleConstraints\Src\SvgPuzzleConstraints.csproj", "{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZingaWasm", "ZingaWasm\ZingaWasm.csproj", "{F911EC69-67D5-4769-A549-E7EC0876DA04}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ZingaLib", "ZingaLib\ZingaLib.csproj", "{00EB7B3C-171E-4703-9443-2C900D242626}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +31,14 @@ Global
 		{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Release|Any CPU.Build.0 = Release|Any CPU
+		{00EB7B3C-171E-4703-9443-2C900D242626}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{00EB7B3C-171E-4703-9443-2C900D242626}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00EB7B3C-171E-4703-9443-2C900D242626}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{00EB7B3C-171E-4703-9443-2C900D242626}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
