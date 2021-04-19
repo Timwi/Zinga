@@ -4,6 +4,7 @@ using System.Data.Entity;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using RT.Json;
 using RT.Serialization;
 using RT.Servers;
 using RT.TagSoup;
@@ -45,15 +46,10 @@ namespace Zinga
             const double btnHeight = .8;
             const double margin = .135;
 
-            var btns = Ut.NewArray<(string label, bool isSvg, string id, double width, int row, bool color)>(9, btn => ((btn + 1).ToString(), false, (btn + 1).ToString(), .8, 0, true))
-                .Concat(Ut.NewArray<(string label, bool isSvg, string id, double width, int row, bool color)>(
-                    ("Givens", false, "normal", 1.1, 1, false),
-                    ("Constraints", false, "center", 1, 1, false),
-
-                    ("Delete", false, "clear", 1, 2, false),
-                    ("Undo", false, "undo", 1, 2, false),
-                    ("Redo", false, "redo", 1, 2, false),
-                    ("More", false, "sidebar", 1, 2, false)));
+            var btns = Ut.NewArray<(string label, bool isSvg, string id, double width, int row, bool color)>(
+                    ("Delete", false, "clear", 1, 0, false),
+                    ("Undo", false, "undo", 1, 0, false),
+                    ("Redo", false, "redo", 1, 0, false));
 
             string renderButton(string id, double x, double y, double width, string label, bool color, bool isSvg = false) => $@"
                 <g class='button' id='{id}' transform='translate({x}, {y})'>
@@ -71,24 +67,54 @@ namespace Zinga
                     renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
             }).JoinString();
 
-            var constraintTypesJson = ClassifyJson.Serialize(constraintTypes);
-            // Avoid transmitting the SVG code as we don’t need that and it can be a bit much
-            foreach (var kvp in constraintTypesJson.GetDict())
-                foreach (var removable in new[] { "SvgDefsSuco", "SvgSuco", "PreviewSvg" })
-                    if (kvp.Value.ContainsKey(removable))
-                        kvp.Value.Remove(removable);
-            var decodedValues = constraints.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].Variables)).ToArray();
-            var constraintsJson = ClassifyJson.Serialize(constraints);
+            var constraintsJson = constraints.Select(c => new JsonDict
+            {
+                ["type"] = c.ConstraintID,
+                ["values"] = new JsonRaw(c.ValuesJson)
+            }).ToJsonList().ToString();
+            var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => new JsonDict
+            {
+                ["global"] = kvp.Value.Global,
+                ["kind"] = kvp.Value.Kind.ToString(),
+                ["logic"] = kvp.Value.LogicSuco,
+                ["name"] = kvp.Value.Name,
+                ["preview"] = kvp.Value.PreviewSvg,
+                ["public"] = kvp.Value.Public,
+                ["svgdefs"] = kvp.Value.SvgDefsSuco,
+                ["svg"] = kvp.Value.SvgSuco,
+                ["variables"] = new JsonRaw(kvp.Value.VariablesJson)
+            }).ToString();
 
             return HttpResponse.Html(new HTML(
                 new HEAD(
                     new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
                     new META { name = "viewport", content = "width=device-width,initial-scale=1.0" },
                     new TITLE($"Editing: {puzzle.Title} by {puzzle.Author}"),
+                    new RawTag(@"<script src='/_framework/blazor.webassembly.js' autostart='false'></script>"),
 
 #if DEBUG
                     new SCRIPTLiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "EditPuzzle.js"))),
-                    new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.css"))),
+                    new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Font.css"))),
+                    //new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.css"))),
+                    new STYLE { id = "auto-css" },
+                    new SCRIPTLiteral(@"
+                        (function() {
+                            let socket = new WebSocket('ws://localhost:8990/css-websocket');
+                            socket.onopen = function()
+                            {
+                                socket.send('css');
+                                window.setInterval(function() { socket.send('css'); }, 500);
+                            };
+                            socket.onclose = function()
+                            {
+                                console.log('Socket closed.');
+                            };
+                            socket.onmessage = function(msg)
+                            {
+                                document.getElementById('auto-css').innerText = msg.data.replace(/\r|\n/g, ' ');
+                            };
+                        })();
+                    "),
 #else
                     new SCRIPTLiteral(Resources.EditJs),
                     new STYLELiteral(Resources.Css),
@@ -98,10 +124,19 @@ namespace Zinga
                     new DIV { id = "topbar" }._(
                         new DIV { class_ = "title" }._(puzzle.Title),
                         puzzle.Author == null ? null : new DIV { class_ = "author" }._("by ", puzzle.Author)),
-                    new DIV { class_ = "puzzle" }.Data("constrainttypes", constraintTypesJson).Data("constraints", ClassifyJson.Serialize(constraints)).Data("puzzle", ClassifyJson.Serialize(puzzle))._(
-                        new DIV { class_ = "puzzle-container", tabindex = 0 }._(new RawTag($@"
-                            <svg viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
-                                <defs></defs>
+                    new DIV { class_ = "puzzle" }.Data("constrainttypes", constraintTypesJson).Data("constraints", constraintsJson).Data("puzzle", ClassifyJson.Serialize(puzzle))._(
+                        new DIV { class_ = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
+                            <svg viewBox='-0.5 -0.5 10 11.2' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
+                                <defs>
+                                    <filter id='constraint-selection-shadow' x='-1' y='-1' width='500%' height='500%'>
+                                        <feMorphology in='SourceGraphic' operator='dilate' radius='.05' result='constraint-selection-shadow-1' />
+                                        <feColorMatrix in='constraint-selection-shadow-1' type='matrix' values='0 0 0 0 .24 0 0 0 0 .47 0 0 0 0 .96 0 0 0 5 0' result='constraint-selection-shadow-2' />
+                                        <feGaussianBlur in='constraint-selection-shadow-2' stdDeviation='.05' result='constraint-selection-shadow-3' />
+                                        <feColorMatrix in='SourceGraphic' type='matrix' values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 5 0' result='constraint-selection-shadow-4' />
+                                        <feComposite in='constraint-selection-shadow-4' in2='constraint-selection-shadow-3' />
+                                    </filter>
+                                </defs>
+                                <defs id='constraint-defs'></defs>
                                 <g class='full-puzzle'>
                                     <g transform='translate(0, 9.5)' class='button-row'>{renderButtonArea(btns, 9)}</g>
                                     <g class='global-constraints'></g>
@@ -133,16 +168,44 @@ namespace Zinga
                                         <line x1='0' y1='8' x2='9' y2='8' stroke='black' stroke-width='.01' />
                                         <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
 
-                                        <g class='over-svg'></g>
+                                        <g id='constraint-svg'></g>
+                                        <g id='over-svg'></g>
+
+                                        {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='n' data-offset='{col}' d='m {col + .3} 9.3 .2 -.2 .2 .2z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='e' data-offset='{row}' d='m -.3 {row + .3} .2 .2 -.2 .2z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='w' data-offset='{row}' d='m 9.3 {row + .3} -.2 .2 .2 .2z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='s' data-offset='{col}' d='m {col + .3} -.3 .2 .2 .2 -.2z' fill='black' />").JoinString()}
+
+                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='se' data-offset='{offset - 8}' d='m {(offset < 8 ? 0 : offset - 8) - .1} {(offset > 8 ? 0 : 8 - offset) - .1} -.2 0 .2 -.2 z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='sw' data-offset='{offset}' d='m {(offset < 8 ? offset + 1 : 9) + .1} {(offset > 8 ? offset - 8 : 0) - .1} 0 -.2 .2 .2 z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='nw' data-offset='{8 - offset}' d='m {(offset < 8 ? 9 : 17 - offset) + .1} {(offset > 8 ? 9 : offset + 1) + .1} .2 0 -.2 .2 z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='ne' data-offset='{16 - offset}' d='m {(offset < 8 ? 8 - offset : 0) - .1} {(offset > 8 ? 17 - offset : 9) + .1} -.2 0 .2 .2 z' fill='black' />").JoinString()}
                                     </g>
                                 </g>
                             </svg>")),
-                        new DIV { class_ = "sidebar" }._(
-                            new DIV { class_ = "sidebar-content" }._(
-                                new DIV { class_ = "rules" }._(new DIV { class_ = "rules-text" }._(
-                                    puzzle.Rules.NullOr(r => Regex.Split(r, @"\r?\n").Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => new P(s)))
-                                        ?? (object) "Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.")),
-                                puzzle.Links == null || puzzle.Links.Length == 0 ? null : new UL { class_ = "links" }._(puzzle.Links.Select(link => new LI(new A { href = link.Url }._(link.Text))))))))));
+                        new DIV { class_ = "sidebar", tabindex = 0, accesskey = "." }._(
+                            new DIV { class_ = "tabs" }._(
+                                new DIV { class_ = "tab tab-puzzle", accesskey = "p", tabindex = -1 }.Data("tab", "puzzle")._("Puzzle".Accel('P')),
+                                new DIV { class_ = "tab tab-constraints", accesskey = "c", tabindex = -1 }.Data("tab", "constraints")._("Constraints".Accel('C'))),
+
+                            new DIV { class_ = "tabc", id = "tab-puzzle" }._(
+                                new SECTION(
+                                    new DIV { class_ = "label" }._("Rules"),
+                                    new DIV(new TEXTAREA { id = "puzzle-rules-input", accesskey = "/" }._(puzzle.Rules))),
+                                new SECTION(
+                                    new DIV { class_ = "label" }._("Givens"),
+                                    new DIV { id = "givens" }._(
+                                        Enumerable.Range(1, 9).Select(n => new DIV { id = $"given-{n}", class_ = "btn given-btn" }.Data("given", n)._(new SPAN(n))),
+                                        new DIV { class_ = "list" }
+                                    ))),
+                            new DIV { class_ = "tabc", id = "tab-constraints" }._(
+                                new SECTION(
+                                    new DIV { class_ = "label" }._("Constraints"),
+                                    new DIV { class_ = "btn", id = "add-constraint" }._(new SPAN("Add constraint")),
+                                    new DIV { id = "constraint-list" }),
+                                new SECTION { id = "constraint-parameters-section" }._(
+                                    new DIV { class_ = "label" },
+                                    new DIV { id = "constraint-parameters" })))))));
         }
     }
 }

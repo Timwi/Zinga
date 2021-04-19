@@ -1,6 +1,6 @@
-﻿using System.Security.Cryptography;
-using RT.Util;
+﻿using RT.Util;
 using RT.Util.ExtensionMethods;
+using Zinga.Lib;
 
 namespace Zinga.Suco
 {
@@ -20,15 +20,9 @@ namespace Zinga.Suco
 
         public override object InterpretMemberAccess(string memberName, object operand) => memberName switch
         {
-            "hash" => hash((string) operand),
+            "hash" => MD5.Compute((string) operand),
             _ => base.InterpretMemberAccess(memberName, operand)
         };
-
-        private string hash(string str)
-        {
-            using var md5 = MD5.Create();
-            return md5.ComputeHash(str.ToUtf8()).ToHex();
-        }
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
         {

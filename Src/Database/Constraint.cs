@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
+using RT.Json;
 using RT.Serialization;
 using RT.Util;
 using Zinga.Suco;
@@ -17,6 +18,7 @@ namespace Zinga.Database
         public bool Public { get; set; }
         public string Name { get; set; }
         public bool Global { get; set; }
+        public ConstraintKind Kind { get; set; }
         public string VariablesJson { get; set; }
         public string LogicSuco { get; set; }
         public string SvgDefsSuco { get; set; }
@@ -27,8 +29,8 @@ namespace Zinga.Database
         private SucoVariable[] _variablesCache;
         public SucoVariable[] Variables
         {
-            get => _variablesCache ??= VariablesJson.NullOr(v => ClassifyJson.Deserialize<SucoVariable[]>(v));
-            set { VariablesJson = ClassifyJson.Serialize(value).ToString(); _variablesCache = value; }
+            get => _variablesCache ??= VariablesJson.NullOr(v => JsonDict.Parse(v).Select(kvp => new SucoVariable(kvp.Key, SucoType.Parse(kvp.Value.GetString()))).ToArray());
+            set { VariablesJson = value.ToJsonDict(v => v.Name, v => v.Type.ToString()).ToString(); _variablesCache = value; }
         }
 
         [ClassifyIgnore]

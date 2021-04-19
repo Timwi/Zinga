@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
@@ -24,5 +25,6 @@ namespace Zinga.Suco
         }
 
         public SucoVariable GetVariable(string name) => _variables.Get(name, null) ?? throw new SucoTempCompileException($"Unknown variable “{name}”.");
+        public SucoVariable[] GetVariables() => _variables.Values.ToArray();
     }
 }

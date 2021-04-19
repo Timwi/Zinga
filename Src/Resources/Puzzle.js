@@ -540,22 +540,12 @@
             undoBuffer = undoB ? undoB.split(' ') : [encodeState(state)];
             redoBuffer = redoB ? redoB.split(' ') : [];
 
+            let str = localStorage.getItem(`zinga-${puzzleId}`);
             let item = null;
-            if (puzzleDiv.dataset.progress)
-            {
-                item = JSON.parse(puzzleDiv.dataset.progress);
-                if (undoB && undoB.includes(encodeState(item)))
-                    item = null;
-            }
-
-            if (item === null)
-            {
-                str = localStorage.getItem(`zinga-${puzzleId}`);
-                if (str !== null)
-                    try { item = JSON.parse(localStorage.getItem(`zinga-${puzzleId}`)); }
-                    catch { item = decodeState(str); }
-            }
-            if (item && item.cornerNotation && item.centerNotation && item.enteredDigits)
+            if (str !== null)
+                try { item = decodeState(str); }
+                catch { item = null; }
+            if (item && item.cornerNotation && item.centerNotation && item.enteredDigits && item.colors)
                 state = item;
         }
         catch
@@ -642,7 +632,6 @@
 
                 let sudokuCell = document.getElementById(`sudoku-${cell}`);
                 setClass(sudokuCell, 'highlighted', selectedCells.includes(cell) || highlightedDigits.includes(digit));
-                setClass(sudokuCell, 'invalid', digit === false);
 
                 let intendedText = null;
                 let intendedCenterDigits = null;

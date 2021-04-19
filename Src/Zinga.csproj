@@ -95,9 +95,11 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AutoUpdatingCssWebsocket.cs" />
     <Compile Include="CommandLine.cs" />
     <Compile Include="Database\Configuration.cs" />
     <Compile Include="Database\Constraint.cs" />
+    <Compile Include="Database\ConstraintKind.cs" />
     <Compile Include="Database\Db.cs" />
     <Compile Include="Database\Puzzle.cs" />
     <Compile Include="Database\PuzzleConstraint.cs" />
@@ -126,6 +128,7 @@
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Resources\EditPuzzle.js" />
     <Content Include="Resources\Puzzle.css" />
     <Content Include="Resources\Puzzle.js">
       <Generator>ResXFileCodeGenerator</Generator>

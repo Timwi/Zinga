@@ -10,6 +10,7 @@ using RT.Servers;
 using RT.TagSoup;
 using RT.Util;
 using RT.Util.ExtensionMethods;
+using Zinga.Lib;
 using Zinga.Suco;
 
 namespace Zinga
