@@ -427,22 +427,10 @@ svg.puzzle-svg {
         display: none;
     }
 
-    .sidebar #add-constraint > span {
-        padding-left: .7cm;
-    }
-        .sidebar #add-constraint > span::after {
-            content: '';
-            position: absolute;
-            top: .1cm;
-            left: .1cm;
-            width: .75cm;
-            height: .75cm;
-            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M4 2h2v2h2v2h-2v2h-2v-2h-2v-2h2z" fill="black" /></svg>');
-        }
-
     .sidebar #constraint-list {
         border: 1px solid black;
         background: white;
+        margin-top: .1cm;
     }
     .sidebar .constraint {
         font-size: 12pt;
@@ -498,3 +486,53 @@ svg.puzzle-svg {
         .sidebar .constraint .variables .variable .value {
             background: hsl(220, 80%, 95%);
         }
+
+        .sidebar .constraint .variables .mini-btn {
+            display: inline-block;
+            background: white;
+            border: 1px solid #444;
+            border-radius: .15cm;
+            width: 20px;
+            height: 20px;
+            margin-right: .1cm;
+            vertical-align: bottom;
+        }
+            .sidebar .constraint .variables .mini-btn.show {
+                background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 40 5 L 10.09375 35 L 40 65 L 40 44.708984 C 73.379622 44.022868 83.374266 48.868838 65.09375 90 L 80.09375 90 C 98.976958 33.350377 93.159505 23.925067 40 24.757812 L 40 5 z" fill="%23507fcb" /></svg>');
+            }
+            .sidebar .constraint .variables .mini-btn.set {
+                background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 95,60.09375 65,90 35,60.09375 H 55.291016 C 55.977132,26.714128 51.131162,16.719484 9.9999996,35 V 20 C 66.649623,1.1167916 76.074933,6.9342446 75.242188,60.09375 Z" fill="%232fa639" /></svg>');
+            }
+
+    .sidebar #constraint-add-section {
+        font-size: 12pt;
+    }
+        .sidebar #constraint-add-section .main {
+            padding: 0 .25cm;
+        }
+            .sidebar #constraint-add-section .main ul {
+                padding: 0 0 0 1em;
+            }
+
+            .sidebar #constraint-add-section .main p {
+                font-weight: bold;
+            }
+
+            .sidebar #constraint-add-section .main table {
+                border-spacing: .05cm;
+                width: 100%;
+            }
+                .sidebar #constraint-add-section .main th {
+                    text-align: center;
+                    background: hsl(220, 80%, 80%);
+                    padding: .05cm .25cm;
+                }
+                .sidebar #constraint-add-section .main td {
+                    background: white;
+                    padding: .05cm .25cm;
+                }
+            .sidebar #constraint-add-section .main hr {
+                border: none;
+                border-bottom: 1px solid hsl(220, 40%, 60%);
+            }
+

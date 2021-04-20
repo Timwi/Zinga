@@ -1,0 +1,1 @@
+Arrow constraint: doesn’t render if there are only two cells (sum cell + arrow head)

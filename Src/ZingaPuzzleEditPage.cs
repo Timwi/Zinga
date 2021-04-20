@@ -18,8 +18,16 @@ namespace Zinga
 {
     public partial class ZingaPropellerModule
     {
+        private static DbConstraint[] _constraintsWithShortcuts;
+
         public HttpResponse PuzzleEditPage(HttpRequest req)
         {
+            if (_constraintsWithShortcuts == null)
+                lock (this)
+                    if (_constraintsWithShortcuts == null)
+                        using (var db = new Db())
+                            _constraintsWithShortcuts = db.Constraints.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).ToArray();
+
             Puzzle puzzle;
             Dictionary<int, DbConstraint> constraintTypes;
             PuzzleConstraint[] constraints;
@@ -43,13 +51,16 @@ namespace Zinga
                 constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).AsEnumerable().ToDictionary(c => c.ConstraintID);
             }
 
+            foreach (var cws in _constraintsWithShortcuts)
+                constraintTypes[cws.ConstraintID] = cws;
+
             const double btnHeight = .8;
             const double margin = .135;
 
             var btns = Ut.NewArray<(string label, bool isSvg, string id, double width, int row, bool color)>(
-                    ("Delete", false, "clear", 1, 0, false),
-                    ("Undo", false, "undo", 1, 0, false),
-                    ("Redo", false, "redo", 1, 0, false));
+                ("Delete", false, "clear", 1, 0, false),
+                ("Undo", false, "undo", 1, 0, false),
+                ("Redo", false, "redo", 1, 0, false));
 
             string renderButton(string id, double x, double y, double width, string label, bool color, bool isSvg = false) => $@"
                 <g class='button' id='{id}' transform='translate({x}, {y})'>
@@ -72,17 +83,23 @@ namespace Zinga
                 ["type"] = c.ConstraintID,
                 ["values"] = new JsonRaw(c.ValuesJson)
             }).ToJsonList().ToString();
-            var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => new JsonDict
+            var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp =>
             {
-                ["global"] = kvp.Value.Global,
-                ["kind"] = kvp.Value.Kind.ToString(),
-                ["logic"] = kvp.Value.LogicSuco,
-                ["name"] = kvp.Value.Name,
-                ["preview"] = kvp.Value.PreviewSvg,
-                ["public"] = kvp.Value.Public,
-                ["svgdefs"] = kvp.Value.SvgDefsSuco,
-                ["svg"] = kvp.Value.SvgSuco,
-                ["variables"] = new JsonRaw(kvp.Value.VariablesJson)
+                var dic = new JsonDict
+                {
+                    ["global"] = kvp.Value.Global,
+                    ["kind"] = kvp.Value.Kind.ToString(),
+                    ["logic"] = kvp.Value.LogicSuco,
+                    ["name"] = kvp.Value.Name,
+                    ["preview"] = kvp.Value.PreviewSvg,
+                    ["public"] = kvp.Value.Public,
+                    ["svgdefs"] = kvp.Value.SvgDefsSuco,
+                    ["svg"] = kvp.Value.SvgSuco,
+                    ["variables"] = new JsonRaw(kvp.Value.VariablesJson)
+                };
+                if (kvp.Value.Shortcut != null)
+                    dic["shortcut"] = kvp.Value.Shortcut;
+                return dic;
             }).ToString();
 
             return HttpResponse.Html(new HTML(
@@ -196,16 +213,21 @@ namespace Zinga
                                     new DIV { class_ = "label" }._("Givens"),
                                     new DIV { id = "givens" }._(
                                         Enumerable.Range(1, 9).Select(n => new DIV { id = $"given-{n}", class_ = "btn given-btn" }.Data("given", n)._(new SPAN(n))),
-                                        new DIV { class_ = "list" }
-                                    ))),
+                                        new DIV { class_ = "list" }))),
                             new DIV { class_ = "tabc", id = "tab-constraints" }._(
-                                new SECTION(
+                                new SECTION { id = "constraints-section" }._(
                                     new DIV { class_ = "label" }._("Constraints"),
-                                    new DIV { class_ = "btn", id = "add-constraint" }._(new SPAN("Add constraint")),
                                     new DIV { id = "constraint-list" }),
-                                new SECTION { id = "constraint-parameters-section" }._(
-                                    new DIV { class_ = "label" },
-                                    new DIV { id = "constraint-parameters" })))))));
+                                new SECTION { id = "constraint-add-section" }._(
+                                    new DIV { class_ = "label" }._("Add a constraint"),
+                                    new DIV { class_ = "main" }._(
+                                        new UL(
+                                            new LI("Select a set of cells in the grid."),
+                                            new LI("Press a lower-case letter to add one of the common constraints listed below."),
+                                            new LI("Press Shift with a letter to search for more constraints.")),
+                                        new HR(),
+                                        new P("Common constraint shortcuts:"),
+                                        new TABLE(_constraintsWithShortcuts.Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))))))))))));
         }
     }
 }

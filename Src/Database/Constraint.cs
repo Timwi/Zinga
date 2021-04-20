@@ -24,6 +24,7 @@ namespace Zinga.Database
         public string SvgDefsSuco { get; set; }
         public string SvgSuco { get; set; }
         public string PreviewSvg { get; set; }
+        public string Shortcut { get; set; }
 
         [ClassifyIgnore]
         private SucoVariable[] _variablesCache;

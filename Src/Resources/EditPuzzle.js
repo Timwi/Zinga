@@ -21,6 +21,33 @@
         };
     }
 
+    function inRange(x) { return x >= 0 && x < 9; }
+    function adjacent(cell)
+    {
+        let list = [];
+        let x = cell % 9;
+        let y = (cell / 9) | 0;
+        for (let xx = x - 1; xx <= x + 1; xx++)
+            if (inRange(xx))
+                for (let yy = y - 1; yy <= y + 1; yy++)
+                    if (inRange(yy) && (xx != x || yy != y))
+                        list.push(xx + 9 * yy);
+        return list;
+    }
+
+    function orthogonal(cell)
+    {
+        let list = [];
+        let x = cell % 9;
+        let y = (cell / 9) | 0;
+        for (let xx = x - 1; xx <= x + 1; xx++)
+            if (inRange(xx))
+                for (let yy = y - 1; yy <= y + 1; yy++)
+                    if (inRange(yy) && (xx == x || yy == y) && (xx != x || yy != y))
+                        list.push(xx + 9 * yy);
+        return list;
+    }
+
     function setClass(elem, className, setUnset)
     {
         if (setUnset)
@@ -60,8 +87,9 @@
     let puzzleDiv = document.querySelector('div.puzzle');
     let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
     let sidebarDiv = document.querySelector('div.sidebar');
+    let constraintList = document.getElementById('constraint-list');
     let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
-    let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes || null) || [];
+    let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes || null) || {};
 
     let draggingMode = null;
     puzzleContainer.onmouseup = handler(puzzleContainer.ontouchend = function(ev)
@@ -192,15 +220,19 @@
                 switch (type)
                 {
                     case 'int':
-                        return `<input type='number' step='1' id='${id}' value='${value}' />`;
+                        return `<input type='number' step='1' id='${id}' value='${value | 0}' />`;
                     case 'bool':
                         return `<input type='checkbox' id='${id}'${value ? ` checked='checked'` : ''} />`;
+                    case 'list(cell)':
+                        return `<span class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></span><span class='mini-btn set' id='${id}-set' title='Change to current selection' tabindex='0'></span>`;
                 }
 
                 let listRx = /^list\((.*)\)$/.exec(type);
                 if (listRx !== null)
                 {
                     var uis = [];
+                    if (!Array.isArray(value))
+                        value = [];
                     for (let i = 0; i < value.length; i++)
                         uis.push(`<li>${variableUi(listRx[1], value[i], `${id}-${i}`)}</li>`);
                     return `<ul>${uis.join('')}</ul>`;
@@ -209,7 +241,7 @@
                 return "(not implemented)";
             }
 
-            function setVariableEvents(type, setter, id)
+            function setVariableEvents(type, getter, setter, id)
             {
                 switch (type)
                 {
@@ -218,6 +250,10 @@
                         return;
                     case 'bool':
                         document.getElementById(id).onchange = function() { setter(document.getElementById(id).checked); };
+                        return;
+                    case 'list(cell)':
+                        setButtonHandler(document.getElementById(`${id}-show`), function() { selectedCells = [...getter()]; selectedConstraints = []; updateVisuals(); });
+                        setButtonHandler(document.getElementById(`${id}-set`), function() { if (setter(selectedCells)) updateVisuals({ storage: true, svg: true }); });
                         return;
                 }
             }
@@ -237,15 +273,35 @@
                         <div class='variables'>${variableHtml}</div>
                     </div>`;
             }
-            let constraintList = document.getElementById('constraint-list');
             constraintList.innerHTML = constraintListHtml;
             Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv =>
             {
                 let cIx = constraintDiv.dataset.index | 0;
                 let constraint = state.constraints[cIx];
+                let cType = constraintTypes[constraint.type];
 
-                for (let v of Object.keys(constraintTypes[constraint.type].variables))
-                    setVariableEvents(constraintTypes[constraint.type].variables[v], nv => { saveUndo(); constraint.values[v] = nv; updateVisuals({ storage: true, svg: true }); }, `constraint-${cIx}-${v}`);
+                for (let v of Object.keys(cType.variables))
+                    setVariableEvents(
+                        cType.variables[v],
+                        () => constraint.values[v],
+                        nv =>
+                        {
+                            if (cType.kind === 'SingleCell' ? (v === 'cell') :
+                                cType.kind === 'FourCells' ? (v === 'topleftcell') : (v === 'cells'))
+                            {
+                                let result = enforceConstraintKind(cType.kind, nv);
+                                if (result === false)
+                                    return false;
+                                nv = result;
+                                selectedCells = [];
+                                selectedConstraints = [cIx];
+                            }
+                            saveUndo();
+                            constraint.values[v] = nv;
+                            updateVisuals({ storage: true, svg: true });
+                            return true;
+                        },
+                        `constraint-${cIx}-${v}`);
 
                 setButtonHandler(constraintDiv, ev =>
                 {
@@ -495,7 +551,6 @@
 
     function selectCellLine(dir)
     {
-        console.log([dir, lastCellLineDir]);
         let c = lastCellLineCell !== null ? lastCellLineCell : selectedCells.length === 0 ? 0 : selectedCells[selectedCells.length - 1]
         let cells, nDir = null;
         if ((lastCellLineDir === 's' && dir === 'e') || (dir === 's' && lastCellLineDir === 'e'))
@@ -573,6 +628,153 @@
         }
     });
 
+    function enforceConstraintKind(kind, cells)
+    {
+        if (cells.length === 0)
+        {
+            alert("Please select some cells for this constraint.");
+            return false;
+        }
+
+        switch (kind)
+        {
+            case 'Path':
+                if (cells.length < 2)
+                {
+                    alert("This constraint requires at least two cells.");
+                    return false;
+                }
+                if (Array(cells.length - 1).fill(null).some((_, c) => !adjacent(cells[c]).includes(cells[c + 1])))
+                {
+                    alert("This constraint requires each cell to be adjacent to the previous, forming a path.");
+                    return false;
+                }
+                return cells;
+
+            case 'Region':
+            case 'MatchingRegions':
+                let copy = [...cells];
+                let region = [copy.pop()];
+                while (copy.length > 0)
+                {
+                    // Find an orthogonal cell
+                    let ix = copy.findIndex(cell => region.some(r => orthogonal(cell).includes(r)));
+                    if (ix === -1)
+                    {
+                        alert("This constraint requires an orthogonally connected region of cells.");
+                        return false;
+                    }
+                    region.push(copy[ix]);
+                    copy.splice(ix, 1);
+                }
+                region.sort((c1, c2) => c1 - c2);
+                return region;
+
+            case 'RowColumn':
+                if (cells.length < 2)
+                {
+                    alert("Select at least two cells that are in the same row or column.");
+                    return false;
+                }
+                let row = cells.every(c => ((c / 9) | 0) === ((cells[0] / 9) | 0)) ? ((cells[0] / 9) | 0) : null;
+                let col = cells.every(c => (c % 9) === (cells[0] % 9)) ? (cells[0] % 9) : null;
+                if (row === null && col === null)
+                {
+                    alert("This constraint requires a row or a column.");
+                    return false;
+                }
+                if (cells[1] > cells[0])
+                    cells = row !== null ? Array(9).fill(null).map((_, c) => c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * r);
+                else
+                    cells = row !== null ? Array(9).fill(null).map((_, c) => 8 - c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * (8 - r));
+                return cells;
+
+            case 'Diagonal':
+                if (cells.length < 2)
+                {
+                    alert("Select at least two cells that are on the same diagonal.");
+                    return false;
+                }
+                let forward = cells.every(c => (c % 9) - ((c / 9) | 0) === (cells[0] % 9) - ((cells[0] / 9) | 0)) ? (cells[0] % 9) - ((cells[0] / 9) | 0) : null;
+                let backward = cells.every(c => (c % 9) + ((c / 9) | 0) === (cells[0] % 9) + ((cells[0] / 9) | 0)) ? (cells[0] % 9) + ((cells[0] / 9) | 0) : null;
+                if (forward === null && backward === null)
+                {
+                    alert("This constraint requires a diagonal.");
+                    return false;
+                }
+                cells = (cells[1] > cells[0] ? Array(81).fill(null).map((_, c) => c) : Array(81).fill(null).map((_, c) => 80 - c))
+                    .filter(c => forward !== null ? ((c % 9) - ((c / 9) | 0) === forward) : ((c % 9) + ((c / 9) | 0) === backward));
+                return cells;
+
+            case 'TwoCells':
+                if (cells.length !== 2 || !orthogonal(cells[0]).includes(cells[1]))
+                {
+                    alert("Select two cells that are orthogonally adjacent to one another.");
+                    return false;
+                }
+                return cells;
+
+            case 'FourCells':
+                if (cells.length !== 4)
+                {
+                    alert("Select four cells that form a 2×2 square.");
+                    return false;
+                }
+                let sorted = [...cells];
+                sorted.sort((c1, c2) => c1 - c2);
+                if (sorted[0] % 9 === 9 - 1 || sorted[1] != sorted[0] + 1 || ((sorted[0] / 9) | 0) === 9 - 1 || sorted[2] != sorted[0] + 9 || sorted[3] != sorted[0] + 9 + 1)
+                {
+                    alert("Select four cells that form a 2×2 square.");
+                    return;
+                }
+                return sorted;
+        }
+    }
+
+    function addConstraintWithShortcut(letter)
+    {
+        // Find constraint with the right shortcut key
+        let sc = Object.keys(constraintTypes).filter(id => constraintTypes[id].shortcut === letter);
+        if (sc.length === 0)
+            return;
+
+        let cType = constraintTypes[sc[0]];
+        let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
+        if (enforceResult === false)
+            return;
+
+        saveUndo();
+        let cellsType = cType.variables.cells;
+        let prevLength = state.constraints.length;
+        if (cType.kind === 'SingleCell')
+        {
+            for (let cell of selectedCells)
+                state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'cell': cell } });
+        }
+        else if (cType.kind === 'FourCells')
+            state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'topleftcell': selectedCells[0] } });
+        else
+            state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'cells': cellsType === 'list(list(cell))' ? [selectedCells] : selectedCells } });
+        selectedConstraints = Array(state.constraints.length - prevLength).fill(null).map((_, c) => c + prevLength);
+        selectedCells = [];
+        updateVisuals({ storage: true, svg: true, ui: true });
+
+        for (let cIx = prevLength; cIx < state.constraints.length; cIx++)
+        {
+            let constraintElem = document.getElementById(`constraint-${cIx}`);
+            let uiElement = constraintElem.querySelector('input,textarea,select');
+            if (uiElement !== null)
+            {
+                selectTab('constraints');
+                setClass(constraintElem, 'expanded', true);
+                uiElement.focus();
+                if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
+                    uiElement.select();
+                break;
+            }
+        }
+    }
+
     let keepMove = false;
     puzzleContainer.addEventListener("keydown", ev =>
     {
@@ -620,6 +822,35 @@
                 clearCells();
                 break;
 
+            case 'KeyA':
+            case 'KeyB':
+            case 'KeyC':
+            case 'KeyD':
+            case 'KeyE':
+            case 'KeyF':
+            case 'KeyG':
+            case 'KeyH':
+            case 'KeyI':
+            case 'KeyJ':
+            case 'KeyK':
+            case 'KeyL':
+            case 'KeyM':
+            case 'KeyN':
+            case 'KeyO':
+            case 'KeyP':
+            case 'KeyQ':
+            case 'KeyR':
+            case 'KeyS':
+            case 'KeyT':
+            case 'KeyU':
+            case 'KeyV':
+            case 'KeyW':
+            case 'KeyX':
+            case 'KeyY':
+            case 'KeyZ':
+                addConstraintWithShortcut(str.substr(str.length - 1).toLowerCase());
+                break;
+
             // Navigation
             case 'ArrowUp': ArrowMovement(0, -1, 'clear'); break;
             case 'ArrowDown': ArrowMovement(0, 1, 'clear'); break;
@@ -661,7 +892,7 @@
                 break;
 
             // Debug
-            case 'KeyL':
+            case 'Ctrl+KeyL':
                 console.log(selectedCells.join(", "));
                 break;
 
