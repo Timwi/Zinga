@@ -9,5 +9,8 @@ namespace Zinga.Wasm
 
         [JSInvokable]
         public static string RenderConstraintSvgs(string constraintTypesJson, string constraintsJson) => Lib.Commands.RenderConstraintSvgs(constraintTypesJson, constraintsJson);
+
+        [JSInvokable]
+        public static string GenerateOutline(string regionsJson) => Lib.Commands.GenerateOutline(regionsJson);
     }
 }

@@ -187,6 +187,7 @@ namespace Zinga
 
                                         <g id='constraint-svg'></g>
                                         <g id='over-svg'></g>
+                                        <g id='temp-svg'></g>
 
                                         {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='n' data-offset='{col}' d='m {col + .3} 9.3 .2 -.2 .2 .2z' fill='black' />").JoinString()}
                                         {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='e' data-offset='{row}' d='m -.3 {row + .3} .2 .2 -.2 .2z' fill='black' />").JoinString()}
@@ -212,7 +213,7 @@ namespace Zinga
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Givens"),
                                     new DIV { id = "givens" }._(
-                                        Enumerable.Range(1, 9).Select(n => new DIV { id = $"given-{n}", class_ = "btn given-btn" }.Data("given", n)._(new SPAN(n))),
+                                        Enumerable.Range(1, 9).Select(n => new BUTTON { type = btype.button, id = $"given-{n}", class_ = "btn given-btn" }.Data("given", n)._(new SPAN(n))),
                                         new DIV { class_ = "list" }))),
                             new DIV { class_ = "tabc", id = "tab-constraints" }._(
                                 new SECTION { id = "constraints-section" }._(

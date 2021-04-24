@@ -402,12 +402,15 @@ svg.puzzle-svg {
     border: 2px solid black;
     border-radius: 8px;
     margin: .3cm .05cm .2cm;
-    padding: .1cm .2cm;
     position: relative;
+    cursor: pointer;
+    height: 1cm;
+    font-size: 18pt;
 }
 
-    .sidebar .btn > span {
-        font-size: 18pt;
+    .sidebar .btn:focus {
+        border: 3px solid #46f;
+        outline: none;
     }
 
 .sidebar .given-btn {
@@ -496,12 +499,22 @@ svg.puzzle-svg {
             height: 20px;
             margin-right: .1cm;
             vertical-align: bottom;
+            cursor: pointer;
         }
+            .sidebar .constraint .variables .mini-btn:focus {
+                border: 2px solid #46f;
+                outline: none;
+            }
             .sidebar .constraint .variables .mini-btn.show {
                 background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 40 5 L 10.09375 35 L 40 65 L 40 44.708984 C 73.379622 44.022868 83.374266 48.868838 65.09375 90 L 80.09375 90 C 98.976958 33.350377 93.159505 23.925067 40 24.757812 L 40 5 z" fill="%23507fcb" /></svg>');
             }
             .sidebar .constraint .variables .mini-btn.set {
                 background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 95,60.09375 65,90 35,60.09375 H 55.291016 C 55.977132,26.714128 51.131162,16.719484 9.9999996,35 V 20 C 66.649623,1.1167916 76.074933,6.9342446 75.242188,60.09375 Z" fill="%232fa639" /></svg>');
+                text-align: left;
+                text-shadow: 0 0 3px white;
+                font-weight: bold;
+                font-size: 9pt;
+                padding: 5px 0 0 1px;
             }
 
     .sidebar #constraint-add-section {

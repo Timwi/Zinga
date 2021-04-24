@@ -132,5 +132,14 @@ namespace Zinga.Lib
                 return new JsonDict { ["status"] = "error", ["message"] = e.Message, ["type"] = e.GetType().FullName }.ToString();
             }
         }
+
+        public static string GenerateOutline(string regionsJson)
+        {
+            var regions = JsonList.Parse(regionsJson);
+            var svg = new StringBuilder();
+            foreach (var region in regions)
+                svg.Append($"<path d='{ZingaUtil.GenerateSvgPath(region.GetList().Select(v => v.GetInt()).ToArray(), 0, 0)}' stroke='#2668ff' stroke-width='.15' opacity='.75' fill='none' />");
+            return svg.ToString();
+        }
     }
 }

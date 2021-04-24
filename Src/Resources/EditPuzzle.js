@@ -215,7 +215,7 @@
 
         if (opt && opt.ui)
         {
-            function variableUi(type, value, id)
+            function variableUi(type, value, id, kind, cIx)
             {
                 switch (type)
                 {
@@ -224,7 +224,9 @@
                     case 'bool':
                         return `<input type='checkbox' id='${id}'${value ? ` checked='checked'` : ''} />`;
                     case 'list(cell)':
-                        return `<span class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></span><span class='mini-btn set' id='${id}-set' title='Change to current selection' tabindex='0'></span>`;
+                        return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><button type='button' class='mini-btn set' id='${id}-set' title='Set constraint to the current selection' tabindex='0'></button>`;
+                    case 'list(list(cell))':
+                        return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><span class='matching-regions-controls' id='${id}-set' data-constraintix='${cIx}'></span>`;
                 }
 
                 let listRx = /^list\((.*)\)$/.exec(type);
@@ -234,7 +236,7 @@
                     if (!Array.isArray(value))
                         value = [];
                     for (let i = 0; i < value.length; i++)
-                        uis.push(`<li>${variableUi(listRx[1], value[i], `${id}-${i}`)}</li>`);
+                        uis.push(`<li>${variableUi(listRx[1], value[i], `${id}-${i}`, kind, cIx)}</li>`);
                     return `<ul>${uis.join('')}</ul>`;
                 }
 
@@ -252,8 +254,29 @@
                         document.getElementById(id).onchange = function() { setter(document.getElementById(id).checked); };
                         return;
                     case 'list(cell)':
-                        setButtonHandler(document.getElementById(`${id}-show`), function() { selectedCells = [...getter()]; selectedConstraints = []; updateVisuals(); });
-                        setButtonHandler(document.getElementById(`${id}-set`), function() { if (setter(selectedCells)) updateVisuals({ storage: true, svg: true }); });
+                        setButtonHandler(document.getElementById(`${id}-show`), function()
+                        {
+                            selectedCells = [...getter()];
+                            selectedConstraints = [];
+                            updateVisuals();
+                        });
+                        setButtonHandler(document.getElementById(`${id}-set`), function()
+                        {
+                            setter(selectedCells);
+                        });
+                        return;
+                    case 'list(list(cell))':
+                        setButtonHandler(document.getElementById(`${id}-show`), function()
+                        {
+                            selectedCells = [];
+                            for (let inner of getter())
+                                selectedCells.push(...inner);
+                            selectedConstraints = [];
+                            updateVisuals();
+                        });
+                        let setDiv = document.getElementById(`${id}-set`);
+                        setDiv.zingaSetter = setter;
+                        setDiv.zingaRegions = getter();
                         return;
                 }
             }
@@ -263,13 +286,14 @@
             for (var cIx = 0; cIx < state.constraints.length; cIx++)
             {
                 let constraint = state.constraints[cIx];
+                let constraintType = constraintTypes[constraint.type];
                 let variableHtml = '';
-                for (let v of Object.keys(constraintTypes[constraint.type].variables))
-                    variableHtml += `<div class='variable'><div class='name'>${v}</div><div class='value'>${variableUi(constraintTypes[constraint.type].variables[v], constraint.values[v], `constraint-${cIx}-${v}`)}</div></div>`;
+                for (let v of Object.keys(constraintType.variables))
+                    variableHtml += `<div class='variable'><div class='name'>${v}</div><div class='value'>${variableUi(constraintType.variables[v], constraint.values[v], `constraint-${cIx}-${v}`, constraintType.kind, cIx)}</div></div>`;
 
                 constraintListHtml += `
                     <div class='constraint' id='constraint-${cIx}' data-index='${cIx}'>
-                        <div class='name'>${constraintTypes[constraint.type].name}<div class='expand'></div></div>
+                        <div class='name'>${constraintType.name}<div class='expand'></div></div>
                         <div class='variables'>${variableHtml}</div>
                     </div>`;
             }
@@ -286,7 +310,10 @@
                         () => constraint.values[v],
                         nv =>
                         {
-                            if (cType.kind === 'SingleCell' ? (v === 'cell') :
+                            if (v === 'cells' && cType.kind === 'MatchingRegions')
+                            {
+                            }
+                            else if (cType.kind === 'SingleCell' ? (v === 'cell') :
                                 cType.kind === 'FourCells' ? (v === 'topleftcell') : (v === 'cells'))
                             {
                                 let result = enforceConstraintKind(cType.kind, nv);
@@ -307,6 +334,7 @@
                 {
                     if (ev.target.nodeName === 'INPUT')
                         return true;
+                    sidebarDiv.focus();
                     if (ev.shiftKey && !ev.ctrlKey)
                         selectConstraintRange(lastSelectedConstraint, cIx);
                     else if (ev.ctrlKey && !ev.shiftKey)
@@ -348,6 +376,40 @@
         // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
         if (!constraintSelectionUpdated)
             updateConstraintSelection();
+
+        // Constraint UI that has cell region UI
+        let matchingRegions = null;
+        Array.from(document.querySelectorAll('.matching-regions-controls')).forEach(regCtrl =>
+        {
+            if (matchingRegions === null)
+                matchingRegions = findMatchingRegions(selectedCells);
+            let html = '';
+            for (let regions of matchingRegions)
+                html += `<button type='button' class='mini-btn set' title='Set constraint to a group of ${regions.length} regions' tabindex='0' data-regions='${JSON.stringify(regions)}'>${regions.length}</button>`;
+            regCtrl.innerHTML = html;
+            let setter = regCtrl.zingaSetter;
+            Array.from(regCtrl.querySelectorAll('.set')).forEach(btn =>
+            {
+                btn.onmouseover = function()
+                {
+                    dotNet('GenerateOutline', [btn.dataset.regions], svg => { document.getElementById('temp-svg').innerHTML = svg; });
+                };
+                btn.onmouseout = function()
+                {
+                    document.getElementById('temp-svg').innerHTML = '';
+                };
+                setButtonHandler(btn, () =>
+                {
+                    document.getElementById('temp-svg').innerHTML = '';
+                    let regions = JSON.parse(btn.dataset.regions);
+                    setter(regions);
+                    selectedCells = [];
+                    selectedConstraints = [regCtrl.dataset.constraintix | 0];
+                    regCtrl.zingaRegions = regions;
+                    updateVisuals();
+                });
+            });
+        });
 
         // Fix the viewBox
         let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
@@ -628,6 +690,60 @@
         }
     });
 
+    function findMatchingRegions(cells)
+    {
+        if (cells.length < 2)
+            return [];
+        let smallestFactor = 2;
+        while (cells.length % smallestFactor !== 0)
+            smallestFactor++;
+        if (smallestFactor === cells.length)
+            return [];
+        cells = cells.slice(0);
+        cells.sort((c1, c2) => c1 - c2);
+
+        function* recurse(regionSoFar, banned)
+        {
+            if (regionSoFar.length > 1 && cells.length % regionSoFar.length === 0)
+            {
+                // Check if the remaining cells form regions that match regionSoFar in shape
+                let rem = cells.filter(c => !regionSoFar.includes(c));
+                rem.sort((c1, c2) => c1 - c2);
+                let reg = [...regionSoFar];
+                reg.sort((c1, c2) => c1 - c2);
+                let regions = [reg];
+                while (rem.length > 0)
+                {
+                    let xOffset = rem[0] % 9 - reg[0] % 9;
+                    let yOffset = ((rem[0] / 9) | 0) - ((reg[0] / 9) | 0);
+                    if (!reg.every(c => inRange(c % 9 + xOffset) && inRange(((c / 9) | 0) + yOffset) && rem.includes(c + xOffset + 9 * yOffset)))
+                        break;
+                    regions.push(reg.map(c => c + xOffset + 9 * yOffset));
+                    rem = rem.filter(c => !reg.includes(c - xOffset - 9 * yOffset));
+                }
+                if (rem.length === 0)
+                    yield regions;
+            }
+
+            if (regionSoFar.length * smallestFactor < cells.length && regionSoFar.length < 11)
+                for (let ix = 0; ix < cells.length; ix++)
+                {
+                    let adj = cells[ix];
+                    if (regionSoFar.includes(adj) || banned.includes(adj) || !(regionSoFar.length === 0 || orthogonal(adj).some(orth => regionSoFar.includes(orth))))
+                        continue;
+                    regionSoFar.push(adj);
+                    banned.push(adj);
+                    for (let region of recurse([...regionSoFar], [...banned]))
+                        yield region;
+                    regionSoFar.pop();
+                }
+        }
+
+        let result = [...recurse([cells[0]], [cells[0]])];
+        result.sort((r1, r2) => r1.length - r2.length);
+        return result;
+    }
+
     function enforceConstraintKind(kind, cells)
     {
         if (cells.length === 0)
@@ -652,16 +768,14 @@
                 return cells;
 
             case 'Region':
-            case 'MatchingRegions':
                 let copy = [...cells];
                 let region = [copy.pop()];
                 while (copy.length > 0)
                 {
-                    // Find an orthogonal cell
                     let ix = copy.findIndex(cell => region.some(r => orthogonal(cell).includes(r)));
                     if (ix === -1)
                     {
-                        alert("This constraint requires an orthogonally connected region of cells.");
+                        alert("This constraint requires an orthogonally-connected region of cells.");
                         return false;
                     }
                     region.push(copy[ix]);
@@ -669,6 +783,16 @@
                 }
                 region.sort((c1, c2) => c1 - c2);
                 return region;
+
+            case 'MatchingRegions':
+                let regions = findMatchingRegions(cells);
+                if (regions.length === 0)
+                {
+                    alert("This constraint requires multiple orthogonally-connected regions of cells of the same shape.");
+                    return false;
+                }
+                regions.sort((r1, r2) => r1.length - r2.length);
+                return regions[0];
 
             case 'RowColumn':
                 if (cells.length < 2)
@@ -744,7 +868,6 @@
             return;
 
         saveUndo();
-        let cellsType = cType.variables.cells;
         let prevLength = state.constraints.length;
         if (cType.kind === 'SingleCell')
         {
@@ -754,7 +877,7 @@
         else if (cType.kind === 'FourCells')
             state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'topleftcell': selectedCells[0] } });
         else
-            state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'cells': cellsType === 'list(list(cell))' ? [selectedCells] : selectedCells } });
+            state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'cells': enforceResult } });
         selectedConstraints = Array(state.constraints.length - prevLength).fill(null).map((_, c) => c + prevLength);
         selectedCells = [];
         updateVisuals({ storage: true, svg: true, ui: true });
