@@ -64,23 +64,11 @@
         else
             blazorQueue.push([method, args, callback]);
     }
-    function afterBlazor(fnc)
-    {
-        if (blazorQueue === null)
-            fnc();
-        else
-            blazorQueue.push([null, null, fnc]);
-    }
     Blazor.start({})
         .then(() =>
         {
             for (let i = 0; i < blazorQueue.length; i++)
-            {
-                if (blazorQueue[i][0] === null)
-                    blazorQueue[i][2]();
-                else
-                    DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
-            }
+                DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
             blazorQueue = null;
         });
 
@@ -88,7 +76,6 @@
     let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
     let sidebarDiv = document.querySelector('div.sidebar');
     let constraintList = document.getElementById('constraint-list');
-    let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
     let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes || null) || {};
 
     let draggingMode = null;
@@ -109,10 +96,21 @@
         return JSON.parse(str);
     }
 
-    let state = {
-        givens: Array(81).fill(null),
-        constraints: []
-    };
+    function makeEmptyState()
+    {
+        return {
+            givens: Array(81).fill(null),
+            constraints: [],
+            title: 'Sudoku',
+            author: 'unknown',
+            rules: ''
+        };
+    }
+
+    let state = makeEmptyState();
+    state.title = puzzleDiv.dataset.title || 'Sudoku';
+    state.author = puzzleDiv.dataset.author || 'unknown';
+    state.rules = puzzleDiv.dataset.rules || '';
     if (puzzleDiv.dataset.constraints)
         state.constraints = JSON.parse(puzzleDiv.dataset.constraints);
     for (let givenInf of JSON.parse(puzzleDiv.dataset.givens || null) || [])
@@ -179,12 +177,12 @@
     //  ui (bool)            — updates constraint UI in the sidebar
     function updateVisuals(opt)
     {
-        // Update localStorage (only do this when necessary because encodeState() is relatively slow on Firefox)
+        // Update localStorage
         if (localStorage && opt && opt.storage)
         {
-            localStorage.setItem(`zinga-edit-${puzzleId}`, encodeState(state));
-            localStorage.setItem(`zinga-edit-${puzzleId}-undo`, JSON.stringify(undoBuffer));
-            localStorage.setItem(`zinga-edit-${puzzleId}-redo`, JSON.stringify(redoBuffer));
+            localStorage.setItem(`zinga-edit`, encodeState(state));
+            localStorage.setItem(`zinga-edit-undo`, JSON.stringify(undoBuffer));
+            localStorage.setItem(`zinga-edit-redo`, JSON.stringify(redoBuffer));
         }
         resetClearButton();
 
@@ -426,6 +424,10 @@
         // — change the viewBox so that it includes everything
         let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
         puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
+
+        // Title/author
+        document.querySelector('#topbar>.title').innerText = state.title;
+        document.querySelector('#topbar>.author').innerText = state.author;
     }
     updateVisuals({ storage: true, svg: true, ui: true });
 
@@ -542,10 +544,7 @@
         {
             resetClearButton();
             saveUndo();
-            state = {
-                givens: Array(81).fill(null),
-                constraints: []
-            };
+            state = makeEmptyState();
             updateVisuals({ storage: true, svg: true, ui: true });
         }
     });
@@ -660,8 +659,14 @@
         updateVisuals({ storage: true });
     }
 
+    // Title/Author(s)
+    document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals(); };
+    document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals(); };
+
+    // Buttons that place givens in the grid
     Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given); }); });
 
+    // Arrows at the side of the grid allowing instant selection of rows, columns and diagonals
     Array.from(document.querySelectorAll('.multi-select')).forEach(btn =>
     {
         btn.onclick = function(ev)
@@ -688,6 +693,27 @@
             }
             updateVisuals();
         }
+    });
+
+    // SAVE PUZZLE button
+    setButtonHandler(document.getElementById('puzzle-save'), () =>
+    {
+        document.querySelector('.save-section').classList.add('saving');
+        let req = new XMLHttpRequest();
+        req.open('POST', '/save', true);
+        req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        req.onreadystatechange = function()
+        {
+            if (req.readyState !== XMLHttpRequest.DONE)
+                return;
+            if (req.status !== 200)
+                alert(`The puzzle could not be saved: ${req.responseText} (${req.status})`);
+            else
+                //window.open(`https://${window.location.host}/${req.responseText}`);
+                console.log(req.responseText);
+            document.querySelector('.save-section').classList.remove('saving');
+        };
+        req.send(`puzzle=${encodeURIComponent(JSON.stringify(state))}`);
     });
 
     function findMatchingRegions(cells)

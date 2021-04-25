@@ -34,14 +34,14 @@ namespace Zinga.Database
         public Link[] Links
         {
             get => _linksCache ??= LinksJson.NullOr(l => ClassifyJson.Deserialize<Link[]>(l));
-            set { LinksJson = ClassifyJson.Serialize(value).ToString(); _linksCache = value; }
+            set { LinksJson = value.NullOr(v => ClassifyJson.Serialize(v).ToString()); _linksCache = value; }
         }
 
         private (int cell, int value)[] _givensCache;
         public (int cell, int value)[] Givens
         {
             get => _givensCache ??= GivensJson.NullOr(cstr => ClassifyJson.Deserialize<(int cell, int value)[]>(cstr));
-            set { GivensJson = ClassifyJson.Serialize(value).ToString(); _givensCache = value; }
+            set { GivensJson = value.NullOr(v => ClassifyJson.Serialize(v).ToString()); _givensCache = value; }
         }
     }
 }

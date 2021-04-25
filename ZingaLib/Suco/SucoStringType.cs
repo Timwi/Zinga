@@ -20,7 +20,7 @@ namespace Zinga.Suco
 
         public override object InterpretMemberAccess(string memberName, object operand) => memberName switch
         {
-            "hash" => MD5.Compute((string) operand),
+            "hash" => MD5.ComputeHex((string) operand),
             _ => base.InterpretMemberAccess(memberName, operand)
         };
 
