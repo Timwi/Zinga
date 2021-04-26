@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     internal class SucoListExpressionCondition : SucoListCondition
     {
@@ -12,6 +10,14 @@ namespace Zinga.Suco
             Expression = expression;
         }
 
-        public override bool Interpret(Dictionary<string, object> values, IEnumerable<object> curList, object cur, int curIx, IEnumerable<object> prevList, object prev, int? prevIx) => (bool) Expression.Interpret(values);
+        public override SucoListCondition DeduceTypes(SucoTypeEnvironment env, SucoContext context, SucoType elementType)
+        {
+            var innerExpression = Expression.DeduceTypes(env, context);
+            if (!innerExpression.Type.ImplicitlyConvertibleTo(SucoBooleanType.Instance))
+                throw new SucoCompileException($"A condition expression must be a boolean (or implicitly convertible to one).", StartIndex, EndIndex);
+            return new SucoListExpressionCondition(StartIndex, EndIndex, innerExpression.ImplicitlyConvertTo(SucoBooleanType.Instance));
+        }
+
+        public override bool? Interpret(SucoEnvironment env) => (bool?) Expression.Interpret(env);
     }
 }

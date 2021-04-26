@@ -14,12 +14,12 @@ namespace Zinga.Suco
             MemberName = memberName;
         }
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var op = Operand.DeduceTypes(env, context);
             try
             {
-                var memberType = op.Type.GetMemberType(MemberName);
+                var memberType = op.Type.GetMemberType(MemberName, context);
                 if (memberType == null)
                     throw new SucoCompileException($"“{MemberName}” is not a valid member name on type “{op.Type}”.", Operand.EndIndex, EndIndex);
                 return new SucoMemberAccessExpression(StartIndex, EndIndex, op, MemberName, memberType);
@@ -30,6 +30,6 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(Dictionary<string, object> values) => Operand.Type.InterpretMemberAccess(MemberName, Operand.Interpret(values));
+        public override object Interpret(SucoEnvironment env) => Operand.Type.InterpretMemberAccess(MemberName, Operand.Interpret(env));
     }
 }

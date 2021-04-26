@@ -14,9 +14,9 @@ namespace Zinga.Suco
             Elements = elements;
         }
 
-        public override object Interpret(Dictionary<string, object> values) => Elements.Select(e => e.Interpret(values)).ToArray();
+        public override object Interpret(SucoEnvironment env) => Elements.Select(e => e.Interpret(env)).ToArray();
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var newElements = Elements.Select(e => e.DeduceTypes(env, context)).ToList();
             for (var i = 0; i < newElements.Count; i++)

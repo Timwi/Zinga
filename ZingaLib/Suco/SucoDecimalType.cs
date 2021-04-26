@@ -66,14 +66,14 @@ namespace Zinga.Suco
             _ => base.InterpretImplicitConversionTo(type, operand)
         };
 
-        public override SucoType GetMemberType(string memberName) => memberName switch
+        public override SucoType GetMemberType(string memberName, SucoContext context) => memberName switch
         {
             "atan2" => new SucoFunctionType((new[] { SucoDecimalType.Instance }, SucoDecimalType.Instance)),
             "sin" => SucoDecimalType.Instance,
             "cos" => SucoDecimalType.Instance,
             "tan" => SucoDecimalType.Instance,
             "sqrt" => SucoDecimalType.Instance,
-            _ => base.GetMemberType(memberName)
+            _ => base.GetMemberType(memberName, context)
         };
 
         public override object InterpretMemberAccess(string memberName, object operand) => memberName switch

@@ -5,7 +5,7 @@ namespace Zinga.Suco
 {
     public abstract class SucoType : IEquatable<SucoType>
     {
-        public virtual SucoType GetMemberType(string memberName) => throw new SucoTempCompileException($"Member “{memberName}” is not defined on type “{this}”.");
+        public virtual SucoType GetMemberType(string memberName, SucoContext context) => throw new SucoTempCompileException($"Member “{memberName}” is not defined on type “{this}”.");
         public virtual SucoType GetUnaryOperatorType(UnaryOperator op) => throw new SucoTempCompileException($"Unary operator “{op}” is not defined on type “{this}”.");
         public virtual SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => throw new SucoTempCompileException($"Binary operator “{op}” is not defined on type “{this}”.");
 

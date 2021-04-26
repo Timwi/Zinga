@@ -12,6 +12,22 @@ namespace Zinga.Lib
 {
     public static class Commands
     {
+        private static readonly Dictionary<(string suco, string variablesJson, SucoContext context, string expectedResultType), (SucoExpression expr, SucoTypeEnvironment env, Dictionary<string, object> interpreted)> _parsedSuco = new();
+
+        private static (SucoExpression expr, SucoTypeEnvironment env, Dictionary<string, object> interpreted) parseSuco(string suco, JsonDict variablesJson, SucoContext context, SucoType expectedResultType)
+        {
+            var expectedResultTypeStr = expectedResultType.ToString();
+            var key = (suco, variablesJson.ToString(), context, expectedResultTypeStr);
+            if (!_parsedSuco.ContainsKey(key))
+            {
+                var env = new SucoTypeEnvironment();
+                foreach (var (varName, varValue) in variablesJson.ToTuples())
+                    env = env.DeclareVariable(varName, SucoType.Parse(varValue.GetString()));
+                _parsedSuco[key] = (SucoParser.ParseCode(suco, env, context, expectedResultType), env, new Dictionary<string, object>());
+            }
+            return _parsedSuco[key];
+        }
+
         /*
         CONSTRAINTS
             {
@@ -32,20 +48,26 @@ namespace Zinga.Lib
             }
         */
 
-        private static readonly Dictionary<(string suco, string variablesJson, SucoContext context, string expectedResultType), (SucoExpression expr, SucoEnvironment env, Dictionary<string, object> interpreted)> _parsedSuco = new();
-
-        private static (SucoExpression expr, SucoEnvironment env, Dictionary<string, object> interpreted) parseSuco(string suco, JsonDict variablesJson, SucoContext context, SucoType expectedResultType)
+        public static string CheckConstraints(string enteredDigitsJson, string constraintTypesJson, string constraintsJson)
         {
-            var expectedResultTypeStr = expectedResultType.ToString();
-            var key = (suco, variablesJson.ToString(), context, expectedResultTypeStr);
-            if (!_parsedSuco.ContainsKey(key))
+            var enteredDigits = JsonList.Parse(enteredDigitsJson).Select(v => v?.GetInt()).ToArray();
+            var constraintTypes = JsonDict.Parse(constraintTypesJson);
+            var constraints = JsonList.Parse(constraintsJson);
+            var results = new JsonList();
+
+            for (var cIx = 0; cIx < constraints.Count; cIx++)
             {
-                var env = new SucoEnvironment();
-                foreach (var (varName, varValue) in variablesJson.ToTuples())
-                    env = env.DeclareVariable(varName, SucoType.Parse(varValue.GetString()));
-                _parsedSuco[key] = (SucoParser.ParseCode(suco, env, context, expectedResultType), env, new Dictionary<string, object>());
+                var constraint = constraints[cIx];
+                var typeId = constraint["type"].GetInt();
+                var type = constraintTypes[typeId.ToString()].GetDict();
+                var (expr, env, _) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoBooleanType.Instance);
+                var variableValues = ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), env.GetVariables(), enteredDigits)
+                    .DeclareVariable("allcells", Ut.NewArray(81, cIx => new Cell(cIx, null, enteredDigits[cIx])));
+                if ((bool?) expr.Interpret(variableValues) == false)
+                    results.Add(cIx);
             }
-            return _parsedSuco[key];
+
+            return results.ToString();
         }
 
         public static string RenderConstraintSvgs(string constraintTypesJson, string constraintsJson)
@@ -62,7 +84,7 @@ namespace Zinga.Lib
                 var type = constraintTypes[typeId.ToString()].GetDict();
                 var svgSuco = type["svg"].NullOr(svg => parseSuco(svg.GetString(), type["variables"].GetDict(), SucoContext.Svg, SucoStringType.Instance));
                 var svgDefsSuco = type["svgdefs"].NullOr(svgDefs => parseSuco(svgDefs.GetString(), type["variables"].GetDict(), SucoContext.Svg, SucoStringType.Instance));
-                Dictionary<string, object> variableValues = null;
+                SucoEnvironment variableValues = null;
 
                 if (svgDefsSuco != null)
                 {
@@ -95,7 +117,7 @@ namespace Zinga.Lib
         {
             try
             {
-                var env = new SucoEnvironment();
+                var env = new SucoTypeEnvironment();
                 var variableTypes = JsonDict.Parse(variableTypesJson);
                 foreach (var (key, value) in variableTypes.ToTuples())
                     env = env.DeclareVariable(key, SucoType.Parse(value.GetString()));

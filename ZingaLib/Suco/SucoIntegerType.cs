@@ -38,23 +38,25 @@ namespace Zinga.Suco
             _ => base.GetBinaryOperatorType(op, rightOperand, context),
         };
 
-        public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch
+        private static T? op<T>(int? left, int? right, Func<int, int, T> fnc) where T : struct => left == null || right == null ? null : fnc(left.Value, right.Value);
+
+        public override object InterpretBinaryOperator(object left, BinaryOperator @operator, SucoType rightType, object right) => (@operator, rightType) switch
         {
             // Comparison
-            (BinaryOperator.Equal, SucoIntegerType) => (int) left == (int) right,
-            (BinaryOperator.NotEqual, SucoIntegerType) => (int) left != (int) right,
-            (BinaryOperator.LessThan, SucoIntegerType) => (int) left < (int) right,
-            (BinaryOperator.LessThanOrEqual, SucoIntegerType) => (int) left <= (int) right,
-            (BinaryOperator.GreaterThan, SucoIntegerType) => (int) left > (int) right,
-            (BinaryOperator.GreaterThanOrEqual, SucoIntegerType) => (int) left >= (int) right,
+            (BinaryOperator.Equal, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a == b),
+            (BinaryOperator.NotEqual, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a != b),
+            (BinaryOperator.LessThan, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a < b),
+            (BinaryOperator.LessThanOrEqual, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a <= b),
+            (BinaryOperator.GreaterThan, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a > b),
+            (BinaryOperator.GreaterThanOrEqual, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a >= b),
 
             // Integer arithmetic
-            (BinaryOperator.Plus, SucoIntegerType) => (int) left + (int) right,
-            (BinaryOperator.Minus, SucoIntegerType) => (int) left - (int) right,
-            (BinaryOperator.Times, SucoIntegerType) => (int) left * (int) right,
-            (BinaryOperator.Modulo, SucoIntegerType) => ((int) left % (int) right + (int) right) % (int) right,
+            (BinaryOperator.Plus, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a + b),
+            (BinaryOperator.Minus, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a - b),
+            (BinaryOperator.Times, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a * b),
+            (BinaryOperator.Modulo, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => (a % b + b) % b),
             (BinaryOperator.Divide, SucoIntegerType) => (double) (int) left / (int) right,
-            (BinaryOperator.Power, SucoIntegerType) => (int) BigInteger.Pow((int) left, (int) right),
+            (BinaryOperator.Power, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => (int) BigInteger.Pow(a, b)),
 
             // Decimal arithmetic
             (BinaryOperator.Plus, SucoDecimalType) => (int) left + (double) right,
@@ -63,7 +65,7 @@ namespace Zinga.Suco
             (BinaryOperator.Modulo, SucoDecimalType) => ((int) left % (double) right + (double) right) % (double) right,
             (BinaryOperator.Power, SucoDecimalType) => Math.Pow((int) left, (double) right),
 
-            _ => base.InterpretBinaryOperator(left, op, rightType, right),
+            _ => base.InterpretBinaryOperator(left, @operator, rightType, right),
         };
 
         public override SucoType GetUnaryOperatorType(UnaryOperator op) => op switch
@@ -92,12 +94,17 @@ namespace Zinga.Suco
             _ => base.InterpretImplicitConversionTo(type, operand)
         };
 
-        public override SucoType GetMemberType(string memberName)
+        public override SucoType GetMemberType(string memberName, SucoContext context)
         {
+            switch (memberName)
+            {
+                case "abs": return SucoIntegerType.Instance;
+            }
+
             // See InterpretMemberAccess
             try
             {
-                return SucoDecimalType.Instance.GetMemberType(memberName);
+                return SucoDecimalType.Instance.GetMemberType(memberName, context);
             }
             catch (SucoTempCompileException)
             {
@@ -107,6 +114,11 @@ namespace Zinga.Suco
 
         public override object InterpretMemberAccess(string memberName, object operand)
         {
+            switch (memberName)
+            {
+                case "abs": return operand == null ? null : Math.Abs((int) operand);
+            }
+
             // We want all functions that SucoDecimalType supports to also work on integers by implicitly converting the integer to decimal.
             // This implicit conversion doesn’t happen automatically.
             try

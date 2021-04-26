@@ -22,7 +22,7 @@ namespace Zinga.Suco
         public override string ToString() => $"list({Inner})";
         public override int GetHashCode() => Inner.GetHashCode() * 47;
 
-        public override SucoType GetMemberType(string memberName) => (memberName, Inner) switch
+        public override SucoType GetMemberType(string memberName, SucoContext context) => (memberName, Inner) switch
         {
             // Lists of cells
             ("sum", SucoCellType) => SucoIntegerType.Instance,
@@ -30,6 +30,12 @@ namespace Zinga.Suco
             ("outline", SucoCellType) => new SucoFunctionType(
                 (new[] { SucoDecimalType.Instance, SucoDecimalType.Instance }, SucoStringType.Instance),
                 (new[] { SucoDecimalType.Instance, SucoDecimalType.Instance, SucoDecimalType.Instance, SucoDecimalType.Instance }, SucoStringType.Instance)),
+
+            // Lists of integers
+            ("contains", SucoIntegerType) => new SucoFunctionType(
+                (new[] { SucoIntegerType.Instance }, SucoBooleanType.Instance),
+                (new[] { new SucoListType(SucoIntegerType.Instance) }, SucoBooleanType.Instance)),
+            ("same", SucoIntegerType) => SucoBooleanType.Instance,
 
             // Lists of booleans
             ("all", SucoBooleanType) => SucoBooleanType.Instance,
@@ -42,29 +48,85 @@ namespace Zinga.Suco
             // All lists
             ("count", _) => SucoIntegerType.Instance,
 
-            _ => base.GetMemberType(memberName),
+            _ => base.GetMemberType(memberName, context),
         };
 
         public override object InterpretMemberAccess(string memberName, object operand) => (memberName, Inner) switch
         {
             // Lists of cells
-            ("sum", SucoCellType) => throw new NotImplementedException(),
-            ("unique", SucoCellType) => throw new NotImplementedException(),
-            ("outline", SucoCellType) => outline(((IEnumerable<object>) operand).Cast<Cell>().Select(c => c.Index).ToArray()),
+            ("sum", SucoCellType) => ((IEnumerable<object>) operand)?.Cast<Cell>().Aggregate((int?) 0, (prev, next) => prev == null ? null : next.Value == null ? null : prev.Value + next.Value.Value),
+            ("unique", SucoCellType) => operand == null ? null : checkUnique(((IEnumerable<object>) operand).Cast<Cell>()),
+            ("outline", SucoCellType) => operand == null ? null : outline(((IEnumerable<object>) operand).Cast<Cell>().Select(c => c.Index).ToArray()),
+
+            // Lists of integers
+            ("contains", SucoIntegerType) => operand == null ? null : contains(((IEnumerable<object>) operand).Select(c => (int?) c).ToArray()),
+            ("same", SucoIntegerType) => operand == null ? null : same(((IEnumerable<object>) operand).Select(c => (int?) c)),
 
             // Lists of booleans
-            ("all", SucoBooleanType) => ((IEnumerable<object>) operand).All(b => (bool) b),
-            ("any", SucoBooleanType) => ((IEnumerable<object>) operand).Any(b => (bool) b),
-            ("none", SucoBooleanType) => !((IEnumerable<object>) operand).Any(b => (bool) b),
+            ("all", SucoBooleanType) => ((IEnumerable<object>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == false ? false : prev == null || next == null ? null : true),
+            ("any", SucoBooleanType) => ((IEnumerable<object>) operand)?.Aggregate((bool?) false, (prev, next) => prev == true || (bool?) next == true ? true : prev == null || next == null ? null : false),
+            ("none", SucoBooleanType) => ((IEnumerable<object>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == true ? false : prev == null || next == null ? null : true),
 
             // Lists of lists of integers
-            ("unique", SucoListType { Inner: SucoIntegerType }) => checkUnique(((IEnumerable<object>) operand).Select(obj => ((IEnumerable<object>) obj).Select(i => (int) i).ToArray()).ToArray()),
+            ("unique", SucoListType { Inner: SucoIntegerType }) =>
+                operand == null || ((IEnumerable<object>) operand).Any(l => l == null || ((IEnumerable<object>) l).Contains(null)) ? null :
+                checkUnique(((IEnumerable<object>) operand).Select(obj => ((IEnumerable<object>) obj).Select(i => (int) i).ToArray()).ToArray()),
 
             // All lists
-            ("count", _) => ((IEnumerable<object>) operand).Count(),
+            ("count", _) => ((IEnumerable<object>) operand)?.Count(),
 
             _ => base.InterpretMemberAccess(memberName, operand)
         };
+
+        private bool? same(IEnumerable<int?> values)
+        {
+            var anyNull = false;
+            int? digit = null;
+            foreach (var value in values)
+                if (value == null)
+                    anyNull = true;
+                else if (digit == null)
+                    digit = value.Value;
+                else if (digit != value.Value)
+                    return false;
+            return anyNull ? null : true;
+        }
+
+        private bool? checkUnique(IEnumerable<Cell> cells)
+        {
+            var anyNull = false;
+            var digits = new HashSet<int>();
+            foreach (var cell in cells)
+            {
+                if (cell.Value == null)
+                    anyNull = true;
+                else if (!digits.Add(cell.Value.Value))
+                    return false;
+            }
+            return anyNull ? null : true;
+        }
+
+        private SucoFunction contains(int?[] operand) => new(
+            (parameters: new[] { SucoIntegerType.Instance }, returnType: SucoBooleanType.Instance, interpreter: arg => containsInt(operand, (int?) arg[0])),
+            (parameters: new[] { new SucoListType(SucoIntegerType.Instance) }, returnType: SucoBooleanType.Instance, interpreter: arg => containsList(operand, ((IEnumerable<object>) arg[0]).Select(v => (int?) v).ToArray())));
+
+        private static bool? containsInt(int?[] listToSearch, int? find)
+        {
+            if (find == null || listToSearch == null)
+                return null;
+            if (listToSearch.Any(val => val != null && val.Value == find.Value))
+                return true;
+            return listToSearch.Contains(null) ? null : false;
+        }
+
+        private static bool? containsList(int?[] listToSearch, int?[] find)
+        {
+            if (find == null || find.Contains(null))
+                return null;
+            if (find.All(f => listToSearch.Count(v => v == f.Value) == find.Count(v => v == f.Value)))
+                return true;
+            return listToSearch.Contains(null) ? null : false;
+        }
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
         {
@@ -108,7 +170,7 @@ namespace Zinga.Suco
         public override object InterpretImplicitConversionTo(SucoType type, object operand) => (Inner, type) switch
         {
             (SucoStringType, SucoStringType) => ((IEnumerable<object>) operand).JoinString(),
-            (SucoBooleanType, SucoBooleanType) => ((IEnumerable<object>) operand).All(b => (bool) b),
+            (SucoBooleanType, SucoBooleanType) => ((IEnumerable<object>) operand).Aggregate((bool?) true, (prev, next) => prev == false ? false : (bool?) next == false ? false : prev == null || next == null ? null : true),
             (_, SucoStringType) => ((IEnumerable<object>) operand).Select(item => Inner.InterpretImplicitConversionTo(SucoStringType.Instance, item)).JoinString(),
             _ => base.InterpretImplicitConversionTo(type, operand)
         };

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Zinga.Suco
 {
@@ -13,7 +12,7 @@ namespace Zinga.Suco
             Type = type;
         }
 
-        public SucoExpression DeduceTypes(SucoEnvironment env, SucoContext context)
+        public SucoExpression DeduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var result = deduceTypes(env, context);
             switch (context)
@@ -31,14 +30,14 @@ namespace Zinga.Suco
             return result;
         }
 
-        protected abstract SucoExpression deduceTypes(SucoEnvironment env, SucoContext context);
+        protected abstract SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context);
 
         public SucoExpression ImplicitlyConvertTo(SucoType type) =>
             Type.Equals(type) ? this :
             Type.ImplicitlyConvertibleTo(type) ? new SucoImplicitConversionExpression(StartIndex, EndIndex, this, type) :
             throw new InvalidOperationException("Unexpected implicit conversion. Call Type.ImplicitlyConvertibleTo first to ensure convertibility.");
 
-        public abstract object Interpret(Dictionary<string, object> values);
+        public abstract object Interpret(SucoEnvironment env);
 
     }
 }

@@ -4,7 +4,7 @@ using RT.Util.ExtensionMethods;
 
 namespace Zinga.Lib
 {
-    public class MD5
+    public static class MD5
     {
         public static string ComputeHex(string input) => ComputeBigInteger(input.ToUtf8()).ToString("X").TrimStart('0').PadLeft(32, '0');
 

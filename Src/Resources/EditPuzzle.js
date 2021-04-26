@@ -427,7 +427,7 @@
 
         // Title/author
         document.querySelector('#topbar>.title').innerText = state.title;
-        document.querySelector('#topbar>.author').innerText = state.author;
+        document.querySelector('#topbar>.author').innerText = `by ${state.author === '' ? 'unknown' : state.author}`;
     }
     updateVisuals({ storage: true, svg: true, ui: true });
 
@@ -709,8 +709,8 @@
             if (req.status !== 200)
                 alert(`The puzzle could not be saved: ${req.responseText} (${req.status})`);
             else
-                //window.open(`https://${window.location.host}/${req.responseText}`);
-                console.log(req.responseText);
+                window.open(`${window.location.protocol}//${window.location.host}/${req.responseText}`);
+            //console.log(req.responseText);
             document.querySelector('.save-section').classList.remove('saving');
         };
         req.send(`puzzle=${encodeURIComponent(JSON.stringify(state))}`);

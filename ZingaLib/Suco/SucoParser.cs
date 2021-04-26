@@ -32,9 +32,9 @@ namespace Zinga.Suco
         }
 
         public static SucoExpression ParseCode(string source, SucoVariable[] variables, SucoContext context, SucoType expectedResultType = null) =>
-            ParseCode(source, variables.Aggregate(new SucoEnvironment(), (env, variable) => env.DeclareVariable(variable.Name, variable.Type)), context, expectedResultType);
+            ParseCode(source, variables.Aggregate(new SucoTypeEnvironment(), (env, variable) => env.DeclareVariable(variable.Name, variable.Type)), context, expectedResultType);
 
-        public static SucoExpression ParseCode(string source, SucoEnvironment env, SucoContext context, SucoType expectedResultType = null)
+        public static SucoExpression ParseCode(string source, SucoTypeEnvironment env, SucoContext context, SucoType expectedResultType = null)
         {
             if (source == null)
                 throw new ArgumentNullException(nameof(source));
@@ -346,15 +346,14 @@ namespace Zinga.Suco
             _ix = variableName.EndIndex;
 
             var conditions = new List<SucoListCondition>();
-            string fromVariable = null;
-            SucoToken fromVariableToken = default;
+            SucoExpression fromExpression = null;
             void commitClause(int endIndex)
             {
                 if (!flags.ContainsKey("1") && clauses.Any(c => c.HasSingleton))
                     throw new SucoParseException("A clause with a “1” flag cannot be followed by a clause without one.", clauseStartIx, endIndex);
-                if (flags.ContainsKey("$") && fromVariable != null)
+                if (flags.ContainsKey("$") && fromExpression != null)
                     throw new SucoParseException("A clause with a “$” flag cannot also have a “from” condition.", clauseStartIx, endIndex);
-                clauses.Add(new SucoListClause(clauseStartIx, endIndex, variableName.StringValue, flags.ContainsKey("$"), flags.ContainsKey("+"), flags.ContainsKey("1"), fromVariable, conditions));
+                clauses.Add(new SucoListClause(clauseStartIx, endIndex, variableName.StringValue, flags.ContainsKey("$"), flags.ContainsKey("+"), flags.ContainsKey("1"), fromExpression, conditions));
             }
 
             nextCondition:
@@ -386,17 +385,24 @@ namespace Zinga.Suco
             var tok = getToken();
             if (tok.Type == SucoTokenType.Identifier && tok.StringValue == "from")
             {
-                if (fromVariable != null)
-                    throw new SucoParseException("Duplicate “from” condition.", _ix, fromVariableToken);
+                if (fromExpression != null)
+                    throw new SucoParseException("Duplicate “from” condition.", _ix, fromExpression);
 
                 _ix = tok.EndIndex;
-                var tok2 = getToken();
-                if (tok.Type != SucoTokenType.Identifier)
-                    throw new SucoParseException("“from” must be followed by the name of a collection to select items from.", _ix, tok);
-
-                fromVariable = tok2.StringValue;
-                fromVariableToken = tok2;
-                _ix = tok2.EndIndex;
+                var tokVarName = getToken();
+                if (tokVarName.Type == SucoTokenType.Identifier)
+                {
+                    fromExpression = new SucoIdentifierExpression(tokVarName.StartIndex, tokVarName.EndIndex, tokVarName.StringValue);
+                    _ix = tokVarName.EndIndex;
+                }
+                else
+                {
+                    if (!token("(", out oldIx))
+                        throw new SucoParseException("“from” must be followed by either a variable name, or a parenthesized expression.", _ix);
+                    fromExpression = parseExpression();
+                    if (!token(")"))
+                        throw new SucoParseException("Unmatched “(”: “from” expression must end in “)”.", _ix, oldIx);
+                }
                 goto nextCondition;
             }
             if (tok.Type == SucoTokenType.Identifier)
@@ -409,6 +415,12 @@ namespace Zinga.Suco
             commitClause(_ix);
 
             done:
+            if (selector == null)
+            {
+                if (clauses.Count != 1)
+                    throw new SucoParseException("List comprehensions with more than one clause must have a selector.", _ix, rStartIx);
+                selector = new SucoIdentifierExpression(_ix, _ix, clauses[0].VariableName);
+            }
             if (consumeCloseCurly)
             {
                 if (!token("}"))

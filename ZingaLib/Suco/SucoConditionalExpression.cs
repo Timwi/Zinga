@@ -17,9 +17,9 @@ namespace Zinga
             False = falsePart;
         }
 
-        public override object Interpret(Dictionary<string, object> values) => (bool) Condition.Interpret(values) ? True.Interpret(values) : False.Interpret(values);
+        public override object Interpret(SucoEnvironment env) => (bool) Condition.Interpret(env) ? True.Interpret(env) : False.Interpret(env);
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var condition = Condition.DeduceTypes(env, context);
             if (!(condition.Type is SucoBooleanType))

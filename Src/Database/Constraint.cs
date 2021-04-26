@@ -36,22 +36,22 @@ namespace Zinga.Database
 
         [ClassifyIgnore]
         private SucoExpression _svgDefsCache;
-        public IEnumerable<string> GetSvgDefs(Dictionary<string, object> values)
+        public IEnumerable<string> GetSvgDefs(SucoEnvironment env)
         {
             if (SvgDefsSuco == null)
                 return Enumerable.Empty<string>();
             _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, Variables, SucoContext.Svg, new SucoListType(SucoStringType.Instance));
-            return ((IEnumerable<object>) _svgDefsCache.Interpret(values)).Cast<string>();
+            return ((IEnumerable<object>) _svgDefsCache.Interpret(env)).Cast<string>();
         }
 
         [ClassifyIgnore]
         private SucoExpression _svgCache;
-        public string GetSvg(Dictionary<string, object> values)
+        public string GetSvg(SucoEnvironment env)
         {
             if (SvgSuco == null)
                 return null;
             _svgCache ??= SucoParser.ParseCode(SvgSuco, Variables, SucoContext.Svg, SucoStringType.Instance);
-            return (string) _svgCache.Interpret(values);
+            return (string) _svgCache.Interpret(env);
         }
     }
 }

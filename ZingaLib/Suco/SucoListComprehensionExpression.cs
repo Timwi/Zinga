@@ -1,7 +1,7 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
-using RT.Util;
 using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
@@ -14,26 +14,25 @@ namespace Zinga.Suco
         public SucoListComprehensionExpression(int startIndex, int endIndex, List<SucoListClause> clauses, SucoExpression selector, SucoType type = null)
             : base(startIndex, endIndex, type)
         {
-            Clauses = clauses;
-            Selector = selector;
+            Clauses = clauses ?? throw new ArgumentNullException(nameof(clauses));
+            Selector = selector ?? throw new ArgumentNullException(nameof(selector));
         }
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var newEnv = env;
             var newClauses = new List<SucoListClause>();
             var anySingleton = false;
             foreach (var clause in Clauses)
             {
+                var newFromExpression = clause.FromExpression?.DeduceTypes(newEnv, context);
+
                 // Deduce the type of the iterator variable
                 SucoType collectionType;
-                if (clause.FromVariable != null)
-                {
-                    var collection = newEnv.GetVariable(clause.FromVariable);
-                    if (collection == null)
-                        throw new SucoCompileException($"The variable “{clause.FromVariable}” is not defined.", clause.StartIndex, clause.EndIndex);
-                    collectionType = collection.Type;
-                }
+                if (newFromExpression != null)
+                    collectionType = newFromExpression.Type;
+                else if (clause.HasDollar)
+                    collectionType = new SucoListType(SucoCellType.Instance);
                 else
                 {
                     try
@@ -47,22 +46,12 @@ namespace Zinga.Suco
                 }
 
                 if (collectionType is not SucoListType { Inner: SucoType elementType })
-                    throw new SucoCompileException($"The variable “{clause.FromVariable}” does not refer to a list.", clause.StartIndex, clause.EndIndex);
+                    throw new SucoCompileException($"The clause for variable “{clause.VariableName}” is attempting to draw elements from something that is not a list.", clause.StartIndex, clause.EndIndex);
 
                 // Ensure the inner condition expressions are all implicitly convertible to booleans
                 newEnv = newEnv.DeclareVariable(clause.VariableName, ((SucoListType) collectionType).Inner);
-                var newConditions = clause.Conditions.Select(cond =>
-                {
-                    if (cond is SucoListExpressionCondition expr)
-                    {
-                        var innerExpression = expr.Expression.DeduceTypes(newEnv, context);
-                        if (!innerExpression.Type.ImplicitlyConvertibleTo(SucoBooleanType.Instance))
-                            throw new SucoCompileException($"A condition expression must be a boolean (or implicitly convertible to one).", expr.StartIndex, expr.EndIndex);
-                        return new SucoListExpressionCondition(expr.StartIndex, expr.EndIndex, innerExpression.ImplicitlyConvertTo(SucoBooleanType.Instance));
-                    }
-                    return cond;
-                }).ToList();
-                newClauses.Add(new SucoListClause(clause.StartIndex, clause.EndIndex, clause.VariableName, clause.HasDollar, clause.HasPlus, clause.HasSingleton, clause.FromVariable, newConditions, elementType));
+                var newConditions = clause.Conditions.Select(cond => cond.DeduceTypes(newEnv, context, elementType)).ToList();
+                newClauses.Add(new SucoListClause(clause.StartIndex, clause.EndIndex, clause.VariableName, clause.HasDollar, clause.HasPlus, clause.HasSingleton, newFromExpression, newConditions, elementType));
                 if (clause.HasSingleton)
                     anySingleton = true;
             }
@@ -85,41 +74,57 @@ namespace Zinga.Suco
             return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, selectorType);
         }
 
-        public override object Interpret(Dictionary<string, object> values)
+        public override object Interpret(SucoEnvironment env)
         {
-            var collections = new IEnumerable<object>[Clauses.Count];
-            var indexes = new int[Clauses.Count];
-            var elements = new object[Clauses.Count];
-            IEnumerable<object> recurse(int clIx, Dictionary<string, object> newValues)
+            try
             {
-                if (clIx == Clauses.Count)
+                var indexes = new int[Clauses.Count];
+                var collections = new IList[Clauses.Count];
+                IEnumerable<object> recurse(int clIx, SucoEnvironment curEnv)
                 {
-                    yield return Selector.Interpret(newValues);
-                    yield break;
-                }
+                    if (clIx == Clauses.Count)
+                    {
+                        yield return Selector.Interpret(curEnv);
+                        yield break;
+                    }
 
-                var dic = newValues.ToDictionary();
-                var collection = (IList) newValues[Clauses[clIx].FromVariableResolved];
-                collections[clIx] = (IEnumerable<object>) collection;
-                for (var i = 0; i < collection.Count; i++)
-                {
-                    if (!Clauses[clIx].HasPlus && indexes.Take(clIx).Contains(i))
-                        continue;
-                    indexes[clIx] = i;
-                    elements[clIx] = collection[i];
-                    dic[Clauses[clIx].VariableName] = collection[i];
-                    foreach (var condition in Clauses[clIx].Conditions)
-                        if (!condition.Interpret(dic, collections[clIx], elements[clIx], indexes[clIx],
-                            clIx == 0 ? null : collections[clIx - 1],
-                            clIx == 0 ? null : elements[clIx - 1],
-                            clIx == 0 ? null : indexes[clIx - 1]))
-                            goto skipped;
-                    foreach (var result in recurse(clIx + 1, dic))
-                        yield return result;
-                    skipped:;
+                    var collection = (IList) Clauses[clIx].FromExpressionResolved.Interpret(curEnv);
+                    collections[clIx] = collection;
+                    for (var i = 0; i < collection.Count; i++)
+                    {
+                        if (collection[i] is Cell c)
+                        {
+                            collections[clIx] = null;
+                            if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == null && indexes[ix] == c.Index))
+                                continue;
+                            indexes[clIx] = c.Index;
+                        }
+                        else
+                        {
+                            if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == collections[clIx] && indexes[ix] == i))
+                                continue;
+                            indexes[clIx] = i;
+                        }
+                        var newEnv = curEnv.DeclareVariable(Clauses[clIx].VariableName, collection, i);
+                        foreach (var condition in Clauses[clIx].Conditions)
+                        {
+                            var result = condition.Interpret(newEnv);
+                            if (result == false)
+                                goto skipped;
+                            else if (result == null)
+                                throw new EvaluationIncompleteException();
+                        }
+                        foreach (var result in recurse(clIx + 1, newEnv))
+                            yield return result;
+                        skipped:;
+                    }
                 }
+                return recurse(0, env).ToArray();
             }
-            return recurse(0, values);
+            catch (EvaluationIncompleteException)
+            {
+                return null;
+            }
         }
     }
 }

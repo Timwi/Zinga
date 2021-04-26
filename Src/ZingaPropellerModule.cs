@@ -26,7 +26,7 @@ namespace Zinga
                 new UrlMapping(path: "/css-websocket", specificPath: true, handler: req => new HttpResponseWebSocket(new AutoUpdatingCssWebsocket(Settings))),
 #endif
 
-                new UrlMapping(path: "/tmp", handler: PlayWithSuco2),
+                new UrlMapping(path: "/tmp", handler: DebugStuff),
                 new UrlMapping(path: "/edit", handler: PuzzleEditPage),
                 new UrlMapping(path: "/save", handler: PuzzleSave),
                 new UrlMapping(path: "/_framework", handler: new FileSystemHandler(@"D:\c\Zinga\Builds\Debug-net5.0browser-wasm\wwwroot\_framework").Handle),

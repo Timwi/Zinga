@@ -12,7 +12,7 @@ namespace Zinga.Suco
             Name = name;
         }
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             try
             {
@@ -27,7 +27,16 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(Dictionary<string, object> values) =>
-            values.TryGetValue(Name, out object value) ? value : throw new SucoCompileException($"The variable “{Name}” is not defined.", StartIndex, EndIndex);
+        public override object Interpret(SucoEnvironment env)
+        {
+            try
+            {
+                return env.GetValue(Name);
+            }
+            catch (SucoTempCompileException tce)
+            {
+                throw new SucoCompileException(tce.Message, StartIndex, EndIndex);
+            }
+        }
     }
 }

@@ -16,7 +16,7 @@ namespace Zinga.Suco
             Operator = op;
         }
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var left = Left.DeduceTypes(env, context);
             var right = Right.DeduceTypes(env, context);
@@ -33,6 +33,6 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(Dictionary<string, object> values) => Left.Type.InterpretBinaryOperator(Left.Interpret(values), Operator, Right.Type, Right.Interpret(values));
+        public override object Interpret(SucoEnvironment env) => Left.Type.InterpretBinaryOperator(Left.Interpret(env), Operator, Right.Type, Right.Interpret(env));
     }
 }

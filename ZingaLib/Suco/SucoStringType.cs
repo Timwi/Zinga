@@ -12,10 +12,10 @@ namespace Zinga.Suco
         public override string ToString() => "string";
         public override int GetHashCode() => 4;
 
-        public override SucoType GetMemberType(string memberName) => memberName switch
+        public override SucoType GetMemberType(string memberName, SucoContext context) => memberName switch
         {
             "hash" => SucoStringType.Instance,
-            _ => base.GetMemberType(memberName)
+            _ => base.GetMemberType(memberName, context)
         };
 
         public override object InterpretMemberAccess(string memberName, object operand) => memberName switch

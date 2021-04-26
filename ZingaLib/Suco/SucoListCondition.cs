@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public abstract class SucoListCondition : SucoNode
     {
@@ -9,6 +7,8 @@ namespace Zinga.Suco
         {
         }
 
-        public abstract bool Interpret(Dictionary<string, object> values, IEnumerable<object> curList, object cur, int curIx, IEnumerable<object> prevList, object prev, int? prevIx);
+        public abstract SucoListCondition DeduceTypes(SucoTypeEnvironment env, SucoContext context, SucoType elementType);
+
+        public abstract bool? Interpret(SucoEnvironment env);
     }
 }

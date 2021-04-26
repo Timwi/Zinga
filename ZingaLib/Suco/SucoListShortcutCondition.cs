@@ -15,36 +15,82 @@ namespace Zinga.Suco
             Name = name;
         }
 
-        public override bool Interpret(Dictionary<string, object> values, IEnumerable<object> curList, object cur, int curIx, IEnumerable<object> prevList, object prev, int? prevIx) => Name switch
+        public override SucoListCondition DeduceTypes(SucoTypeEnvironment env, SucoContext context, SucoType elementType)
         {
-            "first" => curIx == 0,
-            "last" => curIx == curList.Count() - 1,
-            "before" => prevIx == null ? throw new SucoCompileException("“before” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : curIx < prevIx.Value,
-            "after" => prevIx == null ? throw new SucoCompileException("“after” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : curIx > prevIx.Value,
-            "~" => prevIx == null ? throw new SucoCompileException("“~” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : curList != prevList ? throw new SucoCompileException("“~” requires that both cells are from the same list.", StartIndex, EndIndex) : curIx == prevIx.Value + 1,
-            "diagonal" => prevIx == null ? throw new SucoCompileException("“diagonal” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? Math.Abs(c1.X - c2.X) == Math.Abs(c1.Y - c2.Y) : throw new SucoTempCompileException("“diagonal” condition can only be used on cells."),
-            "adjacent" => prevIx == null ? throw new SucoCompileException("“adjacent” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? Math.Abs(c1.X - c2.X) <= 1 && Math.Abs(c1.Y - c2.Y) <= 1 : throw new SucoTempCompileException("“adjacent” condition can only be used on cells."),
-            "orthogonal" => prevIx == null ? throw new SucoCompileException("“orthogonal” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? (c1.X == c2.X && Math.Abs(c1.Y - c2.Y) == 1) || (c1.Y == c2.Y && Math.Abs(c1.X - c2.X) == 1) : throw new SucoTempCompileException("“orthogonal” condition can only be used on cells."),
-            "^^" => prevIx == null ? throw new SucoCompileException("“^^” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.Y == c1.Y - 1 && c2.X == c1.X : throw new SucoTempCompileException("“#” condition can only be used on cells."),
-            ">>" => prevIx == null ? throw new SucoCompileException("“>>” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.X == c1.X + 1 && c2.Y == c1.Y : throw new SucoTempCompileException("“>>” condition can only be used on cells."),
-            "vv" => prevIx == null ? throw new SucoCompileException("“vv” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.Y == c1.Y + 1 && c2.X == c1.X : throw new SucoTempCompileException("“vv” condition can only be used on cells."),
-            "<<" => prevIx == null ? throw new SucoCompileException("“<<” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.X == c1.X - 1 && c2.Y == c1.Y : throw new SucoTempCompileException("“<<” condition can only be used on cells."),
-            "above" => prevIx == null ? throw new SucoCompileException("“above” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.Y < c1.Y && c2.X == c1.X : throw new SucoTempCompileException("“above” condition can only be used on cells."),
-            "right" => prevIx == null ? throw new SucoCompileException("“right” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.X > c1.X && c2.Y == c1.Y : throw new SucoTempCompileException("“right” condition can only be used on cells."),
-            "below" => prevIx == null ? throw new SucoCompileException("“below” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.Y > c1.Y && c2.X == c1.X : throw new SucoTempCompileException("“below” condition can only be used on cells."),
-            "left" => prevIx == null ? throw new SucoCompileException("“left” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.X < c1.X && c2.Y == c1.Y : throw new SucoTempCompileException("“left” condition can only be used on cells."),
-            "samerow" => prevIx == null ? throw new SucoCompileException("“samerow” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.Y == c1.Y : throw new SucoTempCompileException("“samerow” condition can only be used on cells."),
-            "samecol" => prevIx == null ? throw new SucoCompileException("“samecol” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.X == c1.X : throw new SucoTempCompileException("“samecol” condition can only be used on cells."),
-            "samebox" => prevIx == null ? throw new SucoCompileException("“samebox” cannot be used on the first variable in a list comprehension.", StartIndex, EndIndex) : prev is Cell c1 && cur is Cell c2 ? c2.Box == c1.Box : throw new SucoTempCompileException("“samebox” condition can only be used on cells."),
-            "topleft" => cur is Cell ce ? curList.Cast<Cell>().GroupBy(c => c.Y).MinElement(g => g.Key).MinElement(c => c.X).Index == ce.Index : throw new SucoTempCompileException("“topleft” condition can only be used on cells."),
-            "topright" => cur is Cell ce ? curList.Cast<Cell>().GroupBy(c => c.Y).MinElement(g => g.Key).MaxElement(c => c.X).Index == ce.Index : throw new SucoTempCompileException("“topright” condition can only be used on cells."),
-            "bottomleft" => cur is Cell ce ? curList.Cast<Cell>().GroupBy(c => c.Y).MaxElement(g => g.Key).MinElement(c => c.X).Index == ce.Index : throw new SucoTempCompileException("“bottomleft” condition can only be used on cells."),
-            "bottomright" => cur is Cell ce ? curList.Cast<Cell>().GroupBy(c => c.Y).MaxElement(g => g.Key).MaxElement(c => c.X).Index == ce.Index : throw new SucoTempCompileException("“bottomright” condition can only be used on cells."),
-            "lefttop" => cur is Cell ce ? curList.Cast<Cell>().GroupBy(c => c.X).MinElement(g => g.Key).MinElement(c => c.Y).Index == ce.Index : throw new SucoTempCompileException("“lefttop” condition can only be used on cells."),
-            "righttop" => cur is Cell ce ? curList.Cast<Cell>().GroupBy(c => c.X).MaxElement(g => g.Key).MinElement(c => c.Y).Index == ce.Index : throw new SucoTempCompileException("“righttop” condition can only be used on cells."),
-            "leftbottom" => cur is Cell ce ? curList.Cast<Cell>().GroupBy(c => c.X).MinElement(g => g.Key).MaxElement(c => c.Y).Index == ce.Index : throw new SucoTempCompileException("“leftbottom” condition can only be used on cells."),
-            "rightbottom" => cur is Cell ce ? curList.Cast<Cell>().GroupBy(c => c.X).MaxElement(g => g.Key).MaxElement(c => c.Y).Index == ce.Index : throw new SucoTempCompileException("“rightbottom” condition can only be used on cells."),
+            switch (Name)
+            {
+                case "first":
+                case "last":
+                case "before":
+                case "after":
+                case "~":
+                    break;
+
+                case "diagonal":
+                case "adjacent":
+                case "orthogonal":
+                case "^^":
+                case ">>":
+                case "vv":
+                case "<<":
+                case "above":
+                case "right":
+                case "below":
+                case "left":
+                case "samerow":
+                case "samecol":
+                case "samebox":
+                case "topleft":
+                case "topright":
+                case "bottomleft":
+                case "bottomright":
+                case "lefttop":
+                case "righttop":
+                case "leftbottom":
+                case "rightbottom":
+                    if (!elementType.Equals(SucoCellType.Instance))
+                        throw new SucoCompileException($"“{Name}” can only be used on lists of cells.", StartIndex, EndIndex);
+                    break;
+
+                default:
+                    throw new SucoCompileException($"Unknown shortcut condition: “{Name}”.", StartIndex, EndIndex);
+            }
+            return this;
+        }
+
+        public override bool? Interpret(SucoEnvironment env) => Name switch
+        {
+            "first" => env.GetLastIndex() == 0,
+            "last" => env.GetLastIndex() == env.GetLastList().Count - 1,
+            "before" => env.GetLastIndex() < env.GetPrevLastIndex(),
+            "after" => env.GetLastIndex() > env.GetPrevLastIndex(),
+            "~" => env.GetLastList() != env.GetPrevLastList() ? throw new SucoCompileException("“~” requires that both elements are from the same list.", StartIndex, EndIndex) : env.GetLastIndex() == env.GetPrevLastIndex() + 1,
+            "diagonal" => cellOp(env, (c1, c2) => Math.Abs(c1.X - c2.X) == Math.Abs(c1.Y - c2.Y)),
+            "adjacent" => cellOp(env, (c1, c2) => Math.Abs(c1.X - c2.X) <= 1 && Math.Abs(c1.Y - c2.Y) <= 1),
+            "orthogonal" => cellOp(env, (c1, c2) => (c1.X == c2.X && Math.Abs(c1.Y - c2.Y) == 1) || (c1.Y == c2.Y && Math.Abs(c1.X - c2.X) == 1)),
+            "^^" => cellOp(env, (c1, c2) => c2.Y == c1.Y - 1 && c2.X == c1.X),
+            ">>" => cellOp(env, (c1, c2) => c2.X == c1.X + 1 && c2.Y == c1.Y),
+            "vv" => cellOp(env, (c1, c2) => c2.Y == c1.Y + 1 && c2.X == c1.X),
+            "<<" => cellOp(env, (c1, c2) => c2.X == c1.X - 1 && c2.Y == c1.Y),
+            "above" => cellOp(env, (c1, c2) => c2.Y < c1.Y && c2.X == c1.X),
+            "right" => cellOp(env, (c1, c2) => c2.X > c1.X && c2.Y == c1.Y),
+            "below" => cellOp(env, (c1, c2) => c2.Y > c1.Y && c2.X == c1.X),
+            "left" => cellOp(env, (c1, c2) => c2.X < c1.X && c2.Y == c1.Y),
+            "samerow" => cellOp(env, (c1, c2) => c2.Y == c1.Y),
+            "samecol" => cellOp(env, (c1, c2) => c2.X == c1.X),
+            "samebox" => cellOp(env, (c1, c2) => c2.Box == c1.Box),
+            "topleft" => cellSetOp(env, c => c.GroupBy(c => c.Y).MinElement(g => g.Key).MinElement(c => c.X).Index),
+            "topright" => cellSetOp(env, c => c.GroupBy(c => c.Y).MinElement(g => g.Key).MaxElement(c => c.X).Index),
+            "bottomleft" => cellSetOp(env, c => c.GroupBy(c => c.Y).MaxElement(g => g.Key).MinElement(c => c.X).Index),
+            "bottomright" => cellSetOp(env, c => c.GroupBy(c => c.Y).MaxElement(g => g.Key).MaxElement(c => c.X).Index),
+            "lefttop" => cellSetOp(env, c => c.GroupBy(c => c.X).MinElement(g => g.Key).MinElement(c => c.Y).Index),
+            "righttop" => cellSetOp(env, c => c.GroupBy(c => c.X).MaxElement(g => g.Key).MinElement(c => c.Y).Index),
+            "leftbottom" => cellSetOp(env, c => c.GroupBy(c => c.X).MinElement(g => g.Key).MaxElement(c => c.Y).Index),
+            "rightbottom" => cellSetOp(env, c => c.GroupBy(c => c.X).MaxElement(g => g.Key).MaxElement(c => c.Y).Index),
             _ => throw new SucoTempCompileException($"Unknown shortcut condition “{Name}”.")
         };
+
+        private bool cellOp(SucoEnvironment env, Func<Cell, Cell, bool> fnc) => fnc((Cell) env.GetPrevLastValue(), (Cell) env.GetLastValue());
+        private bool cellSetOp(SucoEnvironment env, Func<IEnumerable<Cell>, int> fnc) => fnc(env.GetLastList().Cast<Cell>()) == ((Cell) env.GetLastValue()).Index;
     }
 }

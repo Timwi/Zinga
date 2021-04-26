@@ -14,9 +14,9 @@ namespace Zinga.Suco
             Operator = op;
         }
 
-        public override object Interpret(Dictionary<string, object> values) => Operand.Type.InterpretUnaryOperator(Operator, Operand);
+        public override object Interpret(SucoEnvironment env) => Operand.Type.InterpretUnaryOperator(Operator, Operand);
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var op = Operand.DeduceTypes(env, context);
             try

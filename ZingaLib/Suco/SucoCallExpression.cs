@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 
 namespace Zinga.Suco
 {
@@ -15,13 +14,13 @@ namespace Zinga.Suco
             Arguments = arguments;
         }
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             try
             {
                 var operand = Operand.DeduceTypes(env, context);
                 if (operand.Type is not SucoFunctionType fnc)
-                    throw new SucoCompileException($"“{operand.Type}” is not a function.", operand.StartIndex, operand.EndIndex);
+                    throw new SucoCompileException($"“{operand.Type}” is not a function type.", operand.StartIndex, operand.EndIndex);
 
                 var newArguments = Arguments.Select(arg => arg.DeduceTypes(env, context)).ToArray();
                 var (parameterTypes, returnType) = fnc.Resolve(newArguments.Select(a => a.Type).ToArray());
@@ -35,11 +34,11 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(Dictionary<string, object> values)
+        public override object Interpret(SucoEnvironment env)
         {
-            var result = Operand.Interpret(values);
+            var result = Operand.Interpret(env);
             if (result is SucoFunction fnc)
-                return fnc.Interpret(Arguments.Select(a => a.Type).ToArray(), Arguments.Select(a => a.Interpret(values)).ToArray());
+                return fnc.Interpret(Arguments.Select(a => a.Type).ToArray(), Arguments.Select(a => a.Interpret(env)).ToArray());
             throw new SucoCompileException($"Operand isn’t a function.", Operand.StartIndex, Operand.EndIndex);
         }
     }

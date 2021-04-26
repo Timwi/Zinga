@@ -47,9 +47,8 @@ namespace Zinga
                 if (constraintIds.Any(c => !constraintTypes.ContainsKey(c)))
                     return HttpResponse.PlainText($"Constraint ID {constraintIds.First(c => !constraintTypes.ContainsKey(c))} does not exist.", HttpStatusCode._400_BadRequest);
 
-                var constraints = new List<PuzzleConstraint>();
                 foreach (var constraint in json["constraints"].GetList())
-                    constraints.Add(new PuzzleConstraint { PuzzleID = puzzle.PuzzleID, ConstraintID = constraint["type"].GetInt(), ValuesJson = constraint["values"].ToString() });
+                    db.PuzzleConstraints.Add(new PuzzleConstraint { PuzzleID = puzzle.PuzzleID, ConstraintID = constraint["type"].GetInt(), ValuesJson = constraint["values"].ToString() });
                 db.SaveChanges();
                 tr.Complete();
                 return HttpResponse.PlainText(puzzle.UrlName);

@@ -14,7 +14,7 @@ namespace Zinga.Suco
             Pieces = pieces;
         }
 
-        protected override SucoExpression deduceTypes(SucoEnvironment env, SucoContext context)
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var newPieces = Pieces.Select(p =>
             {
@@ -28,14 +28,14 @@ namespace Zinga.Suco
             return new SucoStringLiteralExpression(StartIndex, EndIndex, newPieces, SucoStringType.Instance);
         }
 
-        public override object Interpret(Dictionary<string, object> values)
+        public override object Interpret(SucoEnvironment env)
         {
             var result = new StringBuilder();
             foreach (var piece in Pieces)
                 if (piece is SucoStringLiteralPieceString str)
                     result.Append(str.StringValue);
                 else if (piece is SucoStringLiteralPieceExpression expr)
-                    result.Append(expr.Expression.Interpret(values));
+                    result.Append(expr.Expression.Interpret(env));
                 else
                     throw new SucoTempCompileException($"Unexpected type of string literal piece: “{piece.GetType().Name}”.");
             return result.ToString();

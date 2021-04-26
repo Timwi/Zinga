@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿using System;
 
 namespace Zinga.Suco
 {
@@ -19,13 +19,15 @@ namespace Zinga.Suco
             _ => base.GetBinaryOperatorType(op, rightOperand, context)
         };
 
-        public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch
+        private static T? op<T>(bool? left, bool? right, Func<bool, bool, T> fnc) where T : struct => left == null || right == null ? null : fnc(left.Value, right.Value);
+
+        public override object InterpretBinaryOperator(object left, BinaryOperator @operator, SucoType rightType, object right) => (@operator, rightType) switch
         {
-            (BinaryOperator.Equal, SucoBooleanType) => (bool) left == (bool) right,
-            (BinaryOperator.NotEqual, SucoBooleanType) => (bool) left != (bool) right,
-            (BinaryOperator.And, SucoBooleanType) => (bool) left && (bool) right,
-            (BinaryOperator.Or, SucoBooleanType) => (bool) left || (bool) right,
-            _ => base.InterpretBinaryOperator(left, op, rightType, right)
+            (BinaryOperator.Equal, SucoBooleanType) => op((bool?) left, (bool?) right, (a, b) => a == b),
+            (BinaryOperator.NotEqual, SucoBooleanType) => op((bool?) left, (bool?) right, (a, b) => a != b),
+            (BinaryOperator.And, SucoBooleanType) => (bool?) left == false || (bool?) right == false ? false : left == null || right == null ? null : true,
+            (BinaryOperator.Or, SucoBooleanType) => (bool?) left == true || (bool?) right == true ? true : left == null || right == null ? null : false,
+            _ => base.InterpretBinaryOperator(left, @operator, rightType, right)
         };
 
         public override SucoType GetUnaryOperatorType(UnaryOperator op) => op switch
