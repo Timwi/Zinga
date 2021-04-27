@@ -217,12 +217,6 @@
         multiColorMode = opt ? !!opt.multiColorMode : false;
         sidebarOn = opt ? !!opt.sidebarOn : true;
 
-        let undoB = localStorage.getItem(`zinga-${puzzleId}-undo`);
-        let redoB = localStorage.getItem(`zinga-${puzzleId}-redo`);
-
-        undoBuffer = undoB ? undoB.split(' ') : [encodeState(state)];
-        redoBuffer = redoB ? redoB.split(' ') : [];
-
         let str = localStorage.getItem(`zinga-${puzzleId}`);
         let item = null;
         if (str !== null)
@@ -230,6 +224,12 @@
             catch { item = null; }
         if (item && item.cornerNotation && item.centerNotation && item.enteredDigits && item.colors)
             state = item;
+
+        let undoB = localStorage.getItem(`zinga-${puzzleId}-undo`);
+        let redoB = localStorage.getItem(`zinga-${puzzleId}-redo`);
+
+        undoBuffer = undoB ? undoB.split(' ') : [];
+        redoBuffer = redoB ? redoB.split(' ') : [];
     }
     catch
     {
@@ -924,7 +924,7 @@
                 break;
 
             // Debug
-            case 'KeyL':
+            case 'Ctrl+KeyO':
                 console.log(selectedCells.join(", "));
                 break;
 

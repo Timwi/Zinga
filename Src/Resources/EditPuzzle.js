@@ -86,16 +86,6 @@
         remoteLog(`${ev.type} puzzleContainer`);
     });
 
-    function encodeState(st)
-    {
-        return JSON.stringify(st);
-    }
-
-    function decodeState(str)
-    {
-        return JSON.parse(str);
-    }
-
     function makeEmptyState()
     {
         return {
@@ -116,11 +106,12 @@
     for (let givenInf of JSON.parse(puzzleDiv.dataset.givens || null) || [])
         state.givens[givenInf[0]] = givenInf[1];
 
-    let undoBuffer = [encodeState(state)];
+    let undoBuffer = [];
     let redoBuffer = [];
 
     let selectedCells = [];
     let selectedConstraints = [];
+    let lastSelectedCell = 0;
     let lastSelectedConstraint = 0;
 
     function remoteLog2(msg)
@@ -130,18 +121,22 @@
 
     try
     {
-        //let undoB = localStorage.getItem(`zinga-edit-${puzzleId}-undo`);
-        //let redoB = localStorage.getItem(`zinga-edit-${puzzleId}-redo`);
+        str = localStorage.getItem(`zinga-edit`);
+        try { item = JSON.parse(str); }
+        catch { }
+        if (item && item.givens && item.constraints)
+        {
+            state = item;
+            if (state.title === undefined || state.title === null) state.title = 'Sudoku';
+            if (state.author === undefined || state.author === null) state.author = 'unknown';
+            if (state.rules === undefined || state.rules === null) state.author = '';
+        }
 
-        //undoBuffer = undoB ? JSON.parse(undoB) : [encodeState(state)];
-        //redoBuffer = redoB ? JSON.parse(redoB) : [];
+        let undoB = localStorage.getItem(`zinga-edit-undo`);
+        let redoB = localStorage.getItem(`zinga-edit-redo`);
 
-        //str = localStorage.getItem(`zinga-edit-${puzzleId}`);
-        //if (str !== null)
-        //    try { item = JSON.parse(str); }
-        //    catch { item = decodeState(str); }
-        //if (item && item.givens && item.constraints)
-        //    state = item;
+        undoBuffer = undoB ? JSON.parse(undoB) : [];
+        redoBuffer = redoB ? JSON.parse(redoB) : [];
     }
     catch
     {
@@ -180,7 +175,7 @@
         // Update localStorage
         if (localStorage && opt && opt.storage)
         {
-            localStorage.setItem(`zinga-edit`, encodeState(state));
+            localStorage.setItem(`zinga-edit`, JSON.stringify(state));
             localStorage.setItem(`zinga-edit-undo`, JSON.stringify(undoBuffer));
             localStorage.setItem(`zinga-edit-redo`, JSON.stringify(redoBuffer));
         }
@@ -433,7 +428,7 @@
 
     function saveUndo()
     {
-        undoBuffer.push(encodeState(state));
+        undoBuffer.push(JSON.parse(JSON.stringify(state)));
         redoBuffer = [];
     }
 
@@ -441,8 +436,8 @@
     {
         if (undoBuffer.length > 0)
         {
-            redoBuffer.push(encodeState(state));
-            state = decodeState(undoBuffer.pop());
+            redoBuffer.push(state);
+            state = undoBuffer.pop();
             updateVisuals({ storage: true, svg: true, ui: true });
         }
     }
@@ -451,8 +446,8 @@
     {
         if (redoBuffer.length > 0)
         {
-            undoBuffer.push(encodeState(state));
-            state = decodeState(redoBuffer.pop());
+            undoBuffer.push(state);
+            state = redoBuffer.pop();
             updateVisuals({ storage: true, svg: true, ui: true });
         }
     }
@@ -591,23 +586,23 @@
         else if (mode === 'clear')
         {
             selectedCells = [cell];
-            keepMove = false;
         }
-        else if (mode === 'add' || (mode === 'move' && keepMove))
+        else if (mode === 'add')
         {
             let ix = selectedCells.indexOf(cell);
             if (ix !== -1)
                 selectedCells.splice(ix, 1);
             selectedCells.push(cell);
-            keepMove = false;
         }
-        else    // mode === 'move' && !keepMove
+        else    // mode === 'move'
         {
             selectedCells.pop();
             selectedCells.push(cell);
         }
+        selectedConstraints = [];
         lastCellLineDir = null;
         lastCellLineCell = null;
+        lastSelectedCell = cell;
     }
 
     function selectCellLine(dir)
@@ -924,7 +919,12 @@
         }
     }
 
-    let keepMove = false;
+    puzzleContainer.addEventListener("keyup", ev =>
+    {
+        if (ev.key === 'Control')
+            selectedCells = [...new Set(selectedCells)];
+    });
+
     puzzleContainer.addEventListener("keydown", ev =>
     {
         let str = ev.code;
@@ -939,16 +939,15 @@
 
         function ArrowMovement(dx, dy, mode)
         {
-            if (selectedCells.length === 0)
-                selectedCells = [0];
-            else
+            let toSelect = lastSelectedCell;
+            if (selectedCells.length !== 0)
             {
                 let lastCell = lastCellLineCell !== null ? lastCellLineCell : selectedCells[selectedCells.length - 1];
                 let newX = ((lastCell % 9) + 9 + dx) % 9;
                 let newY = (((lastCell / 9) | 0) + 9 + dy) % 9;
-                let coord = newX + 9 * newY;
-                selectCell(coord, mode);
+                toSelect = newX + 9 * newY;
             }
+            selectCell(toSelect, mode);
             updateVisuals();
         }
 
@@ -1013,12 +1012,12 @@
             case 'Ctrl+ArrowDown': ArrowMovement(0, 1, 'move'); break;
             case 'Ctrl+ArrowLeft': ArrowMovement(-1, 0, 'move'); break;
             case 'Ctrl+ArrowRight': ArrowMovement(1, 0, 'move'); break;
-            case 'Ctrl+ControlLeft': case 'Ctrl+ControlRight': keepMove = true; break;
             case 'Ctrl+Space':
-                if (selectedCells.length >= 2 && selectedCells[selectedCells.length - 2] === selectedCells[selectedCells.length - 1])
-                    selectedCells.splice(selectedCells.length - 1, 1);
+                let numSel = selectedCells.map((c, ix) => c === selectedCells[selectedCells.length - 1] ? ix : null).filter(x => x !== null);
+                if (numSel.length === 2)
+                    selectedCells.splice(numSel[0], 1);
                 else
-                    keepMove = !keepMove;
+                    selectedCells.push(selectedCells[selectedCells.length - 1]);
                 updateVisuals();
                 break;
             case 'Ctrl+Shift+ArrowUp': selectCellLine('n'); break;
@@ -1041,7 +1040,7 @@
                 break;
 
             // Debug
-            case 'Ctrl+KeyL':
+            case 'Ctrl+KeyO':
                 console.log(selectedCells.join(", "));
                 break;
 
