@@ -56,7 +56,7 @@ namespace Zinga.Lib
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
             var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
             var constraints = JsonList.Parse(constraintsJson);
-            var resultSvgDefs = new StringBuilder();
+            var resultSvgDefs = new HashSet<string>();
             var resultSvg = new StringBuilder();
             JsonValue editingResult = null;
 
@@ -68,13 +68,13 @@ namespace Zinga.Lib
                 var type = (typeId < 0 ? customConstraintTypes[~typeId] : constraintTypes[typeId.ToString()]).GetDict();
                 SucoEnvironment variableValues = null;
 
-                void process(string parameter, Action<string> callback)
+                void process(string parameter, SucoType expectedReturnType, Action<object> callback)
                 {
                     if (type[parameter] == null)
                         return;
                     try
                     {
-                        var (expr, env, interpreted) = parseSuco(type[parameter].GetString(), type["variables"].GetDict(), SucoContext.Svg, SucoStringType.Instance);
+                        var (expr, env, interpreted) = parseSuco(type[parameter].GetString(), type["variables"].GetDict(), SucoContext.Svg, expectedReturnType);
                         var cache = interpreted;
                         var cacheKey = constraint["values"].ToString();
                         if (!cache.ContainsKey(cacheKey))
@@ -82,7 +82,7 @@ namespace Zinga.Lib
                             variableValues ??= ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), env.GetVariables());
                             cache[cacheKey] = expr.Interpret(variableValues);
                         }
-                        callback((string) cache[cacheKey]);
+                        callback(cache[cacheKey]);
                     }
                     catch (SucoCompileException sce)
                     {
@@ -96,8 +96,8 @@ namespace Zinga.Lib
                     }
                 }
 
-                process("svgdefs", str => { resultSvgDefs.Append(str); });
-                process("svg", str => { svgCode = str; });
+                process("svgdefs", new SucoListType(SucoStringType.Instance), str => { resultSvgDefs.AddRange(((IEnumerable<object>) str).Cast<string>()); });
+                process("svg", SucoStringType.Instance, str => { svgCode = (string) str; });
 
                 if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == "logic" && type["logic"] != null)
                 {
@@ -119,7 +119,7 @@ namespace Zinga.Lib
                 resultSvg.Append($"<g id='constraint-svg-{cIx}'>{svgCode}</g>");
             }
 
-            return new JsonList { resultSvgDefs.ToString(), resultSvg.ToString(), editingResult }.ToString();
+            return new JsonList { resultSvgDefs.JoinString(), resultSvg.ToString(), editingResult }.ToString();
         }
 
         public static string CompileSuco(string suco, string variableTypesJson)
