@@ -86,7 +86,6 @@ namespace Zinga
             {
                 var dic = new JsonDict
                 {
-                    ["global"] = kvp.Value.Global,
                     ["kind"] = kvp.Value.Kind.ToString(),
                     ["logic"] = kvp.Value.LogicSuco,
                     ["name"] = kvp.Value.Name,
@@ -210,7 +209,6 @@ namespace Zinga
                                 new DIV { class_ = "tabs" }._(
                                     new DIV { class_ = "tab tab-puzzle", accesskey = "p", tabindex = -1 }.Data("tab", "puzzle")._("Puzzle".Accel('P')),
                                     new DIV { class_ = "tab tab-constraints", accesskey = "c", tabindex = -1 }.Data("tab", "constraints")._("Constraints".Accel('C'))),
-
                                 new DIV { class_ = "tabc", id = "tab-puzzle" }._(
                                     new SECTION(
                                         new DIV { class_ = "label" }._("Title"),
@@ -229,12 +227,32 @@ namespace Zinga
                                     new SECTION(
                                         new DIV { class_ = "label" }._("Save"),
                                         new DIV { class_ = "save-section" }._(
-                                            new BUTTON { id = "puzzle-save", accesskey = "s" }._("Save puzzle".Accel('S')),
-                                            new DIV("Saving...")))),
+                                            new BUTTON { id = "puzzle-test", accesskey = "t" }._("Test puzzle".Accel('T')),
+                                            new BUTTON { id = "puzzle-save", accesskey = "s" }._("Publish puzzle".Accel('s')),
+                                            new DIV("Publishing...")))),
                                 new DIV { class_ = "tabc", id = "tab-constraints" }._(
                                     new SECTION { id = "constraints-section" }._(
                                         new DIV { class_ = "label" }._("Constraints"),
                                         new DIV { id = "constraint-list" }),
+                                    new SECTION { id = "constraint-code-section" }._(
+                                        new DIV { class_ = "label" }._("Edit constraint code"),
+                                        new DIV { class_ = "constraint-code" }._(
+                                            new DIV { class_ = "selection", id = "constraint-code-selection" }._(
+                                                new DIV("Apply changes to:"),
+                                                new DIV(new INPUT { type = itype.radio, name = "apply-to", value = "selection", id = "constraint-apply-selection" }, new LABEL { for_ = "constraint-apply-selection" }._(" selected constraints")),
+                                                new DIV(new INPUT { type = itype.radio, name = "apply-to", value = "similar", id = "constraint-apply-similar" }, new LABEL { for_ = "constraint-apply-similar" }._(" all constraints of the same type"))),
+                                            new DIV { class_ = "label" }._("Name"),
+                                            new DIV { class_ = "code" }._(new INPUT { type = itype.text, id = "constraint-code-name" }),
+                                            new DIV { class_ = "label" }._("Kind"),
+                                            new DIV { class_ = "code" }._(new SELECT { id = "constraint-code-kind" }._(EnumStrong.GetValues<ConstraintKind>().Select(v => new OPTION { value = v.ToString() }._(v.ToString())))),
+                                            new DIV { class_ = "label" }._("Logic (Suco)"),
+                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-logic" }),
+                                            new DIV { class_ = "label" }._("Code to generate SVG (Suco)"),
+                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-svg" }),
+                                            new DIV { class_ = "label" }._("Code to generate SVG definitions (Suco)"),
+                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-svgdefs" }),
+                                            new DIV { class_ = "label" }._("Preview SVG"),
+                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-preview" }))),
                                     new SECTION { id = "constraint-add-section" }._(
                                         new DIV { class_ = "label" }._("Add a constraint"),
                                         new DIV { class_ = "main" }._(

@@ -286,6 +286,7 @@
 
                 constraintListHtml += `
                     <div class='constraint' id='constraint-${cIx}' data-index='${cIx}'>
+                        <div class='buttons'><button type='button' class='mini-btn edit-code' title='Edit constraint code'></button></div>
                         <div class='name'>${constraintType.name}<div class='expand'></div></div>
                         <div class='variables'>${variableHtml}</div>
                     </div>`;
@@ -352,6 +353,7 @@
                 let expander = constraintDiv.querySelector('.expand');
                 setButtonHandler(expander, function() { setClass(constraintDiv, 'expanded', !constraintDiv.classList.contains('expanded')); });
                 constraintDiv.querySelector('.name').ondblclick = function(ev) { if (ev.target !== expander) setClass(constraintDiv, 'expanded', !constraintDiv.classList.contains('expanded')); };
+                setButtonHandler(constraintDiv.querySelector('.edit-code'), () => { editConstraintCode(cIx); });
             });
         }
 
@@ -423,6 +425,7 @@
         // Title/author
         document.querySelector('#topbar>.title').innerText = state.title;
         document.querySelector('#topbar>.author').innerText = `by ${state.author === '' ? 'unknown' : state.author}`;
+        document.title = `Editing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
     }
     updateVisuals({ storage: true, svg: true, ui: true });
 
@@ -654,9 +657,13 @@
         updateVisuals({ storage: true });
     }
 
-    // Title/Author(s)
-    document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals(); };
-    document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals(); };
+    // Title, Author(s), Rules
+    document.getElementById('puzzle-title-input').value = state.title;
+    document.getElementById('puzzle-author-input').value = state.author;
+    document.getElementById('puzzle-rules-input').value = state.rules;
+    document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
+    document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
+    document.getElementById('puzzle-rules-input').onchange = function() { saveUndo(); state.rules = document.getElementById('puzzle-rules-input').value; updateVisuals({ storage: true }); };
 
     // Buttons that place givens in the grid
     Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given); }); });
@@ -690,7 +697,9 @@
         }
     });
 
-    // SAVE PUZZLE button
+    // TEST PUZZLE button
+    setButtonHandler(document.getElementById('puzzle-test'), () => { window.open(`${window.location.protocol}//${window.location.host}/test`); });
+    // PUBLISH PUZZLE button
     setButtonHandler(document.getElementById('puzzle-save'), () =>
     {
         document.querySelector('.save-section').classList.add('saving');
@@ -705,7 +714,6 @@
                 alert(`The puzzle could not be saved: ${req.responseText} (${req.status})`);
             else
                 window.open(`${window.location.protocol}//${window.location.host}/${req.responseText}`);
-            //console.log(req.responseText);
             document.querySelector('.save-section').classList.remove('saving');
         };
         req.send(`puzzle=${encodeURIComponent(JSON.stringify(state))}`);
@@ -919,6 +927,23 @@
         }
     }
 
+    function editConstraintCode(cIx)
+    {
+        let constraint = state.constraints[cIx];
+        let cType = constraintTypes[constraint.type];
+        let allApplicable = Array(state.constraints.length).fill(null).map((_, c) => c).filter(ix => state.constraints[ix].type === constraint.type);
+
+        document.getElementById('constraint-code-selection').style.display = allApplicable.length > 1 ? 'block' : 'none';
+        document.getElementById('constraint-apply-selection').checked = true;
+        document.getElementById('constraint-code-name').value = cType.name;
+        document.getElementById('constraint-code-kind').value = cType.kind;
+        document.getElementById('constraint-code-logic').value = cType.logic;
+        document.getElementById('constraint-code-svg').value = cType.svg;
+        document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
+        document.getElementById('constraint-code-preview').value = cType.preview;
+        document.getElementById('constraint-code-section').style.display = 'block';
+    }
+
     puzzleContainer.addEventListener("keyup", ev =>
     {
         if (ev.key === 'Control')
@@ -996,7 +1021,8 @@
             case 'KeyX':
             case 'KeyY':
             case 'KeyZ':
-                addConstraintWithShortcut(str.substr(str.length - 1).toLowerCase());
+                if (selectedCells.length > 0)
+                    addConstraintWithShortcut(str.substr(str.length - 1).toLowerCase());
                 break;
 
             // Navigation
@@ -1100,6 +1126,13 @@
 
             case 'Escape': selectedCells = []; selectedConstraints = []; updateVisuals(); break;
             case 'Ctrl+KeyA': selectedConstraints = state.constraints.map((_, c) => c); updateVisuals(); break;
+
+            case 'KeyE':    // edit constraint code
+                if (selectedConstraints.length > 1)
+                    alert('Please select only a single constraint to edit its code. You will have the option to edit all constraints of the same type.');
+                else if (selectedConstraints.length === 1)
+                    editConstraintCode(selectedConstraints[0]);
+                break;
 
             // Undo/redo
             case 'Backspace':

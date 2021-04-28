@@ -47,10 +47,11 @@
     let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
     let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
     let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes);
-    let constraints = JSON.parse(puzzleDiv.dataset.constraints);
+    let constraints = puzzleId === 'test' ? [] : JSON.parse(puzzleDiv.dataset.constraints);
     let givens = Array(81).fill(null);
-    for (let givenInf of JSON.parse(puzzleDiv.dataset.givens || null) || [])
-        givens[givenInf[0]] = givenInf[1];
+    if (puzzleId !== 'test')
+        for (let givenInf of JSON.parse(puzzleDiv.dataset.givens ?? null) ?? [])
+            givens[givenInf[0]] = givenInf[1];
 
     puzzleContainer.focus();
 
@@ -289,7 +290,7 @@
         setClass(puzzleDiv, 'solved', false);
 
         // Check if any constraints are violated
-        //document.querySelector('.rules-text').innerText = `new string[] { @"${JSON.stringify(state.enteredDigits).replace(/"/g, '""')}", @"${JSON.stringify(constraintTypes).replace(/"/g, '""')}", @"${JSON.stringify(constraints).replace(/"/g, '""')}" }`;
+        //document.querySelector('#rules-text').innerText = `new string[] { @"${JSON.stringify(state.enteredDigits).replace(/"/g, '""')}", @"${JSON.stringify(constraintTypes).replace(/"/g, '""')}", @"${JSON.stringify(constraints).replace(/"/g, '""')}" }`;
         dotNet('CheckConstraints', [JSON.stringify(state.enteredDigits), JSON.stringify(constraintTypes), JSON.stringify(constraints)], result =>
         {
             let violatedConstraintIxs = JSON.parse(result);
@@ -297,12 +298,46 @@
             for (let cIx = 0; cIx < constraints.length; cIx++)
             {
                 if (violatedConstraintIxs.includes(cIx))
-                    document.getElementById(`constraint-${cIx}`).setAttribute('filter', 'url(#constraint-invalid-shadow)');
+                    document.getElementById(`constraint-svg-${cIx}`).setAttribute('filter', 'url(#constraint-invalid-shadow)');
                 else
-                    document.getElementById(`constraint-${cIx}`).removeAttribute('filter');
+                    document.getElementById(`constraint-svg-${cIx}`).removeAttribute('filter');
             }
         });
     }
+
+    function updateConstraints() 
+    {
+        if (!document.hidden && puzzleId === 'test')
+        {
+            let state;
+            try { state = JSON.parse(localStorage.getItem(`zinga-edit`)); }
+            catch { }
+            if (state && state.givens && state.constraints)
+            {
+                console.log(state);
+                givens = state.givens;
+                constraints = state.constraints;
+
+                document.querySelector('#topbar>.title').innerText = state.title ?? 'Sudoku';
+                document.querySelector('#topbar>.author').innerText = `by ${state.author ?? 'unknown'}`;
+                document.title = `Testing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
+
+                var paragraphs = (state.rules ?? 'Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.').split(/\r?\n/).filter(s => s !== null && !/^\s*$/.test(s));
+                document.getElementById('rules-text').innerHTML = paragraphs.map(_ => '<p></p>').join('');
+                Array.from(document.querySelectorAll('#rules-text>p')).forEach((p, pIx) => { p.innerText = paragraphs[pIx]; });
+                window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
+
+                dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(constraints)], svgs =>
+                {
+                    let list = JSON.parse(svgs);
+                    document.getElementById('constraint-defs').innerHTML = list[0];
+                    document.getElementById('constraint-svg').innerHTML = list[1];
+                });
+            }
+        }
+    }
+    updateConstraints();    // Make sure this happens before the first call to updateVisuals()
+    document.addEventListener('visibilitychange', updateConstraints);
 
     function updateVisuals(udpateStorage)
     {
@@ -955,24 +990,34 @@
             remoteLog2(`onmousedown puzzleContainer (canceled)`);
     };
 
-    let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
+    function fixViewBox()
+    {
+        // Fix the viewBox
+        let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
 
-    // Step 1: move the button row so that it’s below the puzzle
-    let buttonRow = puzzleDiv.querySelector('.button-row');
-    let extraBBox = puzzleDiv.querySelector('.sudoku').getBBox();
-    buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, extraBBox.y + extraBBox.height) + .25})`);
+        // Step 1: move the button row so that it’s below the puzzle
+        let buttonRow = puzzleDiv.querySelector('.button-row');
+        let extraBBox = puzzleDiv.querySelector('.sudoku').getBBox();
+        buttonRow.setAttribute('transform', `translate(0, ${Math.max(9.4, extraBBox.y + extraBBox.height + .25)})`);
 
-    // Step 2: move the global constraints so they’re to the left of the puzzle
-    let globalBox = puzzleDiv.querySelector('.global-constraints');
-    globalBox.setAttribute('transform', `translate(${extraBBox.x - 1.5}, 0)`);
+        // Step 2: move the global constraints so they’re to the left of the puzzle
+        let globalBox = puzzleDiv.querySelector('.global-constraints');
+        globalBox.setAttribute('transform', `translate(${extraBBox.x - 1.5}, 0)`);
 
-    // Step 3: change the viewBox so that it includes everything
-    let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
-    puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
+        // Step 3: change the viewBox so that it includes everything
+        let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
+        console.log(fullBBox);
+        let left = Math.min(-.4, fullBBox.x - .1);
+        let top = Math.min(-.4, fullBBox.y - .1);
+        let right = Math.max(9.4, fullBBox.x + fullBBox.width + .2);
+        let bottom = Math.max(9.4, fullBBox.y + fullBBox.height + .2);
+        puzzleSvg.setAttribute('viewBox', `${left} ${top} ${right - left} ${bottom - top}`);
+    }
+    fixViewBox();
 
     window.addEventListener('resize', function()
     {
-        let rulesDiv = puzzleDiv.querySelector('.rules-text');
+        let rulesDiv = document.getElementById('rules-text');
         let sidebar = puzzleDiv.querySelector('.sidebar');
         let sidebarContent = puzzleDiv.querySelector('.sidebar-content');
         let min = 8;
@@ -990,5 +1035,5 @@
         rulesDiv.style.fontSize = `${min}pt`;
     });
 
-    window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 100);
+    window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
 });

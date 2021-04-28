@@ -25,6 +25,15 @@ input, textarea, button, select {
         outline: none;
     }
 
+input[type='text'], textarea, select {
+    width: 100%;
+}
+
+textarea {
+    resize: vertical;
+    height: 3cm;
+}
+
 th, td {
     vertical-align: top;
 }
@@ -277,18 +286,18 @@ svg.puzzle-svg {
         padding: 1cm .5cm .5cm 1cm;
         border: 2px solid black;
         border-radius: .5cm;
-        background: hsl(220, 50%, 97%);
+        background: white;
         position: relative;
     }
 
-        .sidebar .rules .rules-text {
+        .sidebar .rules #rules-text {
             white-space: pre-wrap;
             overflow: auto;
             padding-right: .5cm;
             font-size: 18pt;
         }
 
-            .sidebar .rules .rules-text p {
+            .sidebar .rules #rules-text p {
                 margin: 0 0 .5cm 0;
             }
 
@@ -393,10 +402,17 @@ svg.puzzle-svg {
         overflow: auto;
     }
 
-        .sidebar .tabc section .label {
+        .sidebar .tabc section > .label {
             background: hsl(220, 70%, 50%);
             color: white;
             font-weight: bold;
+            padding: .1cm .2cm;
+        }
+
+        .sidebar .tabc section > div > .label {
+            background: hsl(220, 70%, 85%);
+            font-weight: bold;
+            font-size: 12pt;
             padding: .1cm .2cm;
         }
 
@@ -417,7 +433,7 @@ svg.puzzle-svg {
         outline: none;
     }
 
-.sidebar input[type="text"] {
+.sidebar input[type="text"], .sidebar textarea, .sidebar select {
     width: 100%;
 }
 
@@ -427,10 +443,7 @@ svg.puzzle-svg {
     }
 
 .sidebar #puzzle-rules-input {
-    width: 100%;
     height: 5cm;
-    font: inherit;
-    resize: vertical;
 }
 
 .sidebar #givens {
@@ -445,9 +458,14 @@ svg.puzzle-svg {
         font-size: 18pt;
     }
 
-.sidebar #constraint-parameters-section {
+.sidebar #constraint-code-section {
     display: none;
 }
+
+    .sidebar #constraint-code-section textarea {
+        font-size: 10pt;
+        height: 2cm;
+    }
 
 .sidebar #constraint-list {
     border: 1px solid black;
@@ -495,21 +513,21 @@ svg.puzzle-svg {
         display: table-row;
     }
 
-    .sidebar .constraint .variables .variable > div {
-        display: table-cell;
-        padding: .05cm .3cm;
-    }
+        .sidebar .constraint .variables .variable > div {
+            display: table-cell;
+            padding: .05cm .3cm;
+        }
 
-    .sidebar .constraint .variables .variable .name {
-        font-weight: bold;
-        background: white;
-    }
+        .sidebar .constraint .variables .variable .name {
+            font-weight: bold;
+            background: white;
+        }
 
-    .sidebar .constraint .variables .variable .value {
-        background: hsl(220, 80%, 95%);
-    }
+        .sidebar .constraint .variables .variable .value {
+            background: hsl(220, 80%, 95%);
+        }
 
-    .sidebar .constraint .variables .mini-btn {
+    .sidebar .constraint .mini-btn {
         display: inline-block;
         background: white;
         border: 1px solid #444;
@@ -520,14 +538,14 @@ svg.puzzle-svg {
         vertical-align: bottom;
         cursor: pointer;
     }
-        .sidebar .constraint .variables .mini-btn:focus {
+        .sidebar .constraint .mini-btn:focus {
             border: 2px solid #46f;
             outline: none;
         }
-        .sidebar .constraint .variables .mini-btn.show {
+        .sidebar .constraint .mini-btn.show {
             background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 40 5 L 10.09375 35 L 40 65 L 40 44.708984 C 73.379622 44.022868 83.374266 48.868838 65.09375 90 L 80.09375 90 C 98.976958 33.350377 93.159505 23.925067 40 24.757812 L 40 5 z" fill="%23507fcb" /></svg>');
         }
-        .sidebar .constraint .variables .mini-btn.set {
+        .sidebar .constraint .mini-btn.set {
             background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 95,60.09375 65,90 35,60.09375 H 55.291016 C 55.977132,26.714128 51.131162,16.719484 9.9999996,35 V 20 C 66.649623,1.1167916 76.074933,6.9342446 75.242188,60.09375 Z" fill="%232fa639" /></svg>');
             text-align: left;
             text-shadow: 0 0 3px white;
@@ -535,6 +553,15 @@ svg.puzzle-svg {
             font-size: 9pt;
             padding: 5px 0 0 1px;
         }
+
+        .sidebar .constraint .mini-btn.edit-code {
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 63,10 28,45 h 8 L 52,29 V 25 L 65,12 h 8 L 21,64 36,79 90,25 75,10 Z M 17,68 10,90 32,83 Z" fill="%233274e7" /></svg>');
+        }
+
+    .sidebar .constraint .buttons {
+        float: right;
+        line-height: 0;
+    }
 
 .sidebar #constraint-add-section {
     font-size: 12pt;
@@ -570,11 +597,12 @@ svg.puzzle-svg {
 
 .sidebar .save-section {
     text-align: center;
-    font-size: 24pt;
+    font-size: 18pt;
     padding: .3cm 0 .2cm 0;
 }
     .sidebar .save-section button {
         padding: .1cm .4cm;
+        margin: 0 .1cm;
     }
     .sidebar .save-section div {
         display: none;

@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
@@ -17,7 +16,6 @@ namespace Zinga.Database
 
         public bool Public { get; set; }
         public string Name { get; set; }
-        public bool Global { get; set; }
         public ConstraintKind Kind { get; set; }
         public string VariablesJson { get; set; }
         public string LogicSuco { get; set; }

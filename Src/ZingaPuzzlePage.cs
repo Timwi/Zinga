@@ -1,16 +1,18 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using RT.Json;
-using RT.Serialization;
 using RT.Servers;
 using RT.TagSoup;
 using RT.Util;
 using RT.Util.ExtensionMethods;
 using Zinga.Database;
+
+using DbConstraint = Zinga.Database.Constraint;
 
 namespace Zinga
 {
@@ -22,16 +24,29 @@ namespace Zinga
             if (url.Length == 0)
                 return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
 
-            using var db = new Db();
             url = url.UrlUnescape();
-            var puzzle = db.Puzzles.FirstOrDefault(p => p.UrlName == url);
-            if (puzzle == null)
-                return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
-            var constraints = db.PuzzleConstraints.Where(c => c.PuzzleID == puzzle.PuzzleID).ToArray();
-            var constraintIds = constraints.Select(c => c.ConstraintID).Distinct().ToArray();
-            var constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).AsEnumerable().ToDictionary(c => c.ConstraintID);
-            puzzle.LastAccessed = DateTime.UtcNow;
-            db.SaveChanges();
+
+            var isTest = url == "test";
+            Puzzle puzzle = null;
+            PuzzleConstraint[] constraints = null;
+            Dictionary<int, DbConstraint> constraintTypes;
+            if (isTest)
+            {
+                using var db = new Db();
+                constraintTypes = db.Constraints.Where(c => c.Public).AsEnumerable().ToDictionary(c => c.ConstraintID);
+            }
+            else
+            {
+                using var db = new Db();
+                puzzle = db.Puzzles.FirstOrDefault(p => p.UrlName == url);
+                if (puzzle == null)
+                    return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
+                constraints = db.PuzzleConstraints.Where(c => c.PuzzleID == puzzle.PuzzleID).ToArray();
+                var constraintIds = constraints.Select(c => c.ConstraintID).Distinct().ToArray();
+                constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).AsEnumerable().ToDictionary(c => c.ConstraintID);
+                puzzle.LastAccessed = DateTime.UtcNow;
+                db.SaveChanges();
+            }
 
             const double btnHeight = .8;
             const double margin = .135;
@@ -66,9 +81,9 @@ namespace Zinga
                     renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
             }).JoinString();
 
-            var decodedValues = constraints.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].Variables)).ToArray();
+            var decodedValues = constraints?.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].Variables)).ToArray();
 
-            var constraintsJson = constraints.Select(c => new JsonDict
+            var constraintsJson = constraints?.Select(c => new JsonDict
             {
                 ["type"] = c.ConstraintID,
                 ["values"] = new JsonRaw(c.ValuesJson)
@@ -77,7 +92,6 @@ namespace Zinga
             {
                 var dic = new JsonDict
                 {
-                    ["global"] = kvp.Value.Global,
                     ["kind"] = kvp.Value.Kind.ToString(),
                     ["logic"] = kvp.Value.LogicSuco,
                     ["name"] = kvp.Value.Name,
@@ -96,7 +110,7 @@ namespace Zinga
                 new HEAD(
                     new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
                     new META { name = "viewport", content = "width=device-width,initial-scale=1.0" },
-                    new TITLE($"{puzzle.Title} by {puzzle.Author}"),
+                    new TITLE($"{puzzle?.Title} by {puzzle?.Author}"),
                     new RawTag(@"<script src='/_framework/blazor.webassembly.js' autostart='false'></script>"),
 
 #if DEBUG
@@ -109,13 +123,13 @@ namespace Zinga
                     new LINK { rel = "shortcut icon", type = "image/png", href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQAAQMAAABF07nAAAAABlBMVEUAAAD///+l2Z/dAAACFElEQVR42u3YsQ2AMBAEwZMIKINS3RplERm38ERvodn4gokvkSRJkiRJ2qHxFrqTXJXhk+SsDCcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAJEmSJEmStslFAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8EPA8Q0gSZIkSZLUflD4iAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANoBkiRJkiRJnS37yw5ZFqD7+QAAAABJRU5ErkJggg==" }),
                 new BODY { class_ = "is-puzzle" }._(
                     new DIV { id = "topbar" }._(
-                        new DIV { class_ = "title" }._(puzzle.Title),
-                        puzzle.Author == null ? null : new DIV { class_ = "author" }._("by ", puzzle.Author)),
+                        new DIV { class_ = "title" }._(puzzle?.Title),
+                        new DIV { class_ = "author" }._("by ", puzzle?.Author)),
                     new DIV { class_ = "puzzle" }
                         .Data("constrainttypes", constraintTypesJson)
                         .Data("constraints", constraintsJson)
-                        .Data("givens", puzzle.GivensJson)
-                        .Data("puzzleid", puzzle.UrlName)
+                        .Data("givens", puzzle?.GivensJson)
+                        .Data("puzzleid", puzzle?.UrlName ?? "test")
                         ._(
                             new DIV { class_ = "puzzle-container", tabindex = 0 }._(new RawTag($@"
                                 <svg viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
@@ -127,10 +141,10 @@ namespace Zinga
                                             <feComposite in2='constraint-selection-shadow-3' in='SourceGraphic'></feComposite>
                                         </filter>
                                     </defs>
-                                    <defs>{constraints.SelectMany((c, cIx) => constraintTypes[c.ConstraintID].GetSvgDefs(decodedValues[cIx])).Distinct().JoinString()}</defs>
+                                    <defs id='constraint-defs'>{constraints?.SelectMany((c, cIx) => constraintTypes[c.ConstraintID].GetSvgDefs(decodedValues[cIx])).Distinct().JoinString()}</defs>
                                     <g class='full-puzzle'>
                                         <g transform='translate(0, 9.5)' class='button-row'>{renderButtonArea(btns, 9)}</g>
-                                        <g class='global-constraints'>{constraints.Select((c, cIx) => constraintTypes[c.ConstraintID].Global ? constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx]) : null).JoinString()}</g>
+                                        <g class='global-constraints'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx]) : null).JoinString()}</g>
 
                                         <g class='sudoku'>
                                             <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
@@ -170,18 +184,18 @@ namespace Zinga
                                             <line x1='0' y1='8' x2='9' y2='8' stroke='black' stroke-width='.01' />
                                             <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
 
-                                            {constraints.Select((c, cIx) => constraintTypes[c.ConstraintID].Global ? null : $"<g id='constraint-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}
-                                            <g>{puzzle.ExtraSvg}</g>
+                                            <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
+                                            <g id='over-svg'>{puzzle?.ExtraSvg}</g>
 
                                         </g>
                                     </g>
                                 </svg>")),
                             new DIV { class_ = "sidebar" }._(
                                 new DIV { class_ = "sidebar-content" }._(
-                                    new DIV { class_ = "rules" }._(new DIV { class_ = "rules-text" }._(
-                                        puzzle.Rules.NullOr(r => Regex.Split(r, @"\r?\n").Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => new P(s)))
+                                    new DIV { class_ = "rules" }._(new DIV { id = "rules-text" }._(
+                                        puzzle?.Rules.NullOr(r => Regex.Split(r, @"\r?\n").Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => new P(s)))
                                             ?? (object) "Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.")),
-                                    puzzle.Links == null || puzzle.Links.Length == 0 ? null : new UL { class_ = "links" }._(puzzle.Links.Select(link => new LI(new A { href = link.Url }._(link.Text)))),
+                                    puzzle?.Links == null || puzzle.Links.Length == 0 ? null : new UL { class_ = "links" }._(puzzle.Links.Select(link => new LI(new A { href = link.Url }._(link.Text)))),
                                     new DIV { class_ = "options" }._(
                                         new DIV(new INPUT { type = itype.checkbox, id = "opt-show-errors" }, new LABEL { for_ = "opt-show-errors" }._(" Show conflicts")),
                                         new DIV(new INPUT { type = itype.checkbox, id = "opt-multi-color" }, new LABEL { for_ = "opt-multi-color" }._(" Multi-color mode")))))))));
