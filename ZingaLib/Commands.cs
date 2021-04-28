@@ -28,30 +28,11 @@ namespace Zinga.Lib
             return _parsedSuco[key];
         }
 
-        /*
-        CONSTRAINTS
-            {
-                ["type"] = (int),
-                ["values"] = (obj: string → value)
-            }
-
-        CONSTRAINTTYPES
-            {
-                ["global"] = kvp.Value.Global,
-                ["logic"] = kvp.Value.LogicSuco,
-                ["name"] = kvp.Value.Name,
-                ["preview"] = kvp.Value.PreviewSvg,
-                ["public"] = kvp.Value.Public,
-                ["svgdefs"] = kvp.Value.SvgDefsSuco,
-                ["svg"] = kvp.Value.SvgSuco,
-                ["variables"] = new JsonRaw(kvp.Value.VariablesJson)
-            }
-        */
-
-        public static string CheckConstraints(string enteredDigitsJson, string constraintTypesJson, string constraintsJson)
+        public static string CheckConstraints(string enteredDigitsJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
         {
             var enteredDigits = JsonList.Parse(enteredDigitsJson).Select(v => v?.GetInt()).ToArray();
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
+            var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
             var constraints = JsonList.Parse(constraintsJson);
             var results = new JsonList();
 
@@ -59,7 +40,7 @@ namespace Zinga.Lib
             {
                 var constraint = constraints[cIx];
                 var typeId = constraint["type"].GetInt();
-                var type = constraintTypes[typeId.ToString()].GetDict();
+                var type = typeId < 0 ? customConstraintTypes[~typeId] : constraintTypes[typeId.ToString()].GetDict();
                 var (expr, env, _) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoBooleanType.Instance);
                 var variableValues = ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), env.GetVariables(), enteredDigits)
                     .DeclareVariable("allcells", Ut.NewArray(81, cIx => new Cell(cIx, null, enteredDigits[cIx])));
@@ -70,47 +51,75 @@ namespace Zinga.Lib
             return results.ToString();
         }
 
-        public static string RenderConstraintSvgs(string constraintTypesJson, string constraintsJson)
+        public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson, int? editingConstraintTypeId, string editingConstraintTypeParameter)
         {
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
+            var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
             var constraints = JsonList.Parse(constraintsJson);
             var resultSvgDefs = new StringBuilder();
             var resultSvg = new StringBuilder();
+            JsonValue editingResult = null;
 
             for (var cIx = 0; cIx < constraints.Count; cIx++)
             {
                 var constraint = constraints[cIx];
                 var typeId = constraint["type"].GetInt();
-                var type = constraintTypes[typeId.ToString()].GetDict();
-                var svgSuco = type["svg"].NullOr(svg => parseSuco(svg.GetString(), type["variables"].GetDict(), SucoContext.Svg, SucoStringType.Instance));
-                var svgDefsSuco = type["svgdefs"].NullOr(svgDefs => parseSuco(svgDefs.GetString(), type["variables"].GetDict(), SucoContext.Svg, SucoStringType.Instance));
+                string svgCode = null;
+                var type = (typeId < 0 ? customConstraintTypes[~typeId] : constraintTypes[typeId.ToString()]).GetDict();
                 SucoEnvironment variableValues = null;
 
-                if (svgDefsSuco != null)
+                void process(string parameter, Action<string> callback)
                 {
-                    var cache = svgDefsSuco.Value.interpreted;
-                    var cacheKey = constraint["values"].ToString();
-                    if (!cache.ContainsKey(cacheKey))
+                    if (type[parameter] == null)
+                        return;
+                    try
                     {
-                        variableValues ??= ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), svgDefsSuco.Value.env.GetVariables());
-                        cache[cacheKey] = svgDefsSuco.Value.expr.Interpret(variableValues);
+                        var (expr, env, interpreted) = parseSuco(type[parameter].GetString(), type["variables"].GetDict(), SucoContext.Svg, SucoStringType.Instance);
+                        var cache = interpreted;
+                        var cacheKey = constraint["values"].ToString();
+                        if (!cache.ContainsKey(cacheKey))
+                        {
+                            variableValues ??= ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), env.GetVariables());
+                            cache[cacheKey] = expr.Interpret(variableValues);
+                        }
+                        callback((string) cache[cacheKey]);
                     }
-                    resultSvgDefs.Append(cache[cacheKey]);
+                    catch (SucoCompileException sce)
+                    {
+                        if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == parameter)
+                            editingResult = new JsonDict { ["start"] = sce.StartIndex, ["end"] = sce.EndIndex, ["msg"] = sce.Message };
+                    }
+                    catch (SucoParseException spe)
+                    {
+                        if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == parameter)
+                            editingResult = new JsonDict { ["ix"] = spe.Index, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message };
+                    }
                 }
-                if (svgSuco != null)
+
+                process("svgdefs", str => { resultSvgDefs.Append(str); });
+                process("svg", str => { svgCode = str; });
+
+                if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == "logic" && type["logic"] != null)
                 {
-                    var cache = svgSuco.Value.interpreted;
-                    var cacheKey = constraint["values"].ToString();
-                    if (!cache.ContainsKey(cacheKey))
+                    try
                     {
-                        variableValues ??= ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), svgSuco.Value.env.GetVariables());
-                        cache[cacheKey] = svgSuco.Value.expr.Interpret(variableValues);
+                        var (expr, env, interpreted) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoBooleanType.Instance);
                     }
-                    resultSvg.Append($"<g id='constraint-svg-{cIx}'>{cache[cacheKey]}</g>");
+                    catch (SucoCompileException sce)
+                    {
+                        editingResult = new JsonDict { ["start"] = sce.StartIndex, ["end"] = sce.EndIndex, ["msg"] = sce.Message };
+                    }
+                    catch (SucoParseException spe)
+                    {
+                        editingResult = new JsonDict { ["ix"] = spe.Index, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message };
+                    }
                 }
+
+                // Make sure to add the <g> tag even if no SVG code was generated because the JS code relies on it being there
+                resultSvg.Append($"<g id='constraint-svg-{cIx}'>{svgCode}</g>");
             }
 
-            return new[] { resultSvgDefs.ToString(), resultSvg.ToString() }.ToJsonList().ToString();
+            return new JsonList { resultSvgDefs.ToString(), resultSvg.ToString(), editingResult }.ToString();
         }
 
         public static string CompileSuco(string suco, string variableTypesJson)

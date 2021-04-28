@@ -73,6 +73,7 @@ namespace Zinga.Suco
             "cos" => SucoDecimalType.Instance,
             "tan" => SucoDecimalType.Instance,
             "sqrt" => SucoDecimalType.Instance,
+            "abs" => SucoDecimalType.Instance,
             _ => base.GetMemberType(memberName, context)
         };
 
@@ -83,6 +84,7 @@ namespace Zinga.Suco
             "cos" => Math.Cos((double) operand * Math.PI / 180),
             "tan" => Math.Tan((double) operand * Math.PI / 180),
             "sqrt" => Math.Sqrt((double) operand),
+            "abs" => Math.Abs((double) operand),
             _ => base.InterpretMemberAccess(memberName, operand)
         };
     }

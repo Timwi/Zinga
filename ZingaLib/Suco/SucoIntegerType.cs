@@ -120,7 +120,6 @@ namespace Zinga.Suco
             }
 
             // We want all functions that SucoDecimalType supports to also work on integers by implicitly converting the integer to decimal.
-            // This implicit conversion doesn’t happen automatically.
             try
             {
                 return SucoDecimalType.Instance.InterpretMemberAccess(memberName, (double) (int) operand);

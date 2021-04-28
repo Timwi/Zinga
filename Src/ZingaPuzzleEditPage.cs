@@ -86,13 +86,13 @@ namespace Zinga
             {
                 var dic = new JsonDict
                 {
-                    ["kind"] = kvp.Value.Kind.ToString(),
-                    ["logic"] = kvp.Value.LogicSuco,
-                    ["name"] = kvp.Value.Name,
-                    ["preview"] = kvp.Value.PreviewSvg,
                     ["public"] = kvp.Value.Public,
-                    ["svgdefs"] = kvp.Value.SvgDefsSuco,
-                    ["svg"] = kvp.Value.SvgSuco,
+                    ["name"] = kvp.Value.Name,
+                    ["kind"] = kvp.Value.Kind.ToString(),
+                    ["logic"] = kvp.Value.LogicSuco?.Replace("\r", ""),
+                    ["svgdefs"] = kvp.Value.SvgDefsSuco?.Replace("\r", ""),
+                    ["svg"] = kvp.Value.SvgSuco?.Replace("\r", ""),
+                    ["preview"] = kvp.Value.PreviewSvg,
                     ["variables"] = new JsonRaw(kvp.Value.VariablesJson)
                 };
                 if (kvp.Value.Shortcut != null)
@@ -100,6 +100,7 @@ namespace Zinga
                 return dic;
             }).ToString();
 
+            const bool autoCss = true;
             return HttpResponse.Html(new HTML(
                 new HEAD(
                     new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
@@ -110,26 +111,27 @@ namespace Zinga
 #if DEBUG
                     new SCRIPTLiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "EditPuzzle.js"))),
                     new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Font.css"))),
-                    //new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.css"))),
-                    new STYLE { id = "auto-css" },
-                    new SCRIPTLiteral(@"
-                        (function() {
-                            let socket = new WebSocket('ws://localhost:8990/css-websocket');
-                            socket.onopen = function()
-                            {
-                                socket.send('css');
-                                window.setInterval(function() { socket.send('css'); }, 500);
-                            };
-                            socket.onclose = function()
-                            {
-                                console.log('Socket closed.');
-                            };
-                            socket.onmessage = function(msg)
-                            {
-                                document.getElementById('auto-css').innerText = msg.data.replace(/\r|\n/g, ' ');
-                            };
-                        })();
-                    "),
+                    autoCss ? Ut.NewArray<object>(
+                        new STYLE { id = "auto-css" },
+                        new SCRIPTLiteral(@"
+                            (function() {
+                                let socket = new WebSocket('ws://localhost:8990/css-websocket');
+                                socket.onopen = function()
+                                {
+                                    socket.send('css');
+                                    window.setInterval(function() { socket.send('css'); }, 500);
+                                };
+                                socket.onclose = function()
+                                {
+                                    console.log('Socket closed.');
+                                };
+                                socket.onmessage = function(msg)
+                                {
+                                    document.getElementById('auto-css').innerText = msg.data.replace(/\r|\n/g, ' ');
+                                };
+                            })();
+                        ")
+                    ) : new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.css"))),
 #else
                     new SCRIPTLiteral(Resources.EditJs),
                     new STYLELiteral(Resources.Css),
@@ -232,25 +234,22 @@ namespace Zinga
                                             new DIV("Publishing...")))),
                                 new DIV { class_ = "tabc", id = "tab-constraints" }._(
                                     new SECTION { id = "constraints-section" }._(
+                                        new BUTTON { id = "constraint-select-similar", class_ = "mini-btn", title = "Select constraints of the same type" },
                                         new DIV { class_ = "label" }._("Constraints"),
                                         new DIV { id = "constraint-list" }),
                                     new SECTION { id = "constraint-code-section" }._(
-                                        new DIV { class_ = "label" }._("Edit constraint code"),
+                                        new DIV { class_ = "label" }._("Edit constraint code", new DIV { class_ = "expand" }),
                                         new DIV { class_ = "constraint-code" }._(
-                                            new DIV { class_ = "selection", id = "constraint-code-selection" }._(
-                                                new DIV("Apply changes to:"),
-                                                new DIV(new INPUT { type = itype.radio, name = "apply-to", value = "selection", id = "constraint-apply-selection" }, new LABEL { for_ = "constraint-apply-selection" }._(" selected constraints")),
-                                                new DIV(new INPUT { type = itype.radio, name = "apply-to", value = "similar", id = "constraint-apply-similar" }, new LABEL { for_ = "constraint-apply-similar" }._(" all constraints of the same type"))),
                                             new DIV { class_ = "label" }._("Name"),
                                             new DIV { class_ = "code" }._(new INPUT { type = itype.text, id = "constraint-code-name" }),
                                             new DIV { class_ = "label" }._("Kind"),
                                             new DIV { class_ = "code" }._(new SELECT { id = "constraint-code-kind" }._(EnumStrong.GetValues<ConstraintKind>().Select(v => new OPTION { value = v.ToString() }._(v.ToString())))),
                                             new DIV { class_ = "label" }._("Logic (Suco)"),
-                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-logic" }),
+                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-logic" }, new DIV { id = "reporting-logic" }),
                                             new DIV { class_ = "label" }._("Code to generate SVG (Suco)"),
-                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-svg" }),
+                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-svg" }, new DIV { id = "reporting-svg" }),
                                             new DIV { class_ = "label" }._("Code to generate SVG definitions (Suco)"),
-                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-svgdefs" }),
+                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-svgdefs" }, new DIV { id = "reporting-svgdefs" }),
                                             new DIV { class_ = "label" }._("Preview SVG"),
                                             new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-preview" }))),
                                     new SECTION { id = "constraint-add-section" }._(

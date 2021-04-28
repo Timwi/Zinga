@@ -8,12 +8,13 @@ namespace Zinga.Wasm
         public static string CompileSuco(string suco, string variableTypesJson) => Lib.Commands.CompileSuco(suco, variableTypesJson);
 
         [JSInvokable]
-        public static string RenderConstraintSvgs(string constraintTypesJson, string constraintsJson) => Lib.Commands.RenderConstraintSvgs(constraintTypesJson, constraintsJson);
+        public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson, int? editingConstraintTypeId, string editingConstraintTypeParameter) =>
+            Lib.Commands.RenderConstraintSvgs(constraintTypesJson, customConstraintTypesJson, constraintsJson, editingConstraintTypeId, editingConstraintTypeParameter);
 
         [JSInvokable]
         public static string GenerateOutline(string regionsJson) => Lib.Commands.GenerateOutline(regionsJson);
 
         [JSInvokable]
-        public static string CheckConstraints(string enteredDigitsJson, string constraintTypesJson, string constraintsJson) => Lib.Commands.CheckConstraints(enteredDigitsJson, constraintTypesJson, constraintsJson);
+        public static string CheckConstraints(string enteredDigitsJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson) => Lib.Commands.CheckConstraints(enteredDigitsJson, constraintTypesJson, customConstraintTypesJson, constraintsJson);
     }
 }

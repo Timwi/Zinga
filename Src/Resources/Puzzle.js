@@ -47,6 +47,7 @@
     let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
     let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
     let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes);
+    let customConstraintTypes = [];
     let constraints = puzzleId === 'test' ? [] : JSON.parse(puzzleDiv.dataset.constraints);
     let givens = Array(81).fill(null);
     if (puzzleId !== 'test')
@@ -290,8 +291,7 @@
         setClass(puzzleDiv, 'solved', false);
 
         // Check if any constraints are violated
-        //document.querySelector('#rules-text').innerText = `new string[] { @"${JSON.stringify(state.enteredDigits).replace(/"/g, '""')}", @"${JSON.stringify(constraintTypes).replace(/"/g, '""')}", @"${JSON.stringify(constraints).replace(/"/g, '""')}" }`;
-        dotNet('CheckConstraints', [JSON.stringify(state.enteredDigits), JSON.stringify(constraintTypes), JSON.stringify(constraints)], result =>
+        dotNet('CheckConstraints', [JSON.stringify(state.enteredDigits), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], result =>
         {
             let violatedConstraintIxs = JSON.parse(result);
             setClass(puzzleDiv, 'solved', valid === true && violatedConstraintIxs.length === 0);
@@ -314,9 +314,9 @@
             catch { }
             if (state && state.givens && state.constraints)
             {
-                console.log(state);
                 givens = state.givens;
                 constraints = state.constraints;
+                customConstraintTypes = state.customConstraintTypes;
 
                 document.querySelector('#topbar>.title').innerText = state.title ?? 'Sudoku';
                 document.querySelector('#topbar>.author').innerText = `by ${state.author ?? 'unknown'}`;
@@ -327,7 +327,7 @@
                 Array.from(document.querySelectorAll('#rules-text>p')).forEach((p, pIx) => { p.innerText = paragraphs[pIx]; });
                 window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
 
-                dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(constraints)], svgs =>
+                dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints), null, null], svgs =>
                 {
                     let list = JSON.parse(svgs);
                     document.getElementById('constraint-defs').innerHTML = list[0];

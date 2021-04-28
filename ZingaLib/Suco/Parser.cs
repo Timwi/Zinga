@@ -95,7 +95,7 @@ namespace Zinga.Suco
         public void EnforceEof()
         {
             if (getToken().Type != SucoTokenType.Eof)
-                throw new SucoParseException("There is extra code. End of code expected.", _ix);
+                throw new SucoParseException("Invalid expression.", _ix);
         }
     }
 }

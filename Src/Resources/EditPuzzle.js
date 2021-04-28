@@ -93,7 +93,8 @@
             constraints: [],
             title: 'Sudoku',
             author: 'unknown',
-            rules: ''
+            rules: '',
+            customConstraintTypes: []
         };
     }
 
@@ -113,6 +114,8 @@
     let selectedConstraints = [];
     let lastSelectedCell = 0;
     let lastSelectedConstraint = 0;
+    let editingConstraintType = null;
+    let editingConstraintTypeParameter = null;
 
     function remoteLog2(msg)
     {
@@ -130,6 +133,7 @@
             if (state.title === undefined || state.title === null) state.title = 'Sudoku';
             if (state.author === undefined || state.author === null) state.author = 'unknown';
             if (state.rules === undefined || state.rules === null) state.author = '';
+            if (state.customConstraintTypes === undefined || state.customConstraintTypes === null) state.customConstraintTypes = [];
         }
 
         let undoB = localStorage.getItem(`zinga-edit-undo`);
@@ -166,6 +170,11 @@
         updateVisuals();
     }
 
+    function getConstraintType(id)
+    {
+        return id < 0 ? state.customConstraintTypes[~id] : constraintTypes[id];
+    }
+
     // options:
     //  storage (bool)
     //  svg (bool)          — updates constraint SVG in the grid (this involves Blazor)
@@ -197,11 +206,14 @@
         {
             // Constraint SVGs
             constraintSelectionUpdated = true;
-            dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.constraints)], svgs =>
+            dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints), editingConstraintType, editingConstraintTypeParameter], results =>
             {
-                let list = JSON.parse(svgs);
+                let list = JSON.parse(results);
                 document.getElementById('constraint-defs').innerHTML = list[0];
                 document.getElementById('constraint-svg').innerHTML = list[1];
+                let reportingBox = document.getElementById(`reporting-${editingConstraintTypeParameter}`);
+                if (reportingBox !== null)
+                    reportingBox.innerText = JSON.stringify(list[2]);
                 updateConstraintSelection();
             });
         }
@@ -279,14 +291,13 @@
             for (var cIx = 0; cIx < state.constraints.length; cIx++)
             {
                 let constraint = state.constraints[cIx];
-                let constraintType = constraintTypes[constraint.type];
+                let constraintType = getConstraintType(constraint.type);
                 let variableHtml = '';
                 for (let v of Object.keys(constraintType.variables))
                     variableHtml += `<div class='variable'><div class='name'>${v}</div><div class='value'>${variableUi(constraintType.variables[v], constraint.values[v], `constraint-${cIx}-${v}`, constraintType.kind, cIx)}</div></div>`;
 
                 constraintListHtml += `
-                    <div class='constraint' id='constraint-${cIx}' data-index='${cIx}'>
-                        <div class='buttons'><button type='button' class='mini-btn edit-code' title='Edit constraint code'></button></div>
+                    <div class='constraint${constraint.type < 0 ? ' custom' : ''}' id='constraint-${cIx}' data-index='${cIx}'>
                         <div class='name'>${constraintType.name}<div class='expand'></div></div>
                         <div class='variables'>${variableHtml}</div>
                     </div>`;
@@ -296,7 +307,7 @@
             {
                 let cIx = constraintDiv.dataset.index | 0;
                 let constraint = state.constraints[cIx];
-                let cType = constraintTypes[constraint.type];
+                let cType = getConstraintType(constraint.type);
 
                 for (let v of Object.keys(cType.variables))
                     setVariableEvents(
@@ -353,7 +364,6 @@
                 let expander = constraintDiv.querySelector('.expand');
                 setButtonHandler(expander, function() { setClass(constraintDiv, 'expanded', !constraintDiv.classList.contains('expanded')); });
                 constraintDiv.querySelector('.name').ondblclick = function(ev) { if (ev.target !== expander) setClass(constraintDiv, 'expanded', !constraintDiv.classList.contains('expanded')); };
-                setButtonHandler(constraintDiv.querySelector('.edit-code'), () => { editConstraintCode(cIx); });
             });
         }
 
@@ -371,6 +381,12 @@
         // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
         if (!constraintSelectionUpdated)
             updateConstraintSelection();
+        // Decide whether to show the “select constraints of the same type” button
+        let allSimilar = (selectedConstraints.length > 0 && selectedConstraints.every(ix => state.constraints[ix].type === state.constraints[selectedConstraints[0]].type));
+        document.getElementById('constraint-select-similar').style.display = allSimilar ? 'block' : 'none';
+        document.getElementById('constraint-code-section').style.display = allSimilar ? 'block' : 'none';
+        if (allSimilar)
+            populateConstraintEditBox(state.constraints[selectedConstraints[0]].type);
 
         // Constraint UI that has cell region UI
         let matchingRegions = null;
@@ -525,6 +541,9 @@
                     state.constraints.splice(i, 1);
             let anyConstraintsSelected = selectedConstraints.length > 0;
             selectedConstraints = [];
+            for (let i = 0; i < state.customConstraintTypes.length; i++)
+                if (state.customConstraintTypes[i] !== null && state.constraints.every(c => c.type !== ~i))
+                    state.customConstraintTypes[i] = null;
             updateVisuals({ storage: true, svg: anyConstraintsSelected, ui: true });
         }
     }
@@ -543,6 +562,7 @@
             resetClearButton();
             saveUndo();
             state = makeEmptyState();
+            setMetaData();
             updateVisuals({ storage: true, svg: true, ui: true });
         }
     });
@@ -658,9 +678,13 @@
     }
 
     // Title, Author(s), Rules
-    document.getElementById('puzzle-title-input').value = state.title;
-    document.getElementById('puzzle-author-input').value = state.author;
-    document.getElementById('puzzle-rules-input').value = state.rules;
+    function setMetaData()
+    {
+        document.getElementById('puzzle-title-input').value = state.title;
+        document.getElementById('puzzle-author-input').value = state.author;
+        document.getElementById('puzzle-rules-input').value = state.rules;
+    }
+    setMetaData();
     document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
     document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
     document.getElementById('puzzle-rules-input').onchange = function() { saveUndo(); state.rules = document.getElementById('puzzle-rules-input').value; updateVisuals({ storage: true }); };
@@ -718,6 +742,81 @@
         };
         req.send(`puzzle=${encodeURIComponent(JSON.stringify(state))}`);
     });
+
+    // “Select similar constraints” button
+    setButtonHandler(document.getElementById('constraint-select-similar'), () =>
+    {
+        selectedConstraints = state.constraints.map((cstr, cIx) => cstr.type === state.constraints[selectedConstraints[0]].type ? cIx : null).filter(c => c !== null);
+        updateVisuals();
+    });
+
+    // “EDIT CONSTRAINT CODE” box
+    function populateConstraintEditBox(cTypeId)
+    {
+        let cType = getConstraintType(cTypeId);
+        document.getElementById('constraint-code-name').value = cType.name;
+        document.getElementById('constraint-code-kind').value = cType.kind;
+        document.getElementById('constraint-code-logic').value = cType.logic;
+        document.getElementById('constraint-code-svg').value = cType.svg;
+        document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
+        document.getElementById('constraint-code-preview').value = cType.preview;
+    }
+
+    function editConstraintParameter(elem, paramName, getter, setter)
+    {
+        return function()
+        {
+            if (selectedConstraints.length === 0)
+                return;
+            let newValue = elem.value === '' ? null : elem.value;
+            let cTypeId = state.constraints[selectedConstraints[0]].type;
+            let oldValue = getter(cTypeId);
+            if (newValue === oldValue)
+                return;
+            let unselectedSameType = state.constraints.map((c, cIx) => c.type === cTypeId && !selectedConstraints.includes(cIx) ? cIx : null).filter(c => c != null);
+
+            if (editingConstraintType !== cTypeId)
+            {
+                saveUndo();
+                if (cTypeId >= 0 || unselectedSameType.length > 0)
+                {
+                    let cTypeCopy = JSON.parse(JSON.stringify(getConstraintType(cTypeId)));
+                    delete cTypeCopy.public;
+                    delete cTypeCopy.shortcut;
+                    let nIx = state.customConstraintTypes.findIndex(c => c === null);
+                    if (nIx === -1)
+                    {
+                        nIx = state.customConstraintTypes.length;
+                        state.customConstraintTypes.push(null);
+                    }
+                    let newCTypeId = ~nIx;
+                    state.customConstraintTypes[nIx] = cTypeCopy;
+                    for (let cIx of selectedConstraints)
+                        state.constraints[cIx].type = newCTypeId;
+                    cTypeId = newCTypeId;
+                }
+            }
+            editingConstraintType = cTypeId;
+            editingConstraintTypeParameter = paramName;
+            setter(cTypeId, newValue);
+            updateVisuals({ storage: true, svg: true, ui: true });
+        };
+    }
+
+    // — Expander
+    let constraintCodeBox = document.getElementById('constraint-code-section');
+    let constraintCodeExpander = constraintCodeBox.querySelector('.expand');
+    setButtonHandler(constraintCodeExpander, function() { setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); });
+    setButtonHandler(constraintCodeBox.querySelector('.label'), function() { });
+    constraintCodeBox.querySelector('.label').ondblclick = function(ev) { if (ev.target !== constraintCodeExpander) setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); };
+
+    // — Text boxes
+    document.getElementById('constraint-code-name').onkeyup = editConstraintParameter(document.getElementById('constraint-code-name'), 'name', cTypeId => getConstraintType(cTypeId).name, (cTypeId, value) => { getConstraintType(cTypeId).name = value; });
+    document.getElementById('constraint-code-kind').onchange = editConstraintParameter(document.getElementById('constraint-code-kind'), 'kind', cTypeId => getConstraintType(cTypeId).kind, (cTypeId, value) => { getConstraintType(cTypeId).kind = value; });
+    document.getElementById('constraint-code-logic').onkeyup = editConstraintParameter(document.getElementById('constraint-code-logic'), 'logic', cTypeId => getConstraintType(cTypeId).logic, (cTypeId, value) => { getConstraintType(cTypeId).logic = value; });
+    document.getElementById('constraint-code-svg').onkeyup = editConstraintParameter(document.getElementById('constraint-code-svg'), 'svg', cTypeId => getConstraintType(cTypeId).svg, (cTypeId, value) => { getConstraintType(cTypeId).svg = value; });
+    document.getElementById('constraint-code-svgdefs').onkeyup = editConstraintParameter(document.getElementById('constraint-code-svgdefs'), 'svgdefs', cTypeId => getConstraintType(cTypeId).svgdefs, (cTypeId, value) => { getConstraintType(cTypeId).svgdefs = value; });
+    document.getElementById('constraint-code-preview').onkeyup = editConstraintParameter(document.getElementById('constraint-code-preview'), 'preview', cTypeId => getConstraintType(cTypeId).preview, (cTypeId, value) => { getConstraintType(cTypeId).preview = value; });
 
     function findMatchingRegions(cells)
     {
@@ -927,23 +1026,6 @@
         }
     }
 
-    function editConstraintCode(cIx)
-    {
-        let constraint = state.constraints[cIx];
-        let cType = constraintTypes[constraint.type];
-        let allApplicable = Array(state.constraints.length).fill(null).map((_, c) => c).filter(ix => state.constraints[ix].type === constraint.type);
-
-        document.getElementById('constraint-code-selection').style.display = allApplicable.length > 1 ? 'block' : 'none';
-        document.getElementById('constraint-apply-selection').checked = true;
-        document.getElementById('constraint-code-name').value = cType.name;
-        document.getElementById('constraint-code-kind').value = cType.kind;
-        document.getElementById('constraint-code-logic').value = cType.logic;
-        document.getElementById('constraint-code-svg').value = cType.svg;
-        document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
-        document.getElementById('constraint-code-preview').value = cType.preview;
-        document.getElementById('constraint-code-section').style.display = 'block';
-    }
-
     puzzleContainer.addEventListener("keyup", ev =>
     {
         if (ev.key === 'Control')
@@ -1126,13 +1208,6 @@
 
             case 'Escape': selectedCells = []; selectedConstraints = []; updateVisuals(); break;
             case 'Ctrl+KeyA': selectedConstraints = state.constraints.map((_, c) => c); updateVisuals(); break;
-
-            case 'KeyE':    // edit constraint code
-                if (selectedConstraints.length > 1)
-                    alert('Please select only a single constraint to edit its code. You will have the option to edit all constraints of the same type.');
-                else if (selectedConstraints.length === 1)
-                    editConstraintCode(selectedConstraints[0]);
-                break;
 
             // Undo/redo
             case 'Backspace':

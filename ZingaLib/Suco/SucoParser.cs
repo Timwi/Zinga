@@ -63,7 +63,7 @@ namespace Zinga.Suco
                         throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", parser._ix);
                     return expectedResultType == null ? ret : ret.ImplicitlyConvertTo(expectedResultType);
                 }
-                catch (SucoParseException pe2) when (pe2.Index < pe1.Index)
+                catch (SucoParseException pe2) when (pe2.Index <= pe1.Index)
                 {
                 }
                 throw;
