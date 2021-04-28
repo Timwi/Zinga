@@ -728,14 +728,14 @@
     {
         document.querySelector('.save-section').classList.add('saving');
         let req = new XMLHttpRequest();
-        req.open('POST', '/save', true);
+        req.open('POST', '/publish', true);
         req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
         req.onreadystatechange = function()
         {
             if (req.readyState !== XMLHttpRequest.DONE)
                 return;
             if (req.status !== 200)
-                alert(`The puzzle could not be saved: ${req.responseText} (${req.status})`);
+                alert(`The puzzle could not be published: ${req.responseText} (${req.status})`);
             else
                 window.open(`${window.location.protocol}//${window.location.host}/${req.responseText}`);
             document.querySelector('.save-section').classList.remove('saving');

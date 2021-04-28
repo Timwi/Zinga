@@ -4,7 +4,6 @@ using System.Data.Entity;
 using System.IO;
 using System.Linq;
 using RT.Json;
-using RT.Serialization;
 using RT.Servers;
 using RT.TagSoup;
 using RT.Util;
@@ -21,11 +20,15 @@ namespace Zinga
 
         public HttpResponse PuzzleEditPage(HttpRequest req)
         {
-            if (_constraintsWithShortcuts == null)
+            var constraintsWithShortcuts = _constraintsWithShortcuts;
+            if (constraintsWithShortcuts == null)
                 lock (this)
-                    if (_constraintsWithShortcuts == null)
+                {
+                    constraintsWithShortcuts = _constraintsWithShortcuts;
+                    if (constraintsWithShortcuts == null)
                         using (var db = new Db())
-                            _constraintsWithShortcuts = db.Constraints.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).ToArray();
+                            constraintsWithShortcuts = _constraintsWithShortcuts = db.Constraints.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).ToArray();
+                }
 
             Puzzle puzzle;
             Dictionary<int, DbConstraint> constraintTypes;

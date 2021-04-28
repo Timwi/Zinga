@@ -116,7 +116,7 @@
     <Compile Include="ZingaPropellerModule.cs" />
     <Compile Include="ZingaPuzzleEditPage.cs" />
     <Compile Include="ZingaPuzzlePage.cs" />
-    <Compile Include="ZingaPuzzleSave.cs" />
+    <Compile Include="ZingaPuzzlePublish.cs" />
     <Compile Include="ZingaSettings.cs" />
   </ItemGroup>
   <ItemGroup>
