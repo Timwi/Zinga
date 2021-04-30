@@ -91,8 +91,16 @@ namespace Zinga
                             SvgSuco = cType["svg"]?.GetString(),
                             VariablesJson = cType["variables"].ToString()
                         };
-                        db.Constraints.Add(newConstraintType);
-                        dbConstraintTypes[typeId] = newConstraintType;
+                        var already = db.Constraints.FirstOrDefault(c => c.Kind == newConstraintType.Kind && c.LogicSuco == newConstraintType.LogicSuco &&
+                            c.Name == newConstraintType.Name && c.PreviewSvg == newConstraintType.PreviewSvg && !c.Public && c.Shortcut == null &&
+                            c.SvgDefsSuco == newConstraintType.SvgDefsSuco && c.SvgSuco == newConstraintType.SvgSuco && c.VariablesJson == newConstraintType.VariablesJson);
+                        if (already != null)
+                            dbConstraintTypes[typeId] = already;
+                        else
+                        {
+                            db.Constraints.Add(newConstraintType);
+                            dbConstraintTypes[typeId] = newConstraintType;
+                        }
                     }
                 db.Puzzles.Add(puzzle);
                 db.SaveChanges();   // This assigns new IDs to all the new constraint types and the puzzle itself
