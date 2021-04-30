@@ -72,13 +72,16 @@ namespace Zinga.Suco
             {
                 var j = i;
                 var sb = new StringBuilder();
-                while (j < _source.Length && (_source[j] == '.' || char.IsDigit(_source, j)))
+                var hasDot = false;
+                while (j < _source.Length && (char.IsDigit(_source, j) || (_source[j] == '.' && !hasDot && j < _source.Length - 1 && char.IsDigit(_source, j + 1))))
                 {
                     sb.Append(_source.Substring(j, char.IsSurrogate(_source, j) ? 2 : 1));
                     j += char.IsSurrogate(_source, j) ? 2 : 1;
+                    if (_source[j] == '.')
+                        hasDot = true;
                 }
                 var str = sb.ToString();
-                if (str.Contains(".") && double.TryParse(str, out var dblResult))
+                if (hasDot && double.TryParse(str, out var dblResult))
                     return new SucoToken(SucoTokenType.Decimal, dblResult, startIndex, j);
                 else if (int.TryParse(str, out var intResult))
                     return new SucoToken(SucoTokenType.Integer, intResult, startIndex, j);
