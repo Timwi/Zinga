@@ -8,7 +8,7 @@ using RT.Util;
 using RT.Util.ExtensionMethods;
 using Zinga.Database;
 using Zinga.Lib;
-
+using Zinga.Suco;
 using DbConstraint = Zinga.Database.Constraint;
 
 namespace Zinga
@@ -61,6 +61,24 @@ namespace Zinga
                             return HttpResponse.PlainText($"Undefined custom constraint type: {typeId}. List has {customConstraintTypes.Count} entries.", HttpStatusCode._400_BadRequest);
                         var cType = customConstraintTypes[~typeId];
                         var kind = EnumStrong.Parse<ConstraintKind>(cType["kind"].GetString());
+
+                        // Some verifications:
+                        // Make sure the variable types parse as valid Suco types
+                        var env = new SucoTypeEnvironment();
+                        foreach (var (varName, varType) in cType["variables"].GetDict().ToTuples())
+                        {
+                            if (!SucoType.TryParse(varType.GetString(), out var type))
+                                return HttpResponse.PlainText($"Unrecognized Suco type: {varType.GetString()}.");
+                            env = env.DeclareVariable(varName, type);
+                        }
+                        // Make sure all the Suco code compiles
+                        if (!SucoParser.IsValidCode(cType["logic"].GetString(), env, SucoContext.Constraint, SucoBooleanType.Instance, out string error))
+                            return HttpResponse.PlainText($"The Suco code for the constraint logic in “{cType["name"].GetString()}” doesn’t compile: {error}.");
+                        if (cType["svg"] != null && !SucoParser.IsValidCode(cType["svg"].GetString(), env, SucoContext.Svg, SucoStringType.Instance, out error))
+                            return HttpResponse.PlainText($"The Suco code for generating SVG code in “{cType["name"].GetString()}” doesn’t compile: {error}.");
+                        if (cType["svgdefs"] != null && !SucoParser.IsValidCode(cType["svgdefs"].GetString(), env, SucoContext.Svg, new SucoListType(SucoStringType.Instance), out error))
+                            return HttpResponse.PlainText($"The Suco code for generating SVG definitions in “{cType["name"].GetString()}” doesn’t compile: {error}.");
+
                         var newConstraintType = new DbConstraint
                         {
                             Kind = kind,
@@ -71,20 +89,7 @@ namespace Zinga
                             Shortcut = null,
                             SvgDefsSuco = cType["svgdefs"]?.GetString(),
                             SvgSuco = cType["svg"]?.GetString(),
-#warning This is temporary!
-                            VariablesJson = kind switch
-                            {
-                                ConstraintKind.Diagonal => @"{""cells"":""list(cell)""}",
-                                ConstraintKind.FourCells => @"{""topleftcell"":""cell""}",
-                                ConstraintKind.Global => @"{}",
-                                ConstraintKind.MatchingRegions => @"{""cells"":""list(list(cell))""}",
-                                ConstraintKind.Path => @"{""cells"":""list(cell)""}",
-                                ConstraintKind.Region => @"{""cells"":""list(cell)""}",
-                                ConstraintKind.RowColumn => @"{""cells"":""list(cell)""}",
-                                ConstraintKind.SingleCell => @"{""cell"":""cell""}",
-                                ConstraintKind.TwoCells => @"{""topleftcell"":""cell""}",
-                                _ => @"{""cells"":""list(cell)""}"
-                            }
+                            VariablesJson = cType["variables"].ToString()
                         };
                         db.Constraints.Add(newConstraintType);
                         dbConstraintTypes[typeId] = newConstraintType;

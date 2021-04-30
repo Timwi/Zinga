@@ -26,11 +26,12 @@ namespace Zinga
                 new UrlMapping(path: "/css-websocket", specificPath: true, handler: req => new HttpResponseWebSocket(new AutoUpdatingCssWebsocket(Settings))),
 #endif
 
-                new UrlMapping(path: "/tmp", handler: PlayWithSuco2),
+                new UrlMapping(path: "/tmp", handler: DebugSucoStuff),
+                new UrlMapping(path: "/font", handler: req => HttpResponse.Css(Resources.FontCss)),
                 new UrlMapping(path: "/edit", handler: PuzzleEditPage),
                 new UrlMapping(path: "/publish", handler: PuzzlePublish),
-                new UrlMapping(path: "/_framework", handler: new FileSystemHandler(@"D:\c\Zinga\Builds\Debug-net5.0browser-wasm\wwwroot\_framework").Handle),
-                new UrlMapping(path: "/edit/_framework", handler: new FileSystemHandler(@"D:\c\Zinga\Builds\Debug-net5.0browser-wasm\wwwroot\_framework").Handle),
+                new UrlMapping(path: "/_framework", handler: new FileSystemHandler(Settings.FrameworkDir).Handle),
+                new UrlMapping(path: "/edit/_framework", handler: new FileSystemHandler(Settings.FrameworkDir).Handle),
                 new UrlMapping(path: null, handler: PuzzlePage));
         }
 

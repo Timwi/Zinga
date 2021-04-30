@@ -61,9 +61,35 @@ namespace Zinga {
         }
         
         /// <summary>
-        ///   Looks up a localized string similar to @font-face {
+        ///   Looks up a localized string similar to * {
+        ///    box-sizing: border-box;
+        ///}
+        ///
+        ///body {
         ///    font-family: Bitter;
-        ///    src: url(&apos;data:font/ttf;base64,AAEAAAAUAQAABABAR0RFRtue3BEAAa9YAAAEFEdQT1Op5WWkAAGzbAABYxhHU1VCC2FKsQADFoQAACaoSFZBUuyArIQAAz0sAAANK09TLzKDxleSAAFiVAAAAGBTVEFU+OrV2gADSlgAAAC4YXZhcsP14AEAA0uQAAAAMmNtYXCtiSpuAAFitAAACrZmdmFyj/t5uAADSxAAAAB+Z2FzcAAAABAAAa9QAAAACGdseWYUqCs5AAABTAABPfhndmFyI3CPbwADS8QAARP4aGVhZBjbbb0AAUrsAAAANmhoZWEHzAgWAAFiMAAAACRobXR4toItTAABSyQAABcMbG9jYT39jIEAAT9kAAALiG1heHAF1wDNAAE/RAAAACBuYW1lEnYlogABbXQAAAdMcG9zdBOjxhQAAXTAAAA6jXByZXBoBoyFAAFtb [rest of string was truncated]&quot;;.
+        ///    background: hsl(220, 50%, 95%);
+        ///    margin: 0;
+        ///    overflow: hidden;
+        ///}
+        ///
+        ///kbd {
+        ///    font: inherit;
+        ///    text-decoration: underline;
+        ///}
+        ///
+        ///input, textarea, button, select {
+        ///    font: inherit;
+        ///    border: 1px solid black;
+        ///    background: white;
+        ///}
+        ///
+        ///    input:focus, textarea:focus, select:focus {
+        ///        background: hsl(220, 90%, 95%);
+        ///        outline: none;
+        ///    }
+        ///
+        ///input[type=&apos;text&apos;], textarea, select {
+        ///    width: 100%; [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string Css {
             get {
@@ -82,9 +108,53 @@ namespace Zinga {
         ///        //req.send(`msg=${encodeURIComponent(msg)}`);
         ///    }
         ///
-        ///    function inRange(x) { return x &gt;= 0 &amp;&amp; x &lt; 9; }
-        ///    function dx(dir) { return dir === &apos;Left&apos; ? -1 : dir === &apos;Right&apos; ? 1 : 0 }
-        ///    function dy(dir) { return dir === &apos;Up&apos; ? -1 : dir === &apos;Down&apos; ? 1  [rest of string was truncated]&quot;;.
+        ///    function handler(fnc)
+        ///    {
+        ///        return function(ev)
+        ///        {
+        ///            if (fnc(ev) !== true)
+        ///            {
+        ///                ev.stopPropagation();
+        ///                ev.preventDefault();
+        /// [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string EditJs {
+            get {
+                return ResourceManager.GetString("EditJs", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to @font-face {
+        ///    font-family: Bitter;
+        ///    src: url(&apos;data:font/ttf;base64,AAEAAAAUAQAABABAR0RFRtue3BEAAa9YAAAEFEdQT1Op5WWkAAGzbAABYxhHU1VCC2FKsQADFoQAACaoSFZBUuyArIQAAz0sAAANK09TLzKDxleSAAFiVAAAAGBTVEFU+OrV2gADSlgAAAC4YXZhcsP14AEAA0uQAAAAMmNtYXCtiSpuAAFitAAACrZmdmFyj/t5uAADSxAAAAB+Z2FzcAAAABAAAa9QAAAACGdseWYUqCs5AAABTAABPfhndmFyI3CPbwADS8QAARP4aGVhZBjbbb0AAUrsAAAANmhoZWEHzAgWAAFiMAAAACRobXR4toItTAABSyQAABcMbG9jYT39jIEAAT9kAAALiG1heHAF1wDNAAE/RAAAACBuYW1lEnYlogABbXQAAAdMcG9zdBOjxhQAAXTAAAA6jXByZXBoBoyFAAFtb [rest of string was truncated]&quot;;.
+        /// </summary>
+        internal static string FontCss {
+            get {
+                return ResourceManager.GetString("FontCss", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized string similar to window.onload = (function()
+        ///{
+        ///    function remoteLog(msg)
+        ///    {
+        ///        //let req = new XMLHttpRequest();
+        ///        //req.open(&apos;POST&apos;, &apos;/remote-log&apos;, true);
+        ///        //req.setRequestHeader(&apos;Content-Type&apos;, &apos;application/x-www-form-urlencoded&apos;);
+        ///        //req.send(`msg=${encodeURIComponent(msg)}`);
+        ///    }
+        ///
+        ///    function handler(fnc)
+        ///    {
+        ///        return function(ev)
+        ///        {
+        ///            fnc(ev);
+        ///            ev.stopPropagation();
+        ///            ev.preventDefault();
+        ///            return false;
+        ///        } [rest of string was truncated]&quot;;.
         /// </summary>
         internal static string Js {
             get {

@@ -1,9 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using RT.Util;
 using RT.Util.ExtensionMethods;
 using Zinga.Lib;
 
@@ -128,11 +124,11 @@ namespace Zinga.Suco
             return listToSearch.Contains(null) ? null : false;
         }
 
-        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
+        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
             (BinaryOperator.Plus, SucoListType { Inner: SucoType i }) when i.ImplicitlyConvertibleTo(Inner) || Inner.ImplicitlyConvertibleTo(i)
                 => new SucoListType(i.ImplicitlyConvertibleTo(Inner) ? Inner : i),
-            _ => base.GetBinaryOperatorType(op, rightOperand, context),
+            _ => base.GetBinaryOperatorType(op, rightType, context),
         };
 
         public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch
@@ -161,17 +157,17 @@ namespace Zinga.Suco
 
         public override bool ImplicitlyConvertibleTo(SucoType other) => (Inner, other) switch
         {
-            (SucoStringType, SucoStringType) => true,
-            (SucoBooleanType, SucoBooleanType) => true,
             (_, SucoStringType) => Inner.ImplicitlyConvertibleTo(SucoStringType.Instance),
+            (_, SucoBooleanType) => Inner.ImplicitlyConvertibleTo(SucoBooleanType.Instance),
             _ => base.ImplicitlyConvertibleTo(other)
         };
 
         public override object InterpretImplicitConversionTo(SucoType type, object operand) => (Inner, type) switch
         {
-            (SucoStringType, SucoStringType) => ((IEnumerable<object>) operand).JoinString(),
-            (SucoBooleanType, SucoBooleanType) => ((IEnumerable<object>) operand).Aggregate((bool?) true, (prev, next) => prev == false ? false : (bool?) next == false ? false : prev == null || next == null ? null : true),
-            (_, SucoStringType) => ((IEnumerable<object>) operand).Select(item => Inner.InterpretImplicitConversionTo(SucoStringType.Instance, item)).JoinString(),
+            (_, SucoStringType) => ((IEnumerable<object>) operand).Select(item => (string) Inner.InterpretImplicitConversionTo(SucoStringType.Instance, item)).JoinString(),
+            (_, SucoBooleanType) => ((IEnumerable<object>) operand)
+                ?.Select(item => (bool?) Inner.InterpretImplicitConversionTo(SucoBooleanType.Instance, item))
+                .Aggregate((bool?) true, (prev, next) => prev == false ? false : (bool?) next == false ? false : prev == null || next == null ? null : true),
             _ => base.InterpretImplicitConversionTo(type, operand)
         };
     }

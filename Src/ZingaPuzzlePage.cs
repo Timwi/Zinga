@@ -117,6 +117,7 @@ namespace Zinga
                     new SCRIPTLiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.js"))),
                     new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.css"))),
 #else
+                    new LINK { rel = "stylesheet", href = "/font" },
                     new SCRIPTLiteral(Resources.Js),
                     new STYLELiteral(Resources.Css),
 #endif

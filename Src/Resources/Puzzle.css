@@ -602,6 +602,54 @@ svg.puzzle-svg {
             display: block;
         }
 
+    .sidebar #constraint-code-section span.fixed {
+        background: white;
+        border: 1px solid black;
+        padding: .025cm .3cm .025cm .1cm;
+        margin-left: .2cm;
+    }
+
+    .sidebar #constraint-code-section .mini-btn.add {
+        float: right;
+        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M4 2h2v2h2v2h-2v2h-2v-2h-2v-2h2z" fill="%2339A332" /></svg>');
+    }
+
+    .sidebar #constraint-code-section .mini-btn.remove {
+        position: absolute;
+        top: .075cm;
+        right: 0;
+        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M2 4h6v2h-6z" fill="%23A33232" /></svg>');
+    }
+
+.sidebar #constraint-code-variables {
+    font-size: 11pt;
+    background: hsl(220, 80%, 90%);
+    width: 100%;
+}
+    .sidebar #constraint-code-variables select {
+        width: 1.9cm;
+        margin-left: .2cm;
+    }
+
+    .sidebar #constraint-code-variables th {
+        font-size: 13pt;
+        background: white;
+        padding: .075cm .7cm 0 .2cm;
+        position: relative;
+    }
+
+    .sidebar #constraint-code-variables td {
+        padding-right: .2cm;
+    }
+
+        .sidebar #constraint-code-variables tr.fixed td {
+            padding-top: .1cm;
+        }
+
+    .sidebar #constraint-code-variables tr.fixed th, .sidebar #constraint-code-variables tr.fixed td {
+        background: hsl(220, 100%, 80%);
+    }
+
 .sidebar #constraint-add-section {
     font-size: 12pt;
 }

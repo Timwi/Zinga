@@ -67,6 +67,8 @@
     Blazor.start({})
         .then(() =>
         {
+            DotNet.invokeMethodAsync('ZingaWasm', 'GetVersion', []).then(v => { console.log(`Version: ${v}`); });
+            DotNet.invokeMethodAsync('ZingaWasm', 'GetLibVersion', []).then(v => { console.log(`Lib Version: ${v}`); });
             for (let i = 0; i < blazorQueue.length; i++)
                 DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
             blazorQueue = null;
@@ -215,6 +217,7 @@
                 if (reportingBox !== null)
                     reportingBox.innerText = JSON.stringify(list[2]);
                 updateConstraintSelection();
+                fixViewBox();
             });
         }
 
@@ -318,8 +321,7 @@
                             if (v === 'cells' && cType.kind === 'MatchingRegions')
                             {
                             }
-                            else if (cType.kind === 'SingleCell' ? (v === 'cell') :
-                                cType.kind === 'FourCells' ? (v === 'topleftcell') : (v === 'cells'))
+                            else if (cType.kind === 'FourCells' ? (v === 'topleftcell') : (v === 'cells'))
                             {
                                 let result = enforceConstraintKind(cType.kind, nv);
                                 if (result === false)
@@ -422,26 +424,30 @@
             });
         });
 
-        // Fix the viewBox
-        let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
+        function fixViewBox()
+        {
+            // Fix the viewBox
+            let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
 
-        // — move the button row so that it’s below the puzzle
-        let buttonRow = puzzleDiv.querySelector('.button-row');
-        let sudokuBBox = puzzleDiv.querySelector('.sudoku').getBBox();
-        buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, sudokuBBox.y + sudokuBBox.height) + .5})`);
+            // — move the button row so that it’s below the puzzle
+            let buttonRow = puzzleDiv.querySelector('.button-row');
+            let sudokuBBox = puzzleDiv.querySelector('.sudoku').getBBox();
+            buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, sudokuBBox.y + sudokuBBox.height) + .5})`);
 
-        // — move the global constraints so they’re to the left of the puzzle
-        let globalBox = puzzleDiv.querySelector('.global-constraints');
-        globalBox.setAttribute('transform', `translate(${sudokuBBox.x - 1.5}, 0)`);
+            // — move the global constraints so they’re to the left of the puzzle
+            let globalBox = puzzleDiv.querySelector('.global-constraints');
+            globalBox.setAttribute('transform', `translate(${sudokuBBox.x - 1.5}, 0)`);
 
-        // — change the viewBox so that it includes everything
-        let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
-        puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
+            // — change the viewBox so that it includes everything
+            let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
+            puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
 
-        // Title/author
-        document.querySelector('#topbar>.title').innerText = state.title;
-        document.querySelector('#topbar>.author').innerText = `by ${state.author === '' ? 'unknown' : state.author}`;
-        document.title = `Editing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
+            // Title/author
+            document.querySelector('#topbar>.title').innerText = state.title;
+            document.querySelector('#topbar>.author').innerText = `by ${state.author === '' ? 'unknown' : state.author}`;
+            document.title = `Editing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
+        }
+        fixViewBox();
     }
     updateVisuals({ storage: true, svg: true, ui: true });
 
@@ -750,9 +756,27 @@
         updateVisuals();
     });
 
+    function getSpecialVariable(kind)
+    {
+        switch (kind)
+        {
+            case 'Custom': return ['cells', 'list(cell)']; break;
+            case 'Path': return ['cells', 'list(cell)']; break;
+            case 'Region': return ['cells', 'list(cell)']; break;
+            case 'MatchingRegions': return ['cells', 'list(list(cell))']; break;
+            case 'RowColumn': return ['cells', 'list(cell)']; break;
+            case 'Diagonal': return ['cells', 'list(cell)']; break;
+            case 'TwoCells': return ['cells', 'list(cell)']; break;
+            case 'FourCells': return ['topleftcell', 'cell']; break;
+        }
+        return [null, null];
+    }
+
     // “EDIT CONSTRAINT CODE” box
     function populateConstraintEditBox(cTypeId)
     {
+        let primitives = 'cell,int,bool,string,decimal'.split(',');
+
         let cType = getConstraintType(cTypeId);
         document.getElementById('constraint-code-name').value = cType.name;
         document.getElementById('constraint-code-kind').value = cType.kind;
@@ -760,6 +784,114 @@
         document.getElementById('constraint-code-svg').value = cType.svg;
         document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
         document.getElementById('constraint-code-preview').value = cType.preview;
+
+        function generateVariablesTable()
+        {
+            let variableNames = Object.keys(cType.variables);
+            let specialVariable = getSpecialVariable(cType.kind)[0];
+            variableNames.sort((a, b) => a === specialVariable ? -1 : b === specialVariable ? 1 : a.localeCompare(b));
+
+            document.getElementById('constraint-code-variables').dataset.variables = JSON.stringify(cType.variables);
+            document.getElementById('constraint-code-variables').innerHTML = variableNames
+                .map(variableName => `<tr data-variablename='${variableName}'${variableName === specialVariable ? " class='fixed'" : ''}><th>${variableName}${variableName === specialVariable ? '' : `<button class='mini-btn remove'></button>`}</th><td></td></tr>`)
+                .join('');
+            Array.from(document.getElementById('constraint-code-variables').querySelectorAll('tr')).forEach(tr =>
+            {
+                function dropdown(id)
+                {
+                    return `<select id='${id}'>${primitives.map(p => `<option value='${p}'>${p}</option>`).join('')}<option value='list'>list of...</option></select>`;
+                }
+
+                let variableName = tr.dataset.variablename;
+
+                if (variableName !== specialVariable)
+                {
+                    // Button to delete a variable
+                    setButtonHandler(tr.querySelector('button.remove'), () =>
+                    {
+                        saveUndo();
+                        delete cType.variables[variableName];
+                        generateVariablesTable();
+                        updateVisuals({ storage: true, ui: true });
+                    });
+
+                    tr.querySelector('th').ondblclick = function()
+                    {
+                        let newName = prompt('Enter the new name for this variable:', variableName);
+                        if (newName !== null && newName !== variableName)
+                        {
+                            saveUndo();
+                            cType.variables[newName] = cType.variables[variableName];
+                            delete cType.variables[variableName];
+                            generateVariablesTable();
+                            updateVisuals({ storage: true, ui: true });
+                        }
+                    };
+
+                    function generateDropdowns()
+                    {
+                        let type = cType.variables[variableName];
+                        let html = '';
+                        let i = 0;
+                        let regexResult;
+                        while (regexResult = /^list\((.*)\)$/.exec(type))
+                        {
+                            html += dropdown(`constraint-code-variable-${variableName}-${i}`);
+                            i++;
+                            type = regexResult[1];
+                        }
+                        html += dropdown(`constraint-code-variable-${variableName}-${i}`);
+                        tr.querySelector('td').innerHTML = html;
+                        Array.from(tr.querySelectorAll('select')).forEach((sel, selIx) =>
+                        {
+                            sel.value = selIx === i ? type : 'list';
+                            sel.onchange = function()
+                            {
+                                saveUndo();
+                                if (sel.value === 'list')
+                                    cType.variables[variableName] = `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`;
+                                else
+                                    cType.variables[variableName] = `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
+                                generateDropdowns();
+                                updateVisuals({ storage: true, ui: true });
+                            };
+                        });
+                    }
+                    generateDropdowns();
+                }
+                else
+                {
+                    tr.querySelector('td').innerHTML = `<span class='fixed'></span>`;
+                    tr.querySelector('td>span').innerText = cType.variables[variableName];
+                }
+            });
+        }
+
+        // Button to add a new variable
+        setButtonHandler(document.getElementById('constraint-code-addvar'), () =>
+        {
+            saveUndo();
+            let i = 1;
+            while (`variable${i === 1 ? '' : i}` in cType.variables)
+                i++;
+            cType.variables[`variable${i === 1 ? '' : i}`] = 'cell';
+            generateVariablesTable();
+            updateVisuals({ storage: true, ui: true });
+        });
+
+        // Drop-down to change the kind
+        document.getElementById('constraint-code-kind').onchange = function()
+        {
+            saveUndo();
+            cType.kind = document.getElementById('constraint-code-kind').value;
+            let inf = getSpecialVariable(cType.kind);
+            if (inf[0] !== null)
+                cType.variables[inf[0]] = inf[1];
+            generateVariablesTable();
+            updateVisuals({ storage: true, ui: true });
+        };
+
+        generateVariablesTable();
     }
 
     function editConstraintParameter(elem, paramName, getter, setter)
@@ -812,7 +944,6 @@
 
     // — Text boxes
     document.getElementById('constraint-code-name').onkeyup = editConstraintParameter(document.getElementById('constraint-code-name'), 'name', cTypeId => getConstraintType(cTypeId).name, (cTypeId, value) => { getConstraintType(cTypeId).name = value; });
-    document.getElementById('constraint-code-kind').onchange = editConstraintParameter(document.getElementById('constraint-code-kind'), 'kind', cTypeId => getConstraintType(cTypeId).kind, (cTypeId, value) => { getConstraintType(cTypeId).kind = value; });
     document.getElementById('constraint-code-logic').onkeyup = editConstraintParameter(document.getElementById('constraint-code-logic'), 'logic', cTypeId => getConstraintType(cTypeId).logic, (cTypeId, value) => { getConstraintType(cTypeId).logic = value; });
     document.getElementById('constraint-code-svg').onkeyup = editConstraintParameter(document.getElementById('constraint-code-svg'), 'svg', cTypeId => getConstraintType(cTypeId).svg, (cTypeId, value) => { getConstraintType(cTypeId).svg = value; });
     document.getElementById('constraint-code-svgdefs').onkeyup = editConstraintParameter(document.getElementById('constraint-code-svgdefs'), 'svgdefs', cTypeId => getConstraintType(cTypeId).svgdefs, (cTypeId, value) => { getConstraintType(cTypeId).svgdefs = value; });
@@ -981,6 +1112,8 @@
                 }
                 return sorted;
         }
+
+        return cells;
     }
 
     function addConstraintWithShortcut(letter)
@@ -997,12 +1130,7 @@
 
         saveUndo();
         let prevLength = state.constraints.length;
-        if (cType.kind === 'SingleCell')
-        {
-            for (let cell of selectedCells)
-                state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'cell': cell } });
-        }
-        else if (cType.kind === 'FourCells')
+        if (cType.kind === 'FourCells')
             state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'topleftcell': selectedCells[0] } });
         else
             state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'cells': enforceResult } });

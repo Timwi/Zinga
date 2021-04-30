@@ -172,5 +172,7 @@ namespace Zinga.Lib
                 svg.Append($"<path d='{ZingaUtil.GenerateSvgPath(region.GetList().Select(v => v.GetInt()).ToArray(), 0, 0)}' stroke='#2668ff' stroke-width='.15' opacity='.75' fill='none' />");
             return svg.ToString();
         }
+
+        public static string GetVersion() => "1.0";
     }
 }

@@ -11,7 +11,7 @@ namespace Zinga.Suco
         public override string ToString() => "int";
         public override int GetHashCode() => 3;
 
-        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
+        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
             // Comparison
             (BinaryOperator.Equal, SucoIntegerType) => SucoBooleanType.Instance,
@@ -35,7 +35,7 @@ namespace Zinga.Suco
             (BinaryOperator.Times, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Modulo, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Power, SucoDecimalType) => SucoDecimalType.Instance,
-            _ => base.GetBinaryOperatorType(op, rightOperand, context),
+            _ => base.GetBinaryOperatorType(op, rightType, context),
         };
 
         private static T? op<T>(int? left, int? right, Func<int, int, T> fnc) where T : struct => left == null || right == null ? null : fnc(left.Value, right.Value);

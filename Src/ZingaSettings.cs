@@ -2,7 +2,8 @@
 {
     public class ZingaSettings
     {
-        public string ResourcesDir;
         public string ConnectionString;
+        public string FrameworkDir;
+        public string ResourcesDir;
     }
 }

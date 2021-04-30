@@ -131,6 +131,7 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Resources\EditPuzzle.js" />
+    <Content Include="Resources\Font.css" />
     <Content Include="Resources\Puzzle.css" />
     <Content Include="Resources\Puzzle.js">
       <Generator>ResXFileCodeGenerator</Generator>
@@ -156,6 +157,9 @@
   </Target>
   <Import Project="..\packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" />
   <PropertyGroup>
-    <PostBuildEvent>"$(TargetPath)" postbuild "$(SolutionDir)."</PostBuildEvent>
+    <PostBuildEvent>"$(TargetPath)" postbuild "$(SolutionDir)."
+if exist "$(TargetDir)_framework" rd /s /q "$(TargetDir)_framework"
+xcopy /s /y /i "$(TargetDir)..\Release-net5.0browser-wasm\wwwroot\_framework" "$(TargetDir)_framework"
+</PostBuildEvent>
   </PropertyGroup>
 </Project>

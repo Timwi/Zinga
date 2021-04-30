@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
@@ -255,6 +256,14 @@ namespace Zinga
                         new DIV(
                             new BUTTON { type = btype.button, accesskey = "w", id = "btn-wasm" }._("Wasm"),
                             new BUTTON { type = btype.submit, accesskey = "r" }._("Remote")))))));
+        }
+
+        private HttpResponse DebugSucoStuff(HttpRequest req)
+        {
+            var suco = @"a/2";
+            var parsed = SucoParser.ParseCode(suco, new SucoTypeEnvironment().DeclareVariable("a", SucoDecimalType.Instance), SucoContext.Svg, SucoDecimalType.Instance);
+            var interpreted = parsed.Interpret(new SucoEnvironment().DeclareVariable("a", 5));
+            return HttpResponse.PlainText(interpreted.ToString());
         }
     }
 }

@@ -24,10 +24,10 @@ namespace Zinga.Suco
             _ => base.InterpretMemberAccess(memberName, operand)
         };
 
-        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => (op, rightOperand) switch
+        public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
             (BinaryOperator.Plus, SucoStringType) => SucoStringType.Instance,
-            _ => GetBinaryOperatorType(op, rightOperand, context)
+            _ => GetBinaryOperatorType(op, rightType, context)
         };
 
         public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch

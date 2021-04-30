@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
-using System.IO;
 using System.Linq;
 using RT.Json;
 using RT.Servers;
@@ -16,19 +15,10 @@ namespace Zinga
 {
     public partial class ZingaPropellerModule
     {
-        private static DbConstraint[] _constraintsWithShortcuts;
-
         public HttpResponse PuzzleEditPage(HttpRequest req)
         {
-            var constraintsWithShortcuts = _constraintsWithShortcuts;
-            if (constraintsWithShortcuts == null)
-                lock (this)
-                {
-                    constraintsWithShortcuts = _constraintsWithShortcuts;
-                    if (constraintsWithShortcuts == null)
-                        using (var db = new Db())
-                            constraintsWithShortcuts = _constraintsWithShortcuts = db.Constraints.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).ToArray();
-                }
+            using var db = new Db();
+            var constraintsWithShortcuts = db.Constraints.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).ToArray();
 
             Puzzle puzzle;
             Dictionary<int, DbConstraint> constraintTypes;
@@ -43,7 +33,6 @@ namespace Zinga
             }
             else
             {
-                using var db = new Db();
                 url = url.UrlUnescape();
                 puzzle = db.Puzzles.FirstOrDefault(p => p.UrlName == url);
                 if (puzzle == null)
@@ -53,7 +42,7 @@ namespace Zinga
                 constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).AsEnumerable().ToDictionary(c => c.ConstraintID);
             }
 
-            foreach (var cws in _constraintsWithShortcuts)
+            foreach (var cws in constraintsWithShortcuts)
                 constraintTypes[cws.ConstraintID] = cws;
 
             const double btnHeight = .8;
@@ -136,6 +125,7 @@ namespace Zinga
                         ")
                     ) : new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.css"))),
 #else
+                    new LINK { rel = "stylesheet", href = "/font" },
                     new SCRIPTLiteral(Resources.EditJs),
                     new STYLELiteral(Resources.Css),
 #endif
@@ -244,17 +234,19 @@ namespace Zinga
                                         new DIV { class_ = "label" }._("Edit constraint code", new DIV { class_ = "expand" }),
                                         new DIV { class_ = "constraint-code" }._(
                                             new DIV { class_ = "label" }._("Name"),
-                                            new DIV { class_ = "code" }._(new INPUT { type = itype.text, id = "constraint-code-name" }),
+                                            new DIV(new INPUT { type = itype.text, id = "constraint-code-name" }),
                                             new DIV { class_ = "label" }._("Kind"),
-                                            new DIV { class_ = "code" }._(new SELECT { id = "constraint-code-kind" }._(EnumStrong.GetValues<ConstraintKind>().Select(v => new OPTION { value = v.ToString() }._(v.ToString())))),
+                                            new DIV(new SELECT { id = "constraint-code-kind" }._(EnumStrong.GetValues<ConstraintKind>().Select(v => new OPTION { value = v.ToString() }._(v.ToString())))),
+                                            new DIV { class_ = "label" }._("Variables", new BUTTON { id = "constraint-code-addvar", class_ = "mini-btn add", title = "Add a new variable" }),
+                                            new DIV(new TABLE { id = "constraint-code-variables" }),
                                             new DIV { class_ = "label" }._("Logic (Suco)"),
-                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-logic" }, new DIV { id = "reporting-logic" }),
+                                            new DIV(new TEXTAREA { id = "constraint-code-logic" }, new DIV { id = "reporting-logic" }),
                                             new DIV { class_ = "label" }._("Code to generate SVG (Suco)"),
-                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-svg" }, new DIV { id = "reporting-svg" }),
+                                            new DIV(new TEXTAREA { id = "constraint-code-svg" }, new DIV { id = "reporting-svg" }),
                                             new DIV { class_ = "label" }._("Code to generate SVG definitions (Suco)"),
-                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-svgdefs" }, new DIV { id = "reporting-svgdefs" }),
+                                            new DIV(new TEXTAREA { id = "constraint-code-svgdefs" }, new DIV { id = "reporting-svgdefs" }),
                                             new DIV { class_ = "label" }._("Preview SVG"),
-                                            new DIV { class_ = "code" }._(new TEXTAREA { id = "constraint-code-preview" }))),
+                                            new DIV(new TEXTAREA { id = "constraint-code-preview" }))),
                                     new SECTION { id = "constraint-add-section" }._(
                                         new DIV { class_ = "label" }._("Add a constraint"),
                                         new DIV { class_ = "main" }._(
@@ -264,7 +256,7 @@ namespace Zinga
                                                 new LI("Press Shift with a letter to search for more constraints.")),
                                             new HR(),
                                             new P("Common constraint shortcuts:"),
-                                            new TABLE(_constraintsWithShortcuts.Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))))))))))));
+                                            new TABLE(constraintsWithShortcuts.Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))))))))))));
         }
     }
 }

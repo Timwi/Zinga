@@ -121,6 +121,12 @@
   <data name="Css" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\Puzzle.css;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>
+  <data name="EditJs" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>resources\editpuzzle.js;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="FontCss" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>resources\font.css;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
   <data name="Js" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\Puzzle.js;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>

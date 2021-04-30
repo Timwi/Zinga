@@ -12,10 +12,13 @@ namespace Zinga.Suco
         public SucoContext Context { get; private set; }
 
         public SucoParser(string source, SucoContext context) : base(source, Ut.NewArray(
+
+            // MAKE SURE that every multi-character token that has another token as its prefix comes before said prefix
+
             // Arithmetic
             "+", "-", "−", "*", "×", "^", "%", "/",
             // Relational
-            "<", "<=", "≤", ">", ">=", "≥", "=", "!=", "≠",
+            "<=", "<", "≤", ">=", ">", "≥", "=", "!=", "≠",
             // Logical
             "&", "|", "?", ":", "!",
             // Structural
@@ -84,6 +87,26 @@ namespace Zinga.Suco
             return left;
         }
 
+        public static bool IsValidCode(string source, SucoTypeEnvironment env, SucoContext context, SucoType expectedResultType, out string error)
+        {
+            try
+            {
+                ParseCode(source, env, context, expectedResultType);
+                error = null;
+                return true;
+            }
+            catch (SucoCompileException sce)
+            {
+                error = sce.Message;
+                return false;
+            }
+            catch (SucoParseException spe)
+            {
+                error = spe.Message;
+                return false;
+            }
+        }
+
         private SucoExpression parseExpressionOr()
         {
             var left = parseExpressionAnd();
@@ -144,7 +167,7 @@ namespace Zinga.Suco
         private SucoExpression parseExpressionMultiplicative()
         {
             var left = parseExpressionExponential();
-            while (tokens(out var op, ("*", BinaryOperator.Times), ("×", BinaryOperator.Times), ("%", BinaryOperator.Modulo)))
+            while (tokens(out var op, ("*", BinaryOperator.Times), ("×", BinaryOperator.Times), ("%", BinaryOperator.Modulo), ("/", BinaryOperator.Divide)))
             {
                 var right = parseExpressionExponential();
                 left = new SucoBinaryOperatorExpression(left.StartIndex, right.EndIndex, left, right, op);

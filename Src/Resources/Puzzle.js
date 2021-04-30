@@ -31,15 +31,27 @@
     function dotNet(method, args, callback)
     {
         if (blazorQueue === null)
-            DotNet.invokeMethodAsync('ZingaWasm', method, ...args).then(callback);
+        {
+            if (method === null)
+                callback();
+            else
+                DotNet.invokeMethodAsync('ZingaWasm', method, ...args).then(callback);
+        }
         else
             blazorQueue.push([method, args, callback]);
     }
     Blazor.start({})
         .then(() =>
         {
+            DotNet.invokeMethodAsync('ZingaWasm', 'GetVersion', []).then(v => { console.log(`Version: ${v}`); });
+            DotNet.invokeMethodAsync('ZingaWasm', 'GetLibVersion', []).then(v => { console.log(`Lib Version: ${v}`); });
             for (let i = 0; i < blazorQueue.length; i++)
-                DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
+            {
+                if (blazorQueue[i][0] === null)
+                    blazorQueue[i][2]();
+                else
+                    DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
+            }
             blazorQueue = null;
         });
 
@@ -64,13 +76,17 @@
         remoteLog(`${ev.type} puzzleContainer`);
     });
 
-    let state = {
-        colors: Array(81).fill(null).map(_ => []),
-        cornerNotation: Array(81).fill(null).map(_ => []),
-        centerNotation: Array(81).fill(null).map(_ => []),
-        enteredDigits: Array(81).fill(null)
-    };
-    let undoBuffer = [encodeState(state)];
+    function makeCleanState()
+    {
+        return {
+            colors: Array(81).fill(null).map(_ => []),
+            cornerNotation: Array(81).fill(null).map(_ => []),
+            centerNotation: Array(81).fill(null).map(_ => []),
+            enteredDigits: Array(81).fill(null)
+        };
+    }
+    let state = makeCleanState();
+    let undoBuffer = [];
     let redoBuffer = [];
 
     let mode = 'normal';
@@ -291,18 +307,23 @@
         setClass(puzzleDiv, 'solved', false);
 
         // Check if any constraints are violated
-        dotNet('CheckConstraints', [JSON.stringify(state.enteredDigits), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], result =>
+        if (showErrors || state.enteredDigits.every(d => d !== null))
         {
-            let violatedConstraintIxs = JSON.parse(result);
-            setClass(puzzleDiv, 'solved', valid === true && violatedConstraintIxs.length === 0);
-            for (let cIx = 0; cIx < constraints.length; cIx++)
+            dotNet('CheckConstraints', [JSON.stringify(state.enteredDigits), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], result =>
             {
-                if (violatedConstraintIxs.includes(cIx))
-                    document.getElementById(`constraint-svg-${cIx}`).setAttribute('filter', 'url(#constraint-invalid-shadow)');
-                else
-                    document.getElementById(`constraint-svg-${cIx}`).removeAttribute('filter');
-            }
-        });
+                let violatedConstraintIxs = JSON.parse(result);
+                setClass(puzzleDiv, 'solved', valid === true && violatedConstraintIxs.length === 0);
+                for (let cIx = 0; cIx < constraints.length; cIx++)
+                {
+                    if (violatedConstraintIxs.includes(cIx) && showErrors)
+                        document.getElementById(`constraint-svg-${cIx}`).setAttribute('filter', 'url(#constraint-invalid-shadow)');
+                    else
+                        document.getElementById(`constraint-svg-${cIx}`).removeAttribute('filter');
+                }
+            });
+        }
+        else
+            Array.from(document.querySelectorAll('#constraint-svg>g')).forEach(g => { g.removeAttribute('filter'); });
     }
 
     function updateConstraints() 
@@ -425,7 +446,7 @@
             setClass(document.getElementById(`btn-${digit + 1}`), 'success', digitCounts[digit] === 9);
         }
 
-        setClass(puzzleDiv, 'sidebar-on', sidebarOn);
+        setClass(puzzleDiv, 'sidebar-off', !sidebarOn);
         puzzleDiv.querySelector('#btn-sidebar>text').textContent = sidebarOn ? 'Less' : 'More';
         puzzleDiv.querySelector('#opt-show-errors').checked = showErrors;
         puzzleDiv.querySelector('#opt-multi-color').checked = multiColorMode;
@@ -750,12 +771,7 @@
         {
             resetClearButton();
             saveUndo();
-            state = {
-                colors: Array(81).fill(null),
-                cornerNotation: Array(81).fill(null).map(_ => []),
-                centerNotation: Array(81).fill(null).map(_ => []),
-                enteredDigits: Array(81).fill(null)
-            };
+            state = makeCleanState();
             updateVisuals(true);
         }
     });
@@ -907,6 +923,12 @@
             case 'Space': {
                 let modes = ['normal', 'corner', 'center', 'color'];
                 mode = modes[(modes.indexOf(mode) + 1) % modes.length];
+                updateVisuals();
+                break;
+            }
+            case 'Shift+Space': {
+                let modes = ['normal', 'corner', 'center', 'color'];
+                mode = modes[(modes.indexOf(mode) + modes.length - 1) % modes.length];
                 updateVisuals();
                 break;
             }

@@ -1,4 +1,6 @@
-﻿namespace Zinga.Suco
+﻿using System;
+
+namespace Zinga.Suco
 {
     public class Cell
     {
@@ -20,5 +22,8 @@
         }
 
         public override string ToString() => $"[{(char) ('A' + X)}{Y + 1}/{Box + 1}]{(Position == null ? "" : $"#{Position.Value}")}={Value}";
+
+        public bool Orthogonal(Cell other) => Index != other.Index && ((X == other.X && Math.Abs(Y - other.Y) == 1) || (Y == other.Y && Math.Abs(X - other.X) == 1));
+        public bool Adjacent(Cell other) => Index != other.Index && Math.Abs(X - other.X) <= 1 && Math.Abs(Y - other.Y) <= 1;
     }
 }

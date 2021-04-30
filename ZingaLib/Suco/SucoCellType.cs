@@ -1,4 +1,6 @@
-﻿namespace Zinga.Suco
+﻿using System;
+
+namespace Zinga.Suco
 {
     public class SucoCellType : SucoType
     {
@@ -21,6 +23,9 @@
             "cx" => SucoDecimalType.Instance,
             "cy" => SucoDecimalType.Instance,
 
+            "orthogonal" => new SucoFunctionType((new[] { SucoCellType.Instance }, SucoBooleanType.Instance)),
+            "adjacent" => new SucoFunctionType((new[] { SucoCellType.Instance }, SucoBooleanType.Instance)),
+
             _ => base.GetMemberType(memberName, context)
         };
 
@@ -38,6 +43,9 @@
 
                 "cx" => op.X + .5,
                 "cy" => op.Y + .5,
+
+                "orthogonal" => new SucoFunction((parameters: new[] { SucoCellType.Instance }, returnType: SucoBooleanType.Instance, interpreter: args => op.Orthogonal((Cell) args[0]))),
+                "adjacent" => new SucoFunction((parameters: new[] { SucoCellType.Instance }, returnType: SucoBooleanType.Instance, interpreter: args => op.Adjacent((Cell) args[0]))),
 
                 _ => base.InterpretMemberAccess(memberName, operand)
             };

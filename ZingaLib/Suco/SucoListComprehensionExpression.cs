@@ -112,7 +112,10 @@ namespace Zinga.Suco
                             if (result == false)
                                 goto skipped;
                             else if (result == null)
-                                throw new EvaluationIncompleteException();
+                            {
+                                yield return null;
+                                yield break;
+                            }
                         }
                         foreach (var result in recurse(clIx + 1, newEnv))
                             yield return result;

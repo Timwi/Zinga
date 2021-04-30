@@ -5,13 +5,14 @@ namespace Zinga.Suco
 {
     public abstract class SucoType : IEquatable<SucoType>
     {
-        public virtual SucoType GetMemberType(string memberName, SucoContext context) => throw new SucoTempCompileException($"Member “{memberName}” is not defined on type “{this}”.");
-        public virtual SucoType GetUnaryOperatorType(UnaryOperator op) => throw new SucoTempCompileException($"Unary operator “{op}” is not defined on type “{this}”.");
-        public virtual SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightOperand, SucoContext context) => throw new SucoTempCompileException($"Binary operator “{op}” is not defined on type “{this}”.");
-
-        public virtual bool ImplicitlyConvertibleTo(SucoType other) => Equals(other);
-        public virtual object InterpretUnaryOperator(UnaryOperator op, object operand) => throw new SucoTempCompileException($"Unary operator “{op}” not defined on type “{this}”.");
+        public virtual SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => throw new SucoTempCompileException($"Binary operator “{op}” not defined on types “{this}” and “{rightType}”.");
         public virtual object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => throw new SucoTempCompileException($"Binary operator “{op}” not defined on types “{this}” and “{rightType}”.");
+
+        public virtual SucoType GetUnaryOperatorType(UnaryOperator op) => throw new SucoTempCompileException($"Unary operator “{op}” is not defined on type “{this}”.");
+        public virtual object InterpretUnaryOperator(UnaryOperator op, object operand) => throw new SucoTempCompileException($"Unary operator “{op}” not defined on type “{this}”.");
+
+        public virtual SucoType GetMemberType(string memberName, SucoContext context) => throw new SucoTempCompileException($"Member “{memberName}” is not defined on type “{this}”.");
+        public virtual bool ImplicitlyConvertibleTo(SucoType other) => Equals(other);
         public virtual object InterpretImplicitConversionTo(SucoType type, object operand) => Equals(type) ? operand : throw new SucoTempCompileException($"Implicit conversion not defined from type “{this}” to “{type}”.");
         public virtual object InterpretMemberAccess(string memberName, object operand) => throw new SucoTempCompileException($"Member “{memberName}” not defined on type “{this}”.");
         public abstract override int GetHashCode();
@@ -81,6 +82,20 @@ namespace Zinga.Suco
                     if (!token(","))
                         throw new SucoParseException("Expected ‘]’ (to finish the enum type) or ‘,’ (to specify further enum names).", _ix);
                 }
+            }
+        }
+
+        public static bool TryParse(string source, out SucoType type)
+        {
+            try
+            {
+                type = Parse(source);
+                return true;
+            }
+            catch
+            {
+                type = default;
+                return false;
             }
         }
     }

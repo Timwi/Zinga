@@ -9,7 +9,6 @@
         MatchingRegions,
         RowColumn,
         Diagonal,
-        SingleCell,
         TwoCells,
         FourCells
     }
