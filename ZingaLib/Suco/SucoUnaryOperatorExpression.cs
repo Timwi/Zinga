@@ -14,7 +14,7 @@ namespace Zinga.Suco
             Operator = op;
         }
 
-        public override object Interpret(SucoEnvironment env) => Operand.Type.InterpretUnaryOperator(Operator, Operand);
+        public override object Interpret(SucoEnvironment env) => Operand.Type.InterpretUnaryOperator(Operator, Operand.Interpret(env));
 
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
