@@ -353,6 +353,7 @@
                     let list = JSON.parse(svgs);
                     document.getElementById('constraint-defs').innerHTML = list[0];
                     document.getElementById('constraint-svg').innerHTML = list[1];
+                    fixViewBox();
                 });
             }
         }
