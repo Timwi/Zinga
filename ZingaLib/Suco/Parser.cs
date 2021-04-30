@@ -76,9 +76,9 @@ namespace Zinga.Suco
                 while (j < _source.Length && (char.IsDigit(_source, j) || (_source[j] == '.' && !hasDot && j < _source.Length - 1 && char.IsDigit(_source, j + 1))))
                 {
                     sb.Append(_source.Substring(j, char.IsSurrogate(_source, j) ? 2 : 1));
-                    j += char.IsSurrogate(_source, j) ? 2 : 1;
                     if (_source[j] == '.')
                         hasDot = true;
+                    j += char.IsSurrogate(_source, j) ? 2 : 1;
                 }
                 var str = sb.ToString();
                 if (hasDot && double.TryParse(str, out var dblResult))

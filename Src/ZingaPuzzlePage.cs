@@ -40,7 +40,7 @@ namespace Zinga
                 using var db = new Db();
                 puzzle = db.Puzzles.FirstOrDefault(p => p.UrlName == url);
                 if (puzzle == null)
-                    return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
+                    return HttpResponse.Html($"<h1>404 — Puzzle “{url}” Not Found</h1>", HttpStatusCode._404_NotFound);
                 constraints = db.PuzzleConstraints.Where(c => c.PuzzleID == puzzle.PuzzleID).ToArray();
                 var constraintIds = constraints.Select(c => c.ConstraintID).Distinct().ToArray();
                 constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).AsEnumerable().ToDictionary(c => c.ConstraintID);
@@ -132,7 +132,7 @@ namespace Zinga
                         .Data("givens", puzzle?.GivensJson)
                         .Data("puzzleid", puzzle?.UrlName ?? "test")
                         ._(
-                            new DIV { class_ = "puzzle-container", tabindex = 0 }._(new RawTag($@"
+                            new DIV { class_ = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
                                 <svg viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
                                     <defs>
                                         <filter id='constraint-invalid-shadow' x='-1' y='-1' width='500%' height='500%'>

@@ -13,7 +13,7 @@ namespace Zinga.Suco
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
-            // Comparison
+            // Comparison with Int
             (BinaryOperator.Equal, SucoIntegerType) => SucoBooleanType.Instance,
             (BinaryOperator.NotEqual, SucoIntegerType) => SucoBooleanType.Instance,
             (BinaryOperator.LessThan, SucoIntegerType) => SucoBooleanType.Instance,
@@ -21,7 +21,15 @@ namespace Zinga.Suco
             (BinaryOperator.GreaterThan, SucoIntegerType) => SucoBooleanType.Instance,
             (BinaryOperator.GreaterThanOrEqual, SucoIntegerType) => SucoBooleanType.Instance,
 
-            // Integer arithmetic
+            // Comparison with Decimal
+            (BinaryOperator.Equal, SucoDecimalType) => SucoBooleanType.Instance,
+            (BinaryOperator.NotEqual, SucoDecimalType) => SucoBooleanType.Instance,
+            (BinaryOperator.LessThan, SucoDecimalType) => SucoBooleanType.Instance,
+            (BinaryOperator.LessThanOrEqual, SucoDecimalType) => SucoBooleanType.Instance,
+            (BinaryOperator.GreaterThan, SucoDecimalType) => SucoBooleanType.Instance,
+            (BinaryOperator.GreaterThanOrEqual, SucoDecimalType) => SucoBooleanType.Instance,
+
+            // Arithmetic with Int
             (BinaryOperator.Plus, SucoIntegerType) => SucoIntegerType.Instance,
             (BinaryOperator.Minus, SucoIntegerType) => SucoIntegerType.Instance,
             (BinaryOperator.Times, SucoIntegerType) => SucoIntegerType.Instance,
@@ -29,7 +37,7 @@ namespace Zinga.Suco
             (BinaryOperator.Divide, SucoIntegerType) => context != SucoContext.Constraint ? SucoDecimalType.Instance : throw new SucoTempCompileException("Suco does not allow the use of division in puzzle constraints. Rewrite the equation to use multiplication instead (for example: instead of a.value/b.value = 2, write a.value = 2*b.value)."),
             (BinaryOperator.Power, SucoIntegerType) => SucoIntegerType.Instance,
 
-            // Decimal arithmetic
+            // Arithmetic with Decimal
             (BinaryOperator.Plus, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Minus, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Times, SucoDecimalType) => SucoDecimalType.Instance,
@@ -42,13 +50,21 @@ namespace Zinga.Suco
 
         public override object InterpretBinaryOperator(object left, BinaryOperator @operator, SucoType rightType, object right) => (@operator, rightType) switch
         {
-            // Comparison
+            // Comparison with Int
             (BinaryOperator.Equal, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a == b),
             (BinaryOperator.NotEqual, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a != b),
             (BinaryOperator.LessThan, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a < b),
             (BinaryOperator.LessThanOrEqual, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a <= b),
             (BinaryOperator.GreaterThan, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a > b),
             (BinaryOperator.GreaterThanOrEqual, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a >= b),
+
+            // Comparison with Decimal
+            (BinaryOperator.Equal, SucoDecimalType) => (int) left == (double) right,
+            (BinaryOperator.NotEqual, SucoDecimalType) => (int) left != (double) right,
+            (BinaryOperator.LessThan, SucoDecimalType) => (int) left < (double) right,
+            (BinaryOperator.LessThanOrEqual, SucoDecimalType) => (int) left <= (double) right,
+            (BinaryOperator.GreaterThan, SucoDecimalType) => (int) left > (double) right,
+            (BinaryOperator.GreaterThanOrEqual, SucoDecimalType) => (int) left >= (double) right,
 
             // Integer arithmetic
             (BinaryOperator.Plus, SucoIntegerType) => op((int?) left, (int?) right, (a, b) => a + b),

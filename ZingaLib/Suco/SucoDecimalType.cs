@@ -12,6 +12,7 @@ namespace Zinga.Suco
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
+            // Decimal op Decimal
             (BinaryOperator.Equal, SucoDecimalType) => SucoBooleanType.Instance,
             (BinaryOperator.NotEqual, SucoDecimalType) => SucoBooleanType.Instance,
             (BinaryOperator.LessThan, SucoDecimalType) => SucoBooleanType.Instance,
@@ -24,11 +25,26 @@ namespace Zinga.Suco
             (BinaryOperator.Modulo, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Divide, SucoDecimalType) => SucoDecimalType.Instance,
             (BinaryOperator.Power, SucoDecimalType) => SucoDecimalType.Instance,
+
+            // Decimal op Int
+            (BinaryOperator.Equal, SucoIntegerType) => SucoBooleanType.Instance,
+            (BinaryOperator.NotEqual, SucoIntegerType) => SucoBooleanType.Instance,
+            (BinaryOperator.LessThan, SucoIntegerType) => SucoBooleanType.Instance,
+            (BinaryOperator.LessThanOrEqual, SucoIntegerType) => SucoBooleanType.Instance,
+            (BinaryOperator.GreaterThan, SucoIntegerType) => SucoBooleanType.Instance,
+            (BinaryOperator.GreaterThanOrEqual, SucoIntegerType) => SucoBooleanType.Instance,
+            (BinaryOperator.Plus, SucoIntegerType) => SucoDecimalType.Instance,
+            (BinaryOperator.Minus, SucoIntegerType) => SucoDecimalType.Instance,
+            (BinaryOperator.Times, SucoIntegerType) => SucoDecimalType.Instance,
+            (BinaryOperator.Modulo, SucoIntegerType) => SucoDecimalType.Instance,
+            (BinaryOperator.Divide, SucoIntegerType) => SucoDecimalType.Instance,
+            (BinaryOperator.Power, SucoIntegerType) => SucoDecimalType.Instance,
             _ => base.GetBinaryOperatorType(op, rightType, context),
         };
 
         public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch
         {
+            // Decimal op Decimal
             (BinaryOperator.Equal, SucoDecimalType) => (double) left == (double) right,
             (BinaryOperator.NotEqual, SucoDecimalType) => (double) left != (double) right,
             (BinaryOperator.LessThan, SucoDecimalType) => (double) left < (double) right,
@@ -41,6 +57,21 @@ namespace Zinga.Suco
             (BinaryOperator.Modulo, SucoDecimalType) => ((double) left % (double) right + (double) right) % (double) right,
             (BinaryOperator.Divide, SucoDecimalType) => (double) left / (double) right,
             (BinaryOperator.Power, SucoDecimalType) => Math.Pow((double) left, (double) right),
+
+            // Decimal op Int
+            (BinaryOperator.Equal, SucoIntegerType) => (double) left == (int) right,
+            (BinaryOperator.NotEqual, SucoIntegerType) => (double) left != (int) right,
+            (BinaryOperator.LessThan, SucoIntegerType) => (double) left < (int) right,
+            (BinaryOperator.LessThanOrEqual, SucoIntegerType) => (double) left <= (int) right,
+            (BinaryOperator.GreaterThan, SucoIntegerType) => (double) left > (int) right,
+            (BinaryOperator.GreaterThanOrEqual, SucoIntegerType) => (double) left >= (int) right,
+            (BinaryOperator.Plus, SucoIntegerType) => (double) left + (int) right,
+            (BinaryOperator.Minus, SucoIntegerType) => (double) left - (int) right,
+            (BinaryOperator.Times, SucoIntegerType) => (double) left * (int) right,
+            (BinaryOperator.Modulo, SucoIntegerType) => ((double) left % (int) right + (int) right) % (int) right,
+            (BinaryOperator.Divide, SucoIntegerType) => (double) left / (int) right,
+            (BinaryOperator.Power, SucoIntegerType) => Math.Pow((double) left, (int) right),
+
             _ => base.InterpretBinaryOperator(left, op, rightType, right),
         };
 

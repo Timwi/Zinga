@@ -90,6 +90,8 @@ namespace Zinga.Suco
 
                     var collection = (IList) Clauses[clIx].FromExpressionResolved.Interpret(curEnv);
                     collections[clIx] = collection;
+                    int? oneFound = null;
+                    bool nullFound = false;
                     for (var i = 0; i < collection.Count; i++)
                     {
                         if (collection[i] is Cell c)
@@ -111,15 +113,42 @@ namespace Zinga.Suco
                             var result = condition.Interpret(newEnv);
                             if (result == false)
                                 goto skipped;
+                            else if (result == null && Clauses[clIx].HasSingleton)
+                            {
+                                nullFound = true;
+                                goto skipped;
+                            }
                             else if (result == null)
                             {
                                 yield return null;
                                 yield break;
                             }
                         }
-                        foreach (var result in recurse(clIx + 1, newEnv))
-                            yield return result;
+                        if (Clauses[clIx].HasSingleton)
+                        {
+                            if (oneFound != null)
+                            {
+                                yield return false;
+                                yield break;
+                            }
+                            oneFound = i;
+                        }
+                        else
+                        {
+                            foreach (var result in recurse(clIx + 1, newEnv))
+                                yield return result;
+                        }
                         skipped:;
+                    }
+                    if (Clauses[clIx].HasSingleton)
+                    {
+                        if (oneFound == null)
+                        {
+                            yield return nullFound ? null : false;
+                            yield break;
+                        }
+                        foreach (var result in recurse(clIx + 1, curEnv.DeclareVariable(Clauses[clIx].VariableName, collection, oneFound.Value)))
+                            yield return Equals(result, true) && nullFound ? null : result;
                     }
                 }
                 return recurse(0, env).ToArray();

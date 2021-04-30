@@ -12,7 +12,7 @@ namespace Zinga.Lib
         {
             var value = ComputeBigInteger(input.ToUtf8());
             var str = new StringBuilder();
-            var allowedCharacters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-~@$*+=";
+            var allowedCharacters = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
             while (value > 0)
             {
                 str.Append(allowedCharacters[(int) (value % allowedCharacters.Length)]);

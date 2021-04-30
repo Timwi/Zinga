@@ -276,14 +276,16 @@
                 for (let colB = colA + 1; colB < 9; colB++)
                     if (grid[colA + 9 * i] !== null && grid[colA + 9 * i] === grid[colB + 9 * i])
                     {
-                        console.log(`Row ${i + 1} is violated.`);
+                        if (showErrors)
+                            console.log(`Row ${i + 1} is violated.`);
                         return false;
                     }
             for (let rowA = 0; rowA < 9; rowA++)
                 for (let rowB = rowA + 1; rowB < 9; rowB++)
                     if (grid[i + 9 * rowA] !== null && grid[i + 9 * rowA] === grid[i + 9 * rowB])
                     {
-                        console.log(`Column ${i + 1} is violated.`);
+                        if (showErrors)
+                            console.log(`Column ${i + 1} is violated.`);
                         return false;
                     }
             for (let cellA = 0; cellA < 9; cellA++)
@@ -291,7 +293,8 @@
                     if (grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] !== null &&
                         grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] === grid[cellB % 3 + 3 * (i % 3) + 9 * (((cellB / 3) | 0) + 3 * ((i / 3) | 0))])
                     {
-                        console.log(`Box ${i + 1} is violated.`);
+                        if (showErrors)
+                            console.log(`Box ${i + 1} is violated.`);
                         return false;
                     }
         }
@@ -316,7 +319,10 @@
                 for (let cIx = 0; cIx < constraints.length; cIx++)
                 {
                     if (violatedConstraintIxs.includes(cIx) && showErrors)
+                    {
+                        console.log(`Constraint ${cIx} is violated.`);
                         document.getElementById(`constraint-svg-${cIx}`).setAttribute('filter', 'url(#constraint-invalid-shadow)');
+                    }
                     else
                         document.getElementById(`constraint-svg-${cIx}`).removeAttribute('filter');
                 }
@@ -353,6 +359,7 @@
                     let list = JSON.parse(svgs);
                     document.getElementById('constraint-defs').innerHTML = list[0];
                     document.getElementById('constraint-svg').innerHTML = list[1];
+                    updateVisuals();
                     fixViewBox();
                 });
             }
@@ -1029,7 +1036,6 @@
 
         // Step 3: change the viewBox so that it includes everything
         let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
-        console.log(fullBBox);
         let left = Math.min(-.4, fullBBox.x - .1);
         let top = Math.min(-.4, fullBBox.y - .1);
         let right = Math.max(9.4, fullBBox.x + fullBBox.width + .2);

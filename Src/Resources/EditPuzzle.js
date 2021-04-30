@@ -158,18 +158,20 @@
     {
         selectedConstraints = [cIx];
         lastSelectedConstraint = cIx;
+        editingConstraintType = null;
         selectedCells = [];
         updateVisuals();
     }
 
-    function selectConstraintRange(cIx1, cIx2)
+    function selectConstraintRange(cIx1, cIx2, updateOpt)
     {
         if (cIx1 <= cIx2)
             selectedConstraints = Array(cIx2 - cIx1 + 1).fill(null).map((_, c) => c + cIx1);
         else
             selectedConstraints = Array(cIx1 - cIx2 + 1).fill(null).map((_, c) => c + cIx2);
+        editingConstraintType = null;
         selectedCells = [];
-        updateVisuals();
+        updateVisuals(updateOpt);
     }
 
     function getConstraintType(id)
@@ -221,74 +223,76 @@
             });
         }
 
+        function variableUi(type, value, id, kind, cIx)
+        {
+            switch (type)
+            {
+                case 'int':
+                    return `<input type='number' step='1' id='${id}' value='${value | 0}' />`;
+                case 'bool':
+                    return `<input type='checkbox' id='${id}'${value ? ` checked='checked'` : ''} />`;
+                case 'list(cell)':
+                    return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><button type='button' class='mini-btn set' id='${id}-set' title='Set constraint to the current selection' tabindex='0'></button>`;
+                case 'list(list(cell))':
+                    return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><span class='matching-regions-controls' id='${id}-set' data-constraintix='${cIx}'></span>`;
+            }
+
+            let listRx = /^list\((.*)\)$/.exec(type);
+            if (listRx !== null)
+            {
+                var uis = [];
+                if (!Array.isArray(value))
+                    value = [];
+                for (let i = 0; i < value.length; i++)
+                    uis.push(`<li>${variableUi(listRx[1], value[i], `${id}-${i}`, kind, cIx)}</li>`);
+                return `<ul>${uis.join('')}</ul>`;
+            }
+
+            return "(not implemented)";
+        }
+
+        function setVariableEvents(type, getter, setter, id)
+        {
+            switch (type)
+            {
+                case 'int':
+                    document.getElementById(id).onchange = function() { setter(document.getElementById(id).value); };
+                    return;
+                case 'bool':
+                    document.getElementById(id).onchange = function() { setter(document.getElementById(id).checked); };
+                    return;
+                case 'list(cell)':
+                    setButtonHandler(document.getElementById(`${id}-show`), function()
+                    {
+                        selectedCells = [...getter()];
+                        selectedConstraints = [];
+                        editingConstraintType = null;
+                        updateVisuals();
+                    });
+                    setButtonHandler(document.getElementById(`${id}-set`), function()
+                    {
+                        setter(selectedCells);
+                    });
+                    return;
+                case 'list(list(cell))':
+                    setButtonHandler(document.getElementById(`${id}-show`), function()
+                    {
+                        selectedCells = [];
+                        for (let inner of getter())
+                            selectedCells.push(...inner);
+                        selectedConstraints = [];
+                        editingConstraintType = null;
+                        updateVisuals();
+                    });
+                    let setDiv = document.getElementById(`${id}-set`);
+                    setDiv.zingaSetter = setter;
+                    setDiv.zingaRegions = getter();
+                    return;
+            }
+        }
+
         if (opt && opt.ui)
         {
-            function variableUi(type, value, id, kind, cIx)
-            {
-                switch (type)
-                {
-                    case 'int':
-                        return `<input type='number' step='1' id='${id}' value='${value | 0}' />`;
-                    case 'bool':
-                        return `<input type='checkbox' id='${id}'${value ? ` checked='checked'` : ''} />`;
-                    case 'list(cell)':
-                        return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><button type='button' class='mini-btn set' id='${id}-set' title='Set constraint to the current selection' tabindex='0'></button>`;
-                    case 'list(list(cell))':
-                        return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><span class='matching-regions-controls' id='${id}-set' data-constraintix='${cIx}'></span>`;
-                }
-
-                let listRx = /^list\((.*)\)$/.exec(type);
-                if (listRx !== null)
-                {
-                    var uis = [];
-                    if (!Array.isArray(value))
-                        value = [];
-                    for (let i = 0; i < value.length; i++)
-                        uis.push(`<li>${variableUi(listRx[1], value[i], `${id}-${i}`, kind, cIx)}</li>`);
-                    return `<ul>${uis.join('')}</ul>`;
-                }
-
-                return "(not implemented)";
-            }
-
-            function setVariableEvents(type, getter, setter, id)
-            {
-                switch (type)
-                {
-                    case 'int':
-                        document.getElementById(id).onchange = function() { setter(document.getElementById(id).value); };
-                        return;
-                    case 'bool':
-                        document.getElementById(id).onchange = function() { setter(document.getElementById(id).checked); };
-                        return;
-                    case 'list(cell)':
-                        setButtonHandler(document.getElementById(`${id}-show`), function()
-                        {
-                            selectedCells = [...getter()];
-                            selectedConstraints = [];
-                            updateVisuals();
-                        });
-                        setButtonHandler(document.getElementById(`${id}-set`), function()
-                        {
-                            setter(selectedCells);
-                        });
-                        return;
-                    case 'list(list(cell))':
-                        setButtonHandler(document.getElementById(`${id}-show`), function()
-                        {
-                            selectedCells = [];
-                            for (let inner of getter())
-                                selectedCells.push(...inner);
-                            selectedConstraints = [];
-                            updateVisuals();
-                        });
-                        let setDiv = document.getElementById(`${id}-set`);
-                        setDiv.zingaSetter = setter;
-                        setDiv.zingaRegions = getter();
-                        return;
-                }
-            }
-
             // List of constraints
             let constraintListHtml = '';
             for (var cIx = 0; cIx < state.constraints.length; cIx++)
@@ -300,8 +304,8 @@
                     variableHtml += `<div class='variable'><div class='name'>${v}</div><div class='value'>${variableUi(constraintType.variables[v], constraint.values[v], `constraint-${cIx}-${v}`, constraintType.kind, cIx)}</div></div>`;
 
                 constraintListHtml += `
-                    <div class='constraint${constraint.type < 0 ? ' custom' : ''}' id='constraint-${cIx}' data-index='${cIx}'>
-                        <div class='name'>${constraintType.name}<div class='expand'></div></div>
+                    <div class='constraint${constraint.type < 0 ? ' custom' : ''}${constraint.expanded ? ' expanded' : ''}' id='constraint-${cIx}' data-index='${cIx}'>
+                        <div class='name'><span></span><div class='expand'></div><button class='mini-btn merge' title='Merge constraint types (set selected constraints to match this type)'></button></div>
                         <div class='variables'>${variableHtml}</div>
                     </div>`;
             }
@@ -332,6 +336,9 @@
                             }
                             saveUndo();
                             constraint.values[v] = nv;
+                            for (let cIx of selectedConstraints)
+                                if (state.constraints[cIx].type === constraint.type)
+                                    state.constraints[cIx].values[v] = nv;
                             updateVisuals({ storage: true, svg: true });
                             return true;
                         },
@@ -353,6 +360,7 @@
                             selectedConstraints.push(cIx);
                             lastSelectedConstraint = cIx;
                         }
+                        editingConstraintType = null;
                         updateVisuals();
                     }
                     else
@@ -360,26 +368,64 @@
                         selectedConstraints = [cIx];
                         lastSelectedConstraint = cIx;
                         selectedCells = [];
+                        editingConstraintType = null;
                         updateVisuals();
                     }
                 }, ev => ev.target.nodeName === 'INPUT');
+
+                function toggleExpanded()
+                {
+                    constraint.expanded = !constraint.expanded;
+                    updateVisuals({ storage: true });
+                }
                 let expander = constraintDiv.querySelector('.expand');
-                setButtonHandler(expander, function() { setClass(constraintDiv, 'expanded', !constraintDiv.classList.contains('expanded')); });
-                constraintDiv.querySelector('.name').ondblclick = function(ev) { if (ev.target !== expander) setClass(constraintDiv, 'expanded', !constraintDiv.classList.contains('expanded')); };
+                setButtonHandler(expander, toggleExpanded);
+                constraintDiv.querySelector('.name').ondblclick = function(ev) { if (ev.target !== expander) toggleExpanded(); };
+
+                let mergeBtn = constraintDiv.querySelector('.mini-btn.merge');
+                setButtonHandler(mergeBtn, () =>
+                {
+                    console.log(`Selected: [${selectedConstraints.map(c => `#${c}=${state.constraints[c].type}`).join(', ')}]`);
+                    console.log(mergeBtn);
+                    let targetTypeId = state.constraints[cIx].type;
+                    let targetType = getConstraintType(targetTypeId);
+                    console.log(`Target ID: ${targetTypeId}`);
+                    saveUndo();
+                    for (let selCIx of selectedConstraints)
+                        if (state.constraints[selCIx].type !== targetTypeId)
+                        {
+                            console.log(`Setting constraint ${selCIx} from ${state.constraints[selCIx].type} to ${targetTypeId}`);
+                            state.constraints[selCIx].type = targetTypeId;
+                            for (let varName of Object.keys(state.constraints[selCIx].values))
+                                if (!(varName in targetType.variables))
+                                    delete state.constraints[selCIx].values[varName];
+                            for (let varName of Object.keys(targetType.variables))
+                                if (!(varName in state.constraints[selCIx].values))
+                                    state.constraints[selCIx].values[varName] = constraint.values[varName];
+                        }
+                    updateVisuals({ storage: true, ui: true, svg: true });
+                });
             });
         }
 
-        for (let cell = 0; cell < 81; cell++)
+        let uniqueConstraintTypes = [...new Set(state.constraints.map(c => c.type))];
+        uniqueConstraintTypes.sort((a, b) => b - a);
+        function getConstraintColor(cType, selected)
         {
-            // Cell selection
-            setClass(document.getElementById(`sudoku-${cell}`), 'highlighted', selectedCells.includes(cell));
-            // Givens
-            document.getElementById(`sudoku-text-${cell}`).textContent = state.givens[cell] !== null ? state.givens[cell] : '';
+            return `hsl(${(220 + 360 / uniqueConstraintTypes.length * uniqueConstraintTypes.indexOf(cType)) % 360}, ${selected ? '80%, 50%' : '80%, 90%'})`;
         }
 
-        // Constraint selection
-        for (let cIx = 0; cIx < state.constraints.length; cIx++)
-            setClass(document.getElementById(`constraint-${cIx}`), 'selected', selectedConstraints.includes(cIx));
+        function populateVariableUi(type, value, id, kind, cIx)
+        {
+            switch (type)
+            {
+                case 'int':
+                    document.getElementById(id).value = (value | 0); break;
+                case 'bool':
+                    document.getElementById(id).checked = !!value; break;
+            }
+        }
+
         // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
         if (!constraintSelectionUpdated)
             updateConstraintSelection();
@@ -389,6 +435,20 @@
         document.getElementById('constraint-code-section').style.display = allSimilar ? 'block' : 'none';
         if (allSimilar)
             populateConstraintEditBox(state.constraints[selectedConstraints[0]].type);
+
+        Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv =>
+        {
+            let cIx = constraintDiv.dataset.index | 0;
+            let constraint = state.constraints[cIx];
+            constraintDiv.style.backgroundColor = getConstraintColor(constraint.type, selectedConstraints.includes(cIx));
+            constraintDiv.style.color = selectedConstraints.includes(cIx) ? 'white' : 'black';
+            let cType = getConstraintType(constraint.type);
+            constraintDiv.querySelector('.name>span').innerText = cType.name;
+            constraintDiv.querySelector('.mini-btn.merge').style.display = selectedConstraints.length > 1 && !allSimilar && selectedConstraints.includes(cIx) ? 'block' : 'none';
+            setClass(constraintDiv, 'expanded', constraint.expanded);
+            for (let v of Object.keys(cType.variables))
+                populateVariableUi(cType.variables[v], constraint.values[v], `constraint-${cIx}-${v}`, cType.kind, cIx);
+        });
 
         // Constraint UI that has cell region UI
         let matchingRegions = null;
@@ -418,11 +478,20 @@
                     setter(regions);
                     selectedCells = [];
                     selectedConstraints = [regCtrl.dataset.constraintix | 0];
+                    editingConstraintType = null;
                     regCtrl.zingaRegions = regions;
                     updateVisuals();
                 });
             });
         });
+
+        for (let cell = 0; cell < 81; cell++)
+        {
+            // Cell selection
+            setClass(document.getElementById(`sudoku-${cell}`), 'highlighted', selectedCells.includes(cell));
+            // Givens
+            document.getElementById(`sudoku-text-${cell}`).textContent = state.givens[cell] !== null ? state.givens[cell] : '';
+        }
 
         function fixViewBox()
         {
@@ -547,10 +616,11 @@
                     state.constraints.splice(i, 1);
             let anyConstraintsSelected = selectedConstraints.length > 0;
             selectedConstraints = [];
+            editingConstraintType = null;
             for (let i = 0; i < state.customConstraintTypes.length; i++)
                 if (state.customConstraintTypes[i] !== null && state.constraints.every(c => c.type !== ~i))
                     state.customConstraintTypes[i] = null;
-            updateVisuals({ storage: true, svg: anyConstraintsSelected, ui: true });
+            updateVisuals({ storage: true, svg: anyConstraintsSelected, ui: anyConstraintsSelected });
         }
     }
 
@@ -601,10 +671,7 @@
             if (selectedCells.length === 1 && selectedCells[0] === cell && selectedConstraints.length === 0)
                 selectedCells = [];
             else
-            {
                 selectedCells = [cell];
-                selectedConstraints = [];
-            }
         }
         else if (mode === 'remove')
         {
@@ -632,6 +699,7 @@
         lastCellLineDir = null;
         lastCellLineCell = null;
         lastSelectedCell = cell;
+        editingConstraintType = null;
     }
 
     function selectCellLine(dir)
@@ -654,6 +722,7 @@
         lastCellLineDir = nDir;
         selectedCells = cells;
         selectedConstraints = [];
+        editingConstraintType = null;
         lastCellLineCell = c;
         updateVisuals();
     }
@@ -723,6 +792,7 @@
                 selectedCells = cells;
                 selectedConstraints = [];
             }
+            editingConstraintType = null;
             updateVisuals();
         }
     });
@@ -753,7 +823,9 @@
     setButtonHandler(document.getElementById('constraint-select-similar'), () =>
     {
         selectedConstraints = state.constraints.map((cstr, cIx) => cstr.type === state.constraints[selectedConstraints[0]].type ? cIx : null).filter(c => c !== null);
+        editingConstraintType = null;
         updateVisuals();
+        sidebarDiv.focus();
     });
 
     function getSpecialVariable(kind)
@@ -817,14 +889,27 @@
 
                     tr.querySelector('th').ondblclick = function()
                     {
-                        let newName = prompt('Enter the new name for this variable:', variableName);
-                        if (newName !== null && newName !== variableName)
+                        let lastInput = variableName;
+                        while (true)
                         {
-                            saveUndo();
-                            cType.variables[newName] = cType.variables[variableName];
-                            delete cType.variables[variableName];
-                            generateVariablesTable();
-                            updateVisuals({ storage: true, ui: true });
+                            let newName = prompt('Enter the new name for this variable:', lastInput);
+                            if (newName !== null && newName !== variableName)
+                            {
+                                lastInput = newName;
+                                if (['gw', 'gh', 'allcells'].includes(newName))
+                                {
+                                    alert('This variable name is reserved. Please choose a different name.');
+                                    continue;
+                                }
+
+                                saveUndo();
+                                cType.variables[newName] = cType.variables[variableName];
+                                delete cType.variables[variableName];
+                                generateVariablesTable();
+                                updateVisuals({ storage: true, ui: true });
+                                document.getElementById(`constraint-code-variable-${variableName}-0`).focus();
+                            }
+                            break;
                         }
                     };
 
@@ -931,7 +1016,7 @@
             editingConstraintType = cTypeId;
             editingConstraintTypeParameter = paramName;
             setter(cTypeId, newValue);
-            updateVisuals({ storage: true, svg: true, ui: true });
+            updateVisuals({ storage: true, svg: true });
         };
     }
 
@@ -1135,6 +1220,7 @@
         else
             state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'cells': enforceResult } });
         selectedConstraints = Array(state.constraints.length - prevLength).fill(null).map((_, c) => c + prevLength);
+        editingConstraintType = null;
         selectedCells = [];
         updateVisuals({ storage: true, svg: true, ui: true });
 
@@ -1261,7 +1347,7 @@
             case 'Ctrl+Shift+ArrowLeft': selectCellLine('w'); break;
             case 'Ctrl+Shift+ArrowRight': selectCellLine('e'); break;
 
-            case 'Escape': selectedCells = []; selectedConstraints = []; updateVisuals(); break;
+            case 'Escape': selectedCells = []; selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
             case 'Ctrl+KeyA': selectedCells = Array(81).fill(null).map((_, c) => c); updateVisuals(); break;
 
             // Undo/redo
@@ -1311,8 +1397,16 @@
 
         switch (str)
         {
-            case 'Delete':
-                clearCells();
+            // Keys that change something
+            case 'Delete': clearCells(); break;
+            case 'Ctrl+KeyD':
+                if (selectedConstraints.length > 0)
+                {
+                    saveUndo();
+                    let oldLength = state.constraints.length;
+                    state.constraints.push(...selectedConstraints.map(c => JSON.parse(JSON.stringify(state.constraints[c]))));
+                    selectConstraintRange(oldLength, state.constraints.length - 1, { storage: true, ui: true, svg: true });
+                }
                 break;
 
             // Navigation
@@ -1331,11 +1425,12 @@
             case 'Shift+Home': selectConstraintRange(lastSelectedConstraint, 0); break;
             case 'Shift+End': selectConstraintRange(lastSelectedConstraint, state.constraints.length - 1); break;
 
-            case 'ArrowRight': selectedConstraints.forEach(cIx => { setClass(document.getElementById(`constraint-${cIx}`), 'expanded', true); }); break;
-            case 'ArrowLeft': selectedConstraints.forEach(cIx => { setClass(document.getElementById(`constraint-${cIx}`), 'expanded', false); }); break;
+            // Note: we’re using updateVisuals({ storage: true }) so it’ll remember what constraints were expanded, but we don’t use saveUndo() because we really don’t need that to be an undoable step
+            case 'ArrowRight': selectedConstraints.forEach(cIx => { state.constraints[cIx].expanded = true; }); updateVisuals({ storage: true }); break;
+            case 'ArrowLeft': selectedConstraints.forEach(cIx => { state.constraints[cIx].expanded = false; }); updateVisuals({ storage: true }); break;
 
-            case 'Escape': selectedCells = []; selectedConstraints = []; updateVisuals(); break;
-            case 'Ctrl+KeyA': selectedConstraints = state.constraints.map((_, c) => c); updateVisuals(); break;
+            case 'Escape': selectedCells = []; selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
+            case 'Ctrl+KeyA': selectedConstraints = state.constraints.map((_, c) => c); editingConstraintType = null; updateVisuals(); break;
 
             // Undo/redo
             case 'Backspace':
@@ -1368,6 +1463,7 @@
         {
             selectedCells = [];
             selectedConstraints = [];
+            editingConstraintType = null;
             updateVisuals();
             remoteLog2(`onmousedown puzzleContainer`);
         }

@@ -68,16 +68,16 @@ namespace Zinga
                         foreach (var (varName, varType) in cType["variables"].GetDict().ToTuples())
                         {
                             if (!SucoType.TryParse(varType.GetString(), out var type))
-                                return HttpResponse.PlainText($"Unrecognized Suco type: {varType.GetString()}.");
+                                return HttpResponse.PlainText($"Unrecognized Suco type: {varType.GetString()}.", HttpStatusCode._400_BadRequest);
                             env = env.DeclareVariable(varName, type);
                         }
                         // Make sure all the Suco code compiles
                         if (!SucoParser.IsValidCode(cType["logic"].GetString(), env, SucoContext.Constraint, SucoBooleanType.Instance, out string error))
-                            return HttpResponse.PlainText($"The Suco code for the constraint logic in “{cType["name"].GetString()}” doesn’t compile: {error}.");
+                            return HttpResponse.PlainText($"The Suco code for the constraint logic in “{cType["name"].GetString()}” doesn’t compile: {error}.", HttpStatusCode._400_BadRequest);
                         if (cType["svg"] != null && !SucoParser.IsValidCode(cType["svg"].GetString(), env, SucoContext.Svg, SucoStringType.Instance, out error))
-                            return HttpResponse.PlainText($"The Suco code for generating SVG code in “{cType["name"].GetString()}” doesn’t compile: {error}.");
+                            return HttpResponse.PlainText($"The Suco code for generating SVG code in “{cType["name"].GetString()}” doesn’t compile: {error}.", HttpStatusCode._400_BadRequest);
                         if (cType["svgdefs"] != null && !SucoParser.IsValidCode(cType["svgdefs"].GetString(), env, SucoContext.Svg, new SucoListType(SucoStringType.Instance), out error))
-                            return HttpResponse.PlainText($"The Suco code for generating SVG definitions in “{cType["name"].GetString()}” doesn’t compile: {error}.");
+                            return HttpResponse.PlainText($"The Suco code for generating SVG definitions in “{cType["name"].GetString()}” doesn’t compile: {error}.", HttpStatusCode._400_BadRequest);
 
                         var newConstraintType = new DbConstraint
                         {

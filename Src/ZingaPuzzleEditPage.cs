@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
 using RT.Json;
 using RT.Servers;
@@ -227,11 +228,11 @@ namespace Zinga
                                             new DIV("Publishing...")))),
                                 new DIV { class_ = "tabc", id = "tab-constraints" }._(
                                     new SECTION { id = "constraints-section" }._(
-                                        new BUTTON { id = "constraint-select-similar", class_ = "mini-btn", title = "Select constraints of the same type" },
+                                        new BUTTON { id = "constraint-select-similar", class_ = "mini-btn", title = "Select constraints of the same type", accesskey = "m" },
                                         new DIV { class_ = "label" }._("Constraints"),
                                         new DIV { id = "constraint-list" }),
                                     new SECTION { id = "constraint-code-section" }._(
-                                        new DIV { class_ = "label" }._("Edit constraint code", new DIV { class_ = "expand" }),
+                                        new DIV { class_ = "label" }._("Edit constraint code", new BUTTON { class_ = "expand", accesskey = "e" }),
                                         new DIV { class_ = "constraint-code" }._(
                                             new DIV { class_ = "label" }._("Name"),
                                             new DIV(new INPUT { type = itype.text, id = "constraint-code-name" }),
