@@ -310,9 +310,10 @@
         setClass(puzzleDiv, 'solved', false);
 
         // Check if any constraints are violated
-        if (showErrors || state.enteredDigits.every(d => d !== null))
+        let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
+        if (showErrors || grid.every(d => d !== null))
         {
-            dotNet('CheckConstraints', [JSON.stringify(state.enteredDigits), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], result =>
+            dotNet('CheckConstraints', [JSON.stringify(grid), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], result =>
             {
                 let violatedConstraintIxs = JSON.parse(result);
                 setClass(puzzleDiv, 'solved', valid === true && violatedConstraintIxs.length === 0);

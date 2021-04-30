@@ -1,8 +1,9 @@
 • Timer
 • Conflicts in rows/columns/boxes should highlight only that
-• Copy/paste constraints
-• Merge constraints (make them the same type)
 • Variables UI for list of integers
 • Suco parse tree / error reporting
-• Colors to show differing constraint types
 • Support other grid sizes
+• Global constraints
+• Account system
+• Edit button on puzzle page
+• Bug: changing name doesn’t italicize

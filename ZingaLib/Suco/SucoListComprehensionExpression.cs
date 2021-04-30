@@ -121,7 +121,7 @@ namespace Zinga.Suco
                             else if (result == null)
                             {
                                 yield return null;
-                                yield break;
+                                goto skipped;
                             }
                         }
                         if (Clauses[clIx].HasSingleton)

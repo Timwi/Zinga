@@ -811,7 +811,7 @@
             if (req.readyState !== XMLHttpRequest.DONE)
                 return;
             if (req.status !== 200)
-                alert(`The puzzle could not be published: ${req.responseText} (${req.status})`);
+                alert(`The puzzle could not be published: ${req.responseText}`);
             else
                 window.open(`${window.location.protocol}//${window.location.host}/${req.responseText}`);
             document.querySelector('.save-section').classList.remove('saving');
