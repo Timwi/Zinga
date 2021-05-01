@@ -148,49 +148,56 @@ namespace Zinga
                                     <defs id='constraint-defs'>{constraints?.SelectMany((c, cIx) => constraintTypes[c.ConstraintID].GetSvgDefs(decodedValues[cIx])).Distinct().JoinString()}</defs>
                                     <g class='full-puzzle'>
                                         <g transform='translate(0, 9.5)' class='button-row'>{renderButtonArea(btns, 9)}</g>
-                                        <g class='global-constraints'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx]) : null).JoinString()}</g>
 
-                                        <g class='sudoku'>
-                                            <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
-                                            <rect class='frame' id='sudoku-frame' x='0' y='0' width='9' height='9' stroke-width='.2' fill='none' filter='url(#glow-blur)'></rect>
+                                        <g id='sudoku-puzzle'>
+                                            <g id='constraint-svg-global'>{constraints?
+                                                .Select((c, cIx) => (constraint: c, cIx))
+                                                .Where(tup => constraintTypes[tup.constraint.ConstraintID].Kind == ConstraintKind.Global)
+                                                .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ConstraintID].GetSvg(decodedValues[tup.cIx])}</g>")
+                                                .JoinString()}</g>
 
-                                            {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25' stroke-width='0'>
-                                                <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
-                                                <g id='sudoku-multicolor-{cell}' transform='translate({cell % 9 + .5}, {cell / 9 + .5})'></g>
-                                                <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
+                                            <g class='sudoku'>
+                                                <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
+                                                <rect class='frame' id='sudoku-frame' x='0' y='0' width='9' height='9' stroke-width='.2' fill='none' filter='url(#glow-blur)'></rect>
 
-                                                <text class='notation' id='sudoku-center-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .62}' font-size='.3'></text>
-                                                <text class='notation' id='sudoku-corner-text-{cell}-0' x='{cell % 9 + .1}' y='{cell / 9 + .3}' text-anchor='start'></text>
-                                                <text class='notation' id='sudoku-corner-text-{cell}-1' x='{cell % 9 + .9}' y='{cell / 9 + .3}' text-anchor='end'></text>
-                                                <text class='notation' id='sudoku-corner-text-{cell}-2' x='{cell % 9 + .1}' y='{cell / 9 + .875}' text-anchor='start'></text>
-                                                <text class='notation' id='sudoku-corner-text-{cell}-3' x='{cell % 9 + .9}' y='{cell / 9 + .875}' text-anchor='end'></text>
-                                                <text class='notation' id='sudoku-corner-text-{cell}-4' x='{cell % 9 + .5}' y='{cell / 9 + .3}'></text>
-                                                <text class='notation' id='sudoku-corner-text-{cell}-5' x='{cell % 9 + .9}' y='{cell / 9 + .6125}' text-anchor='end'></text>
-                                                <text class='notation' id='sudoku-corner-text-{cell}-6' x='{cell % 9 + .5}' y='{cell / 9 + .875}'></text>
-                                                <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % 9 + .1}' y='{cell / 9 + .6125}' text-anchor='start'></text>
-                                            </g>").JoinString()}
+                                                {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25' stroke-width='0'>
+                                                    <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
+                                                    <g id='sudoku-multicolor-{cell}' transform='translate({cell % 9 + .5}, {cell / 9 + .5})'></g>
+                                                    <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
 
-                                            <line x1='1' y1='0' x2='1' y2='9' stroke='black' stroke-width='.01' />
-                                            <line x1='2' y1='0' x2='2' y2='9' stroke='black' stroke-width='.01' />
-                                            <line x1='3' y1='0' x2='3' y2='9' stroke='black' stroke-width='.05' />
-                                            <line x1='4' y1='0' x2='4' y2='9' stroke='black' stroke-width='.01' />
-                                            <line x1='5' y1='0' x2='5' y2='9' stroke='black' stroke-width='.01' />
-                                            <line x1='6' y1='0' x2='6' y2='9' stroke='black' stroke-width='.05' />
-                                            <line x1='7' y1='0' x2='7' y2='9' stroke='black' stroke-width='.01' />
-                                            <line x1='8' y1='0' x2='8' y2='9' stroke='black' stroke-width='.01' />
-                                            <line x1='0' y1='1' x2='9' y2='1' stroke='black' stroke-width='.01' />
-                                            <line x1='0' y1='2' x2='9' y2='2' stroke='black' stroke-width='.01' />
-                                            <line x1='0' y1='3' x2='9' y2='3' stroke='black' stroke-width='.05' />
-                                            <line x1='0' y1='4' x2='9' y2='4' stroke='black' stroke-width='.01' />
-                                            <line x1='0' y1='5' x2='9' y2='5' stroke='black' stroke-width='.01' />
-                                            <line x1='0' y1='6' x2='9' y2='6' stroke='black' stroke-width='.05' />
-                                            <line x1='0' y1='7' x2='9' y2='7' stroke='black' stroke-width='.01' />
-                                            <line x1='0' y1='8' x2='9' y2='8' stroke='black' stroke-width='.01' />
-                                            <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
+                                                    <text class='notation' id='sudoku-center-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .62}' font-size='.3'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-0' x='{cell % 9 + .1}' y='{cell / 9 + .3}' text-anchor='start'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-1' x='{cell % 9 + .9}' y='{cell / 9 + .3}' text-anchor='end'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-2' x='{cell % 9 + .1}' y='{cell / 9 + .875}' text-anchor='start'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-3' x='{cell % 9 + .9}' y='{cell / 9 + .875}' text-anchor='end'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-4' x='{cell % 9 + .5}' y='{cell / 9 + .3}'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-5' x='{cell % 9 + .9}' y='{cell / 9 + .6125}' text-anchor='end'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-6' x='{cell % 9 + .5}' y='{cell / 9 + .875}'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % 9 + .1}' y='{cell / 9 + .6125}' text-anchor='start'></text>
+                                                </g>").JoinString()}
 
-                                            <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
-                                            <g id='over-svg'>{puzzle?.ExtraSvg}</g>
+                                                <line x1='1' y1='0' x2='1' y2='9' stroke='black' stroke-width='.01' />
+                                                <line x1='2' y1='0' x2='2' y2='9' stroke='black' stroke-width='.01' />
+                                                <line x1='3' y1='0' x2='3' y2='9' stroke='black' stroke-width='.05' />
+                                                <line x1='4' y1='0' x2='4' y2='9' stroke='black' stroke-width='.01' />
+                                                <line x1='5' y1='0' x2='5' y2='9' stroke='black' stroke-width='.01' />
+                                                <line x1='6' y1='0' x2='6' y2='9' stroke='black' stroke-width='.05' />
+                                                <line x1='7' y1='0' x2='7' y2='9' stroke='black' stroke-width='.01' />
+                                                <line x1='8' y1='0' x2='8' y2='9' stroke='black' stroke-width='.01' />
+                                                <line x1='0' y1='1' x2='9' y2='1' stroke='black' stroke-width='.01' />
+                                                <line x1='0' y1='2' x2='9' y2='2' stroke='black' stroke-width='.01' />
+                                                <line x1='0' y1='3' x2='9' y2='3' stroke='black' stroke-width='.05' />
+                                                <line x1='0' y1='4' x2='9' y2='4' stroke='black' stroke-width='.01' />
+                                                <line x1='0' y1='5' x2='9' y2='5' stroke='black' stroke-width='.01' />
+                                                <line x1='0' y1='6' x2='9' y2='6' stroke='black' stroke-width='.05' />
+                                                <line x1='0' y1='7' x2='9' y2='7' stroke='black' stroke-width='.01' />
+                                                <line x1='0' y1='8' x2='9' y2='8' stroke='black' stroke-width='.01' />
+                                                <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
 
+                                                <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
+                                                <g id='over-svg'>{puzzle?.ExtraSvg}</g>
+
+                                            </g>
                                         </g>
                                     </g>
                                 </svg>")),

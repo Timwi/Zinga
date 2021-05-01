@@ -327,7 +327,7 @@
             });
         }
         else
-            Array.from(document.querySelectorAll('#constraint-svg>g')).forEach(g => { g.removeAttribute('filter'); });
+            Array.from(document.querySelectorAll('#constraint-svg>g,#constraint-svg-global>g')).forEach(g => { g.removeAttribute('filter'); });
     }
 
     function updateConstraints() 
@@ -357,6 +357,7 @@
                     let list = JSON.parse(svgs);
                     document.getElementById('constraint-defs').innerHTML = list[0];
                     document.getElementById('constraint-svg').innerHTML = list[1];
+                    document.getElementById('constraint-svg-global').innerHTML = list[2];
                     updateVisuals();
                     fixViewBox();
                 });
@@ -601,16 +602,6 @@
         }
     }
 
-    let tooltip = null;
-    function clearTooltip()
-    {
-        if (tooltip !== null)
-        {
-            tooltip.parentNode.removeChild(tooltip);
-            tooltip = null;
-        }
-    }
-
     Array.from(puzzleDiv.getElementsByClassName('sudoku-cell')).forEach(cellRect =>
     {
         let cell = parseInt(cellRect.dataset.cell);
@@ -661,67 +652,6 @@
             if (any)
                 updateVisuals();
             remoteLog2(`ontouchmove ${cell}`);
-        };
-    });
-
-    Array.from(puzzleDiv.getElementsByClassName('has-tooltip')).forEach(rect =>
-    {
-        rect.onmouseout = handler(clearTooltip);
-        rect.onmouseenter = function()
-        {
-            if (!rect.dataset.description)
-                return;
-            function e(name) { return document.createElementNS('http://www.w3.org/2000/svg', name); }
-            tooltip = e('g');
-            tooltip.setAttribute('text-anchor', 'middle');
-            tooltip.setAttribute('font-size', '.35');
-            let y = -.3;
-            function makeText(str, isBold, offset)
-            {
-                let elem = e('text');
-                elem.textContent = str;
-                if (isBold)
-                    elem.setAttribute('font-weight', 'bold');
-                elem.setAttribute('x', '0');
-                elem.setAttribute('y', y);
-                tooltip.appendChild(elem);
-                y += offset;
-                return elem;
-            }
-            let names = JSON.parse(rect.dataset.name);
-            let descrs = JSON.parse(rect.dataset.description);
-            for (let cn = 0; cn < names.length; cn++)
-            {
-                y += .3;
-                makeText(names[cn], true, .7);
-                let str = descrs[cn];
-                let wordWrapWidth = 55;
-                while (str.length > 0)
-                {
-                    let txt = str;
-                    if (str.length > wordWrapWidth)
-                    {
-                        let p = str.lastIndexOf(' ', wordWrapWidth);
-                        txt = str.substr(0, p === -1 ? wordWrapWidth : p + 1);
-                    }
-                    str = str.substr(txt.length).trim();
-                    makeText(txt.trim(), false, .5);
-                }
-            }
-            let tooltipWidth = 9.75;
-            let rightEdge = (rect.getAttribute('x') | 0) === 9;
-            tooltip.setAttribute('transform', rightEdge
-                ? `translate(${8.7 - tooltipWidth / 2}, ${(rect.getAttribute('y') | 0) + .75})`
-                : `translate(${(rect.getAttribute('x') | 0) - tooltipWidth / 2 + 1.25}, ${(rect.getAttribute('y') | 0) + 2})`);
-
-            let path = e('path');
-            path.setAttribute('d', rightEdge ? `m${-tooltipWidth / 2} -.7 ${tooltipWidth} 0 0 .25 .25 .25 -.25 .25 v ${y - .05} h ${-tooltipWidth} z` : `m${-tooltipWidth / 2} -.7 ${tooltipWidth - 1} 0 .25 -.25 .25 .25 .5 0 v ${y + .7} h ${-tooltipWidth} z`);
-            path.setAttribute('fill', '#fcedca');
-            path.setAttribute('stroke', 'black');
-            path.setAttribute('stroke-width', '.025');
-            tooltip.insertBefore(path, tooltip.firstChild);
-
-            document.getElementById(`full-puzzle`).appendChild(tooltip);
         };
     });
 
@@ -1065,15 +995,15 @@
 
         // Step 1: move the button row so that it’s below the puzzle
         let buttonRow = puzzleDiv.querySelector('.button-row');
-        let extraBBox = puzzleDiv.querySelector('.sudoku').getBBox();
+        let extraBBox = puzzleDiv.querySelector('.sudoku').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
         buttonRow.setAttribute('transform', `translate(0, ${Math.max(9.4, extraBBox.y + extraBBox.height + .25)})`);
 
         // Step 2: move the global constraints so they’re to the left of the puzzle
-        let globalBox = puzzleDiv.querySelector('.global-constraints');
+        let globalBox = document.getElementById('constraint-svg-global');
         globalBox.setAttribute('transform', `translate(${extraBBox.x - 1.5}, 0)`);
 
         // Step 3: change the viewBox so that it includes everything
-        let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
+        let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
         let left = Math.min(-.4, fullBBox.x - .1);
         let top = Math.min(-.4, fullBBox.y - .1);
         let right = Math.max(9.4, fullBBox.x + fullBBox.width + .2);

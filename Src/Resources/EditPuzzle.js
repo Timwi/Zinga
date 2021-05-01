@@ -214,11 +214,14 @@
                 let list = JSON.parse(results);
                 document.getElementById('constraint-defs').innerHTML = list[0];
                 document.getElementById('constraint-svg').innerHTML = list[1];
+                document.getElementById('constraint-svg-global').innerHTML = list[2];
+                let editingResult = list[3];
+
                 if (editingConstraintTypeParameter !== null)
                 {
                     let reportingBox = document.getElementById(`reporting-${editingConstraintTypeParameter}`);
                     if (reportingBox !== null)
-                        reportingBox.innerText = JSON.stringify(list[2]);
+                        reportingBox.innerText = JSON.stringify(editingResult);
                 }
                 updateConstraintSelection();
                 fixViewBox();
@@ -519,7 +522,7 @@
             buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, sudokuBBox.y + sudokuBBox.height) + .5})`);
 
             // — move the global constraints so they’re to the left of the puzzle
-            let globalBox = puzzleDiv.querySelector('.global-constraints');
+            let globalBox = document.getElementById('constraint-svg-global');
             globalBox.setAttribute('transform', `translate(${sudokuBBox.x - 1.5}, 0)`);
 
             // — change the viewBox so that it includes everything
@@ -1224,7 +1227,7 @@
         let cIx = state.constraints.length;
         let cType = constraintTypes[sc[0]];
         let specialVariable = getSpecialVariable(cType.kind);
-        let newConstraint = { type: (sc[0] | 0) };
+        let newConstraint = { type: (sc[0] | 0), values: {} };
         if (specialVariable[0] !== null)
         {
             let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
@@ -1233,7 +1236,7 @@
                 alert(enforceResult.message);
                 return;
             }
-            newConstraint[specialVariable[0]] = enforceResult.value;
+            newConstraint.values[specialVariable[0]] = enforceResult.value;
         }
 
         saveUndo();
@@ -1458,7 +1461,7 @@
 
             default:
                 anyFunction = false;
-                console.log(str, ev.code);
+                //console.log(str, ev.code);
                 break;
         }
 
