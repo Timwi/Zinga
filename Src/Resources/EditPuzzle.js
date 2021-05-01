@@ -181,6 +181,7 @@
     //  storage (bool)
     //  svg (bool)          — updates constraint SVG in the grid (this involves Blazor)
     //  ui (bool)            — updates constraint UI in the sidebar
+    //  metadata (bool) — updates the title / author / rules textboxes
     function updateVisuals(opt)
     {
         // Update localStorage
@@ -524,15 +525,22 @@
             // — change the viewBox so that it includes everything
             let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
             puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
-
-            // Title/author
-            document.querySelector('#topbar>.title').innerText = state.title;
-            document.querySelector('#topbar>.author').innerText = `by ${state.author === '' ? 'unknown' : state.author}`;
-            document.title = `Editing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
         }
         fixViewBox();
+
+        // Title/author
+        document.querySelector('#topbar>.title').innerText = state.title;
+        document.querySelector('#topbar>.author').innerText = `by ${state.author === '' ? 'unknown' : state.author}`;
+        document.title = `Editing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
+
+        if (opt && opt.metadata)
+        {
+            document.getElementById('puzzle-title-input').value = state.title;
+            document.getElementById('puzzle-author-input').value = state.author;
+            document.getElementById('puzzle-rules-input').value = state.rules;
+        }
     }
-    updateVisuals({ storage: true, svg: true, ui: true });
+    updateVisuals({ storage: true, svg: true, ui: true, metadata: true });
 
     function saveUndo()
     {
@@ -546,7 +554,7 @@
         {
             redoBuffer.push(state);
             state = undoBuffer.pop();
-            updateVisuals({ storage: true, svg: true, ui: true });
+            updateVisuals({ storage: true, svg: true, ui: true, metadata: true });
         }
     }
 
@@ -556,7 +564,7 @@
         {
             undoBuffer.push(state);
             state = redoBuffer.pop();
-            updateVisuals({ storage: true, svg: true, ui: true });
+            updateVisuals({ storage: true, svg: true, ui: true, metadata: true });
         }
     }
 
@@ -652,8 +660,7 @@
             resetClearButton();
             saveUndo();
             state = makeEmptyState();
-            setMetaData();
-            updateVisuals({ storage: true, svg: true, ui: true });
+            updateVisuals({ storage: true, svg: true, ui: true, metadata: true });
         }
     });
 
@@ -767,13 +774,6 @@
     }
 
     // Title, Author(s), Rules
-    function setMetaData()
-    {
-        document.getElementById('puzzle-title-input').value = state.title;
-        document.getElementById('puzzle-author-input').value = state.author;
-        document.getElementById('puzzle-rules-input').value = state.rules;
-    }
-    setMetaData();
     document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
     document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
     document.getElementById('puzzle-rules-input').onchange = function() { saveUndo(); state.rules = document.getElementById('puzzle-rules-input').value; updateVisuals({ storage: true }); };
