@@ -117,19 +117,19 @@ namespace Zinga
                                         <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
                                         <filter id='constraint-selection-shadow' x='-1' y='-1' width='500%' height='500%'>
                                             <feMorphology in='SourceGraphic' operator='dilate' radius='.05' result='constraint-selection-shadow-1' />
-                                            <feColorMatrix in='constraint-selection-shadow-1' type='matrix' values='0 0 0 0 .24 0 0 0 0 .47 0 0 0 0 .96 0 0 0 5 0' result='constraint-selection-shadow-2' />
+                                            <feColorMatrix in='constraint-selection-shadow-1' type='matrix' values='0 0 0 0 .1 0 0 0 0 .39 0 0 0 0 .95 0 0 0 5 0' result='constraint-selection-shadow-2' />
                                             <feGaussianBlur in='constraint-selection-shadow-2' stdDeviation='.05' result='constraint-selection-shadow-3' />
-                                            <feColorMatrix in='SourceGraphic' type='matrix' values='1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 5 0' result='constraint-selection-shadow-4' />
+                                            <feColorMatrix in='SourceGraphic' type='matrix' values='.52 0 0 0 0 0 .67 0 0 0 0 0 .97 0 0 0 0 0 5 0' result='constraint-selection-shadow-4' />
                                             <feComposite in='constraint-selection-shadow-4' in2='constraint-selection-shadow-3' />
                                         </filter>
                                     </defs>
                                     <defs id='constraint-defs'></defs>
-                                    <g class='full-puzzle'>
-                                        <g transform='translate(0, 9.5)' class='button-row'>{renderButtonArea(btns, 9)}</g>
+                                    <g id='bb-everything'>
+                                        <g id='bb-buttons' transform='translate(0, 9.5)'>{renderButtonArea(btns, 9)}</g>
 
-                                        <g id='sudoku-puzzle'>
+                                        <g id='bb-puzzle-with-global'>
                                             <g id='constraint-svg-global'></g>
-                                            <g class='sudoku'>
+                                            <g id='bb-puzzle-without-global'>
                                                 <rect class='frame' id='sudoku-frame' x='0' y='0' width='9' height='9' stroke-width='.2' fill='none' filter='url(#glow-blur)'></rect>
 
                                                 {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25' stroke-width='0'>

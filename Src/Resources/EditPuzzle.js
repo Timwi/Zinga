@@ -517,16 +517,16 @@
             let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
 
             // — move the button row so that it’s below the puzzle
-            let buttonRow = puzzleDiv.querySelector('.button-row');
-            let sudokuBBox = puzzleDiv.querySelector('.sudoku').getBBox();
-            buttonRow.setAttribute('transform', `translate(0, ${Math.max(9, sudokuBBox.y + sudokuBBox.height) + .5})`);
+            let buttons = document.getElementById('bb-buttons');
+            let sudokuBBox = document.getElementById('bb-puzzle-without-global').getBBox();
+            buttons.setAttribute('transform', `translate(0, ${Math.max(9, sudokuBBox.y + sudokuBBox.height) + .5})`);
 
             // — move the global constraints so they’re to the left of the puzzle
             let globalBox = document.getElementById('constraint-svg-global');
             globalBox.setAttribute('transform', `translate(${sudokuBBox.x - 1.5}, 0)`);
 
             // — change the viewBox so that it includes everything
-            let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox();
+            let fullBBox = document.getElementById('bb-everything').getBBox();
             puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
         }
         fixViewBox();

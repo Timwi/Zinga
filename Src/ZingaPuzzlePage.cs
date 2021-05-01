@@ -145,22 +145,32 @@ namespace Zinga
                                             <feGaussianBlur stdDeviation='.05' in='constraint-selection-shadow-2' result='constraint-selection-shadow-3'></feGaussianBlur>
                                             <feComposite in2='constraint-selection-shadow-3' in='SourceGraphic'></feComposite>
                                         </filter>
+                                        <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
+                                        <mask id='row-invalid-mask'>
+                                            <rect fill='white' x='-1' y='-1' width='11' height='3' />
+                                            <rect fill='black' x='0' y='0' width='9' height='1' />
+                                        </mask>
+                                        <mask id='column-invalid-mask'>
+                                            <rect fill='white' x='-1' y='-1' width='3' height='11' />
+                                            <rect fill='black' x='0' y='0' width='1' height='9' />
+                                        </mask>
+                                        <mask id='box-invalid-mask'>
+                                            <rect fill='white' x='-1' y='-1' width='5' height='5' />
+                                            <rect fill='black' x='0' y='0' width='3' height='3' />
+                                        </mask>
                                     </defs>
                                     <defs id='constraint-defs'>{constraints?.SelectMany((c, cIx) => constraintTypes[c.ConstraintID].GetSvgDefs(decodedValues[cIx])).Distinct().JoinString()}</defs>
-                                    <g class='full-puzzle'>
-                                        <g transform='translate(0, 9.5)' class='button-row'>{renderButtonArea(btns, 9)}</g>
+                                    <g id='bb-everything'>
+                                        <g id='bb-buttons' transform='translate(0, 9.5)'>{renderButtonArea(btns, 9)}</g>
 
-                                        <g id='sudoku-puzzle'>
+                                        <g id='bb-puzzle-with-global'>
                                             <g id='constraint-svg-global'>{constraints?
                                                 .Select((c, cIx) => (constraint: c, cIx))
                                                 .Where(tup => constraintTypes[tup.constraint.ConstraintID].Kind == ConstraintKind.Global)
                                                 .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ConstraintID].GetSvg(decodedValues[tup.cIx])}</g>")
                                                 .JoinString()}</g>
 
-                                            <g class='sudoku'>
-                                                <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
-                                                <rect class='frame' id='sudoku-frame' x='0' y='0' width='9' height='9' stroke-width='.2' fill='none' filter='url(#glow-blur)'></rect>
-
+                                            <g id='bb-puzzle-without-global'>
                                                 {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25' stroke-width='0'>
                                                     <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
                                                     <g id='sudoku-multicolor-{cell}' transform='translate({cell % 9 + .5}, {cell / 9 + .5})'></g>
@@ -195,9 +205,36 @@ namespace Zinga
                                                 <line x1='0' y1='8' x2='9' y2='8' stroke='black' stroke-width='.01' />
                                                 <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
 
+                                                <rect class='region-invalid' id='row-invalid-0' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 0)' />
+                                                <rect class='region-invalid' id='row-invalid-1' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 1)' />
+                                                <rect class='region-invalid' id='row-invalid-2' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 2)' />
+                                                <rect class='region-invalid' id='row-invalid-3' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 3)' />
+                                                <rect class='region-invalid' id='row-invalid-4' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 4)' />
+                                                <rect class='region-invalid' id='row-invalid-5' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 5)' />
+                                                <rect class='region-invalid' id='row-invalid-6' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 6)' />
+                                                <rect class='region-invalid' id='row-invalid-7' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 7)' />
+                                                <rect class='region-invalid' id='row-invalid-8' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 8)' />
+                                                <rect class='region-invalid' id='column-invalid-0' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(0, 0)' />
+                                                <rect class='region-invalid' id='column-invalid-1' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(1, 0)' />
+                                                <rect class='region-invalid' id='column-invalid-2' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(2, 0)' />
+                                                <rect class='region-invalid' id='column-invalid-3' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(3, 0)' />
+                                                <rect class='region-invalid' id='column-invalid-4' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(4, 0)' />
+                                                <rect class='region-invalid' id='column-invalid-5' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(5, 0)' />
+                                                <rect class='region-invalid' id='column-invalid-6' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(6, 0)' />
+                                                <rect class='region-invalid' id='column-invalid-7' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(7, 0)' />
+                                                <rect class='region-invalid' id='column-invalid-8' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(8, 0)' />
+                                                <rect class='region-invalid' id='box-invalid-0' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 0)' />
+                                                <rect class='region-invalid' id='box-invalid-1' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 0)' />
+                                                <rect class='region-invalid' id='box-invalid-2' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 0)' />
+                                                <rect class='region-invalid' id='box-invalid-3' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 3)' />
+                                                <rect class='region-invalid' id='box-invalid-4' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 3)' />
+                                                <rect class='region-invalid' id='box-invalid-5' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 3)' />
+                                                <rect class='region-invalid' id='box-invalid-6' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 6)' />
+                                                <rect class='region-invalid' id='box-invalid-7' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 6)' />
+                                                <rect class='region-invalid' id='box-invalid-8' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 6)' />
+
                                                 <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
                                                 <g id='over-svg'>{puzzle?.ExtraSvg}</g>
-
                                             </g>
                                         </g>
                                     </g>

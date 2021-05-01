@@ -1,9 +1,6 @@
 • Timer
-• Conflicts in rows/columns/boxes should highlight only that
 • Variables UI for list of integers
 • Suco parse tree / error reporting
 • Support other grid sizes
-• Global constraints
 • Account system
-• Edit button on puzzle page
 • Bug: changing name doesn’t italicize

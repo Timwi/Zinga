@@ -265,8 +265,10 @@
     function isSudokuValid()
     {
         let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
+        Array.from(document.querySelectorAll('.region-invalid')).forEach(elem => { elem.setAttribute('opacity', 0); });
+        let isValid = true;
 
-        // Check the Sudoku rules (rows, columns and regions)
+        // Check the Sudoku rules (rows, columns and boxes)
         for (let i = 0; i < 9; i++)
         {
             for (let colA = 0; colA < 9; colA++)
@@ -274,16 +276,18 @@
                     if (grid[colA + 9 * i] !== null && grid[colA + 9 * i] === grid[colB + 9 * i])
                     {
                         if (showErrors)
-                            console.log(`Row ${i + 1} is violated.`);
-                        return false;
+                            document.getElementById(`row-invalid-${i}`).setAttribute('opacity', 1);
+                        isValid = false;
+                        break;
                     }
             for (let rowA = 0; rowA < 9; rowA++)
                 for (let rowB = rowA + 1; rowB < 9; rowB++)
                     if (grid[i + 9 * rowA] !== null && grid[i + 9 * rowA] === grid[i + 9 * rowB])
                     {
                         if (showErrors)
-                            console.log(`Column ${i + 1} is violated.`);
-                        return false;
+                            document.getElementById(`column-invalid-${i}`).setAttribute('opacity', 1);
+                        isValid = false;
+                        break;
                     }
             for (let cellA = 0; cellA < 9; cellA++)
                 for (let cellB = cellA + 1; cellB < 9; cellB++)
@@ -291,19 +295,19 @@
                         grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] === grid[cellB % 3 + 3 * (i % 3) + 9 * (((cellB / 3) | 0) + 3 * ((i / 3) | 0))])
                     {
                         if (showErrors)
-                            console.log(`Box ${i + 1} is violated.`);
-                        return false;
+                            document.getElementById(`box-invalid-${i}`).setAttribute('opacity', 1);
+                        isValid = false;
+                        break;
                     }
         }
 
         // Check that all cells in the Sudoku grid have a digit
-        return grid.some(c => c === null) ? null : true;
+        return !isValid ? false : grid.some(c => c === null) ? null : true;
     }
 
     function checkSudokuValid()
     {
         let valid = isSudokuValid();
-        setClass(document.getElementById(`sudoku-frame`), 'invalid', showErrors && valid === false);
         setClass(puzzleDiv, 'solved', false);
 
         // Check if any constraints are violated
@@ -763,7 +767,7 @@
     {
         let img = new Image();
         let svgElem = puzzleDiv.querySelector('svg.puzzle-svg');
-        let bBox = document.getElementById('sudoku-puzzle').getBBox({ fill: true, stroke: true, markers: true });
+        let bBox = document.getElementById('bb-puzzle-with-global').getBBox({ fill: true, stroke: true, markers: true });
         let margin = .35;
         let nBox = { x: bBox.x - margin, y: bBox.y - margin, width: bBox.width + 2 * margin, height: bBox.height + 2 * margin };
         let canvas = document.createElement('canvas');
@@ -1016,16 +1020,16 @@
         let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
 
         // Step 1: move the button row so that it’s below the puzzle
-        let buttonRow = puzzleDiv.querySelector('.button-row');
-        let extraBBox = puzzleDiv.querySelector('.sudoku').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
-        buttonRow.setAttribute('transform', `translate(0, ${Math.max(9.4, extraBBox.y + extraBBox.height + .25)})`);
+        let buttons = document.getElementById('bb-buttons');
+        let extraBBox = document.getElementById('bb-puzzle-without-global').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
+        buttons.setAttribute('transform', `translate(0, ${Math.max(9.4, extraBBox.y + extraBBox.height + .25)})`);
 
         // Step 2: move the global constraints so they’re to the left of the puzzle
         let globalBox = document.getElementById('constraint-svg-global');
         globalBox.setAttribute('transform', `translate(${extraBBox.x - 1.5}, 0)`);
 
         // Step 3: change the viewBox so that it includes everything
-        let fullBBox = puzzleDiv.querySelector('.full-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
+        let fullBBox = document.getElementById('bb-everything').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
         let left = Math.min(-.4, fullBBox.x - .1);
         let top = Math.min(-.4, fullBBox.y - .1);
         let right = Math.max(9.4, fullBBox.x + fullBBox.width + .2);
