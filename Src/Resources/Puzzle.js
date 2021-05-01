@@ -759,6 +759,28 @@
         window.open(`${window.location.protocol}//${window.location.host}/edit`);
     });
 
+    setButtonHandler(document.getElementById('opt-screenshot'), () =>
+    {
+        let img = new Image();
+        let svgElem = puzzleDiv.querySelector('svg.puzzle-svg');
+        let bBox = document.getElementById('sudoku-puzzle').getBBox({ fill: true, stroke: true, markers: true });
+        let margin = .35;
+        let nBox = { x: bBox.x - margin, y: bBox.y - margin, width: bBox.width + 2 * margin, height: bBox.height + 2 * margin };
+        let canvas = document.createElement('canvas');
+        canvas.width = 1000;
+        canvas.height = canvas.width / nBox.width * nBox.height;
+        img.onload = function()
+        {
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            window.open(canvas.toDataURL());
+        };
+        img.src = 'data:image/svg+xml;base64,' + btoa(svgElem.outerHTML
+            .replace(/<svg/, `<svg width="${canvas.width}" height="${canvas.height}"`)
+            .replace(/viewBox=".*?"/, `viewBox='${nBox.x} ${nBox.y} ${nBox.width} ${nBox.height}'`)
+            .replace(/(?=<\/style>)/, Array.from(document.styleSheets).map(ss => Array.from(ss.rules).map(rule => rule)).reduce((p, n) => p.concat(n), []).filter(rule => rule instanceof CSSStyleRule).filter(rule => rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n"))
+        );
+    });
+
     function selectCell(cell, mode)
     {
         if (mode === 'toggle')

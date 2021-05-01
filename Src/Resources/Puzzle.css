@@ -185,14 +185,6 @@ svg.puzzle-svg {
         fill: white;
     }
 
-    svg.puzzle-svg .cell.invalid rect {
-        fill: #f00;
-    }
-
-    svg.puzzle-svg .cell.highlighted.invalid rect {
-        fill: #800;
-    }
-
     svg.puzzle-svg .cell .notation {
         fill: #1d6ae5;
     }
@@ -326,10 +318,11 @@ svg.puzzle-svg {
     .sidebar .options .opt-minor {
         margin-bottom: .5cm;
         text-align: right;
+        font-size: 12pt;
     }
 
-    .sidebar .options #opt-edit {
-        font-size: 12pt;
+    .sidebar .options button {
+        margin-left: .1cm;
     }
 
 .puzzle-container, .sidebar {
@@ -357,13 +350,13 @@ svg.puzzle-svg {
  */
 
 /* Arrows at the side of the grid to select a row/column/diagonal */
-.puzzle .multi-select {
+svg.puzzle-svg .multi-select {
     opacity: 0;
     pointer-events: all;
     stroke-width: .145;
     stroke: none;
 }
-    .puzzle .multi-select:hover {
+    svg.puzzle-svg .multi-select:hover {
         opacity: 1;
     }
 

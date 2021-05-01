@@ -136,7 +136,8 @@ namespace Zinga
                         .Data("constraints", constraintsJson)
                         ._(
                             new DIV { class_ = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
-                                <svg viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
+                                <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
+                                    <style></style>
                                     <defs>
                                         <filter id='constraint-invalid-shadow' x='-1' y='-1' width='500%' height='500%'>
                                             <feMorphology in='SourceGraphic' operator='dilate' radius='.05' result='constraint-selection-shadow-1'></feMorphology>
@@ -208,9 +209,9 @@ namespace Zinga
                                             ?? (object) "Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.")),
                                     puzzle?.Links == null || puzzle.Links.Length == 0 ? null : new UL { class_ = "links" }._(puzzle.Links.Select(link => new LI(new A { href = link.Url }._(link.Text)))),
                                     new DIV { class_ = "options" }._(
-                                        new DIV { class_ = "opt-minor" }._(new BUTTON { type = btype.button, id = "opt-edit" }._("Edit this puzzle")),
-                                        new DIV(new INPUT { type = itype.checkbox, id = "opt-show-errors" }, new LABEL { for_ = "opt-show-errors" }._(" Show conflicts")),
-                                        new DIV(new INPUT { type = itype.checkbox, id = "opt-multi-color" }, new LABEL { for_ = "opt-multi-color" }._(" Multi-color mode")))))))));
+                                        new DIV { class_ = "opt-minor" }._(new BUTTON { type = btype.button, id = "opt-screenshot", accesskey = "s" }._("Screenshot".Accel('S')), new BUTTON { type = btype.button, id = "opt-edit", accesskey = "e" }._("Edit this puzzle".Accel('E'))),
+                                        new DIV(new INPUT { type = itype.checkbox, id = "opt-show-errors" }, new LABEL { for_ = "opt-show-errors", accesskey = "c" }._(" Show conflicts".Accel('c'))),
+                                        new DIV(new INPUT { type = itype.checkbox, id = "opt-multi-color" }, new LABEL { for_ = "opt-multi-color", accesskey = "m" }._(" Multi-color mode".Accel('M'))))))))));
         }
     }
 }

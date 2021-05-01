@@ -111,7 +111,8 @@ namespace Zinga
                         .Data("rules", puzzle.Rules)
                         ._(
                             new DIV { class_ = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
-                                <svg viewBox='-0.5 -0.5 10 11.2' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
+                                <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 11.2' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
+                                    <style></style>
                                     <defs>
                                         <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
                                         <filter id='constraint-selection-shadow' x='-1' y='-1' width='500%' height='500%'>
