@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public class SucoBinaryOperatorExpression : SucoExpression
     {

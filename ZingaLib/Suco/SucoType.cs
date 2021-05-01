@@ -6,11 +6,11 @@ namespace Zinga.Suco
 {
     public abstract class SucoType : IEquatable<SucoType>
     {
-        public static readonly SucoType Boolean = SucoBooleanType.Instance;
-        public static readonly SucoType Cell = SucoCellType.Instance;
-        public static readonly SucoType Decimal = SucoDecimalType.Instance;
-        public static readonly SucoType Integer = SucoIntegerType.Instance;
-        public static readonly SucoType String = SucoStringType.Instance;
+        public static readonly SucoType Boolean = new SucoBooleanType();
+        public static readonly SucoType Cell = new SucoCellType();
+        public static readonly SucoType Decimal = new SucoDecimalType();
+        public static readonly SucoType Integer = new SucoIntegerType();
+        public static readonly SucoType String = new SucoStringType();
 
         public static SucoType List(SucoType inner) => new SucoListType(inner);
 

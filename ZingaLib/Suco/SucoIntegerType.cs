@@ -6,8 +6,7 @@ namespace Zinga.Suco
     public class SucoIntegerType : SucoType
     {
         public override bool Equals(SucoType other) => other is SucoIntegerType;
-        public static readonly SucoType Instance = new SucoIntegerType();
-        private SucoIntegerType() { }
+        public SucoIntegerType() { }
         public override string ToString() => "int";
         public override int GetHashCode() => 3;
 

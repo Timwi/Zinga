@@ -11,6 +11,7 @@ namespace Zinga.Suco
     {
         public List<SucoListClause> Clauses { get; private set; }
         public SucoExpression Selector { get; private set; }
+        private SucoContext _context;
 
         public SucoListComprehensionExpression(int startIndex, int endIndex, List<SucoListClause> clauses, SucoExpression selector, SucoType type = null)
             : base(startIndex, endIndex, type)
@@ -72,92 +73,98 @@ namespace Zinga.Suco
             if (anySingleton && !resultType.Equals(SucoType.Boolean.List()))
                 throw new SucoCompileException("A list comprehension with a “1” extra must have a boolean selector.", StartIndex, EndIndex);
 
-            return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, resultType);
+            return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, resultType) { _context = context };
         }
 
         public override object Interpret(SucoEnvironment env)
         {
-            try
-            {
-                var indexes = new int[Clauses.Count];
-                var collections = new IList[Clauses.Count];
-                IEnumerable<object> recurse(int clIx, SucoEnvironment curEnv)
-                {
-                    if (clIx == Clauses.Count)
-                    {
-                        yield return Selector.Interpret(curEnv);
-                        yield break;
-                    }
+            var indexes = new int[Clauses.Count];
+            var collections = new IList[Clauses.Count];
 
-                    var collection = (IList) Clauses[clIx].FromExpressionResolved.Interpret(curEnv);
-                    collections[clIx] = collection;
-                    int? oneFound = null;
-                    bool nullFound = false;
-                    for (var i = 0; i < collection.Count; i++)
+            IEnumerable<object> recurse(int clIx, SucoEnvironment curEnv)
+            {
+                if (clIx == Clauses.Count)
+                {
+                    yield return Selector.Interpret(curEnv);
+                    yield break;
+                }
+
+                var anyConditionNull = false;
+                var collection = (IList) Clauses[clIx].FromExpressionResolved.Interpret(curEnv);
+                collections[clIx] = collection;
+                int? oneFound = null;
+                bool nullFound = false;
+                for (var i = 0; i < collection.Count; i++)
+                {
+                    if (collection[i] is Cell c)
                     {
-                        if (collection[i] is Cell c)
+                        // Optimization: if the cell value is not known, we’ll assume that the constraint will evaluate as null anyway
+                        if (_context == SucoContext.Constraint && c.Value == null)
                         {
-                            collections[clIx] = null;
-                            if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == null && indexes[ix] == c.Index))
-                                continue;
-                            indexes[clIx] = c.Index;
+                            anyConditionNull = true;
+                            goto skipped;
                         }
-                        else
+
+                        collections[clIx] = null;
+                        if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == null && indexes[ix] == c.Index))
+                            continue;
+                        indexes[clIx] = c.Index;
+                    }
+                    else
+                    {
+                        if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == collections[clIx] && indexes[ix] == i))
+                            continue;
+                        indexes[clIx] = i;
+                    }
+                    var newEnv = curEnv.DeclareVariable(Clauses[clIx].VariableName, collection, i);
+                    foreach (var condition in Clauses[clIx].Conditions)
+                    {
+                        var result = condition.Interpret(newEnv);
+                        if (result == false)
+                            goto skipped;
+                        else if (result == null && Clauses[clIx].HasSingleton)
                         {
-                            if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == collections[clIx] && indexes[ix] == i))
-                                continue;
-                            indexes[clIx] = i;
+                            nullFound = true;
+                            goto skipped;
                         }
-                        var newEnv = curEnv.DeclareVariable(Clauses[clIx].VariableName, collection, i);
-                        foreach (var condition in Clauses[clIx].Conditions)
+                        else if (result == null)
                         {
-                            var result = condition.Interpret(newEnv);
-                            if (result == false)
-                                goto skipped;
-                            else if (result == null && Clauses[clIx].HasSingleton)
-                            {
-                                nullFound = true;
-                                goto skipped;
-                            }
-                            else if (result == null)
-                            {
-                                yield return null;
-                                goto skipped;
-                            }
+                            anyConditionNull = true;
+                            goto skipped;
                         }
-                        if (Clauses[clIx].HasSingleton)
-                        {
-                            if (oneFound != null)
-                            {
-                                yield return false;
-                                yield break;
-                            }
-                            oneFound = i;
-                        }
-                        else
-                        {
-                            foreach (var result in recurse(clIx + 1, newEnv))
-                                yield return result;
-                        }
-                        skipped:;
                     }
                     if (Clauses[clIx].HasSingleton)
                     {
-                        if (oneFound == null)
+                        if (oneFound != null)
                         {
-                            yield return nullFound ? null : false;
+                            yield return false;
                             yield break;
                         }
-                        foreach (var result in recurse(clIx + 1, curEnv.DeclareVariable(Clauses[clIx].VariableName, collection, oneFound.Value)))
-                            yield return Equals(result, true) && nullFound ? null : result;
+                        oneFound = i;
                     }
+                    else
+                    {
+                        foreach (var result in recurse(clIx + 1, newEnv))
+                            yield return result;
+                    }
+                    skipped:;
                 }
-                return recurse(0, env).ToArray();
+
+                if (Clauses[clIx].HasSingleton)
+                {
+                    if (oneFound == null)
+                    {
+                        yield return nullFound ? null : false;
+                        yield break;
+                    }
+                    foreach (var result in recurse(clIx + 1, curEnv.DeclareVariable(Clauses[clIx].VariableName, collection, oneFound.Value)))
+                        yield return Equals(result, true) && nullFound ? null : result;
+                }
+                else if (anyConditionNull)
+                    yield return null;
             }
-            catch (EvaluationIncompleteException)
-            {
-                return null;
-            }
+
+            return recurse(0, env);
         }
     }
 }

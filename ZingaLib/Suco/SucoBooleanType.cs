@@ -5,8 +5,7 @@ namespace Zinga.Suco
     public class SucoBooleanType : SucoType
     {
         public override bool Equals(SucoType other) => other is SucoBooleanType;
-        public static readonly SucoType Instance = new SucoBooleanType();
-        private SucoBooleanType() { }
+        public SucoBooleanType() { }
         public override string ToString() => "bool";
         public override int GetHashCode() => 1;
 
