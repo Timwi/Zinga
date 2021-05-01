@@ -548,6 +548,22 @@ svg.puzzle-svg {
             font-style: italic;
         }
 
+            .sidebar .constraint.warning > .name > span {
+                padding-left: .5cm;
+                position: relative;
+            }
+
+            .sidebar .constraint.warning > .name > span::before {
+                position: absolute;
+                content: '';
+                width: .5cm;
+                height: .5cm;
+                left: 0;
+                top: 0;
+                display: block;
+                background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" stroke="black" stroke-width=".5"><path d="M5 1 9 9 1 9z" fill="yellow" /><path d="M5 3v3.5M5 7.3v.4" fill="none" stroke-width=".8" /></svg>');
+            }
+
     .sidebar .constraint:not(:last-child) {
         border-bottom: 1px solid black;
     }

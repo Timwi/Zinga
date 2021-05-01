@@ -319,23 +319,36 @@
                 let constraint = state.constraints[cIx];
                 let cType = getConstraintType(constraint.type);
 
+                let specialVariable = getSpecialVariable(cType.kind);
+                if (specialVariable[0] !== null)
+                {
+                    let enforceResult = enforceConstraintKind(cType.kind, constraint.values[specialVariable[0]]);
+                    if (!enforceResult.valid)
+                    {
+                        constraintDiv.classList.add('warning');
+                        constraintDiv.querySelector('.name').setAttribute('title', `${enforceResult.message} Either change the “${specialVariable[0]}” property accordingly, or (if the constraint works correctly as it is) change its Kind to “Custom”.`);
+                    }
+                }
+
                 for (let v of Object.keys(cType.variables))
                     setVariableEvents(
                         cType.variables[v],
                         () => constraint.values[v],
                         nv =>
                         {
-                            if (v === 'cells' && cType.kind === 'MatchingRegions')
+                            if (v === getSpecialVariable(cType.kind)[0])
                             {
-                            }
-                            else if (cType.kind === 'FourCells' ? (v === 'topleftcell') : (v === 'cells'))
-                            {
-                                let result = enforceConstraintKind(cType.kind, nv);
-                                if (result === false)
+                                var result = enforceConstraintKind(cType.kind, nv);
+                                if (!result.valid)
+                                {
+                                    alert(result.message);
                                     return false;
-                                nv = result;
+                                }
+                                nv = result.value;
                                 selectedCells = [];
                                 selectedConstraints = [cIx];
+                                document.getElementById(`constraint-${cIx}`).classList.remove('warning');
+                                document.getElementById(`constraint-${cIx}`).querySelector('.name').removeAttribute('title');
                             }
                             saveUndo();
                             constraint.values[v] = nv;
@@ -835,7 +848,6 @@
     {
         switch (kind)
         {
-            case 'Custom': return ['cells', 'list(cell)']; break;
             case 'Path': return ['cells', 'list(cell)']; break;
             case 'Region': return ['cells', 'list(cell)']; break;
             case 'MatchingRegions': return ['cells', 'list(list(cell))']; break;
@@ -895,13 +907,13 @@
                         let lastInput = variableName;
                         while (true)
                         {
-                            let newName = prompt('Enter the new name for this variable:', lastInput);
+                            let newName = prompt('Enter the new name for this property:', lastInput);
                             if (newName !== null && newName !== variableName)
                             {
                                 lastInput = newName;
                                 if (['gw', 'gh', 'allcells'].includes(newName))
                                 {
-                                    alert('This variable name is reserved. Please choose a different name.');
+                                    alert('This property name is reserved. Please choose a different name.');
                                     continue;
                                 }
 
@@ -955,14 +967,14 @@
             });
         }
 
-        // Button to add a new variable
+        // Button to add a new property
         setButtonHandler(document.getElementById('constraint-code-addvar'), () =>
         {
             saveUndo();
             let i = 1;
-            while (`variable${i === 1 ? '' : i}` in cType.variables)
+            while (`property${i === 1 ? '' : i}` in cType.variables)
                 i++;
-            cType.variables[`variable${i === 1 ? '' : i}`] = 'cell';
+            cType.variables[`property${i === 1 ? '' : i}`] = 'cell';
             generateVariablesTable();
             updateVisuals({ storage: true, ui: true });
         });
@@ -993,11 +1005,14 @@
             let oldValue = getter(cTypeId);
             if (newValue === oldValue)
                 return;
-            let unselectedSameType = state.constraints.map((c, cIx) => c.type === cTypeId && !selectedConstraints.includes(cIx) ? cIx : null).filter(c => c != null);
+
+            if (editingConstraintType !== cTypeId || editingConstraintTypeParameter !== paramName)
+                saveUndo();
 
             if (editingConstraintType !== cTypeId)
             {
-                saveUndo();
+                // If only some (not all) constraints of the same type are selected, or the constraint type is a public one, create a copy of the constraint type
+                let unselectedSameType = state.constraints.map((c, cIx) => c.type === cTypeId && !selectedConstraints.includes(cIx) ? cIx : null).filter(c => c != null);
                 if (cTypeId >= 0 || unselectedSameType.length > 0)
                 {
                     let cTypeCopy = JSON.parse(JSON.stringify(getConstraintType(cTypeId)));
@@ -1016,6 +1031,7 @@
                     cTypeId = newCTypeId;
                 }
             }
+
             editingConstraintType = cTypeId;
             editingConstraintTypeParameter = paramName;
             setter(cTypeId, newValue);
@@ -1091,117 +1107,113 @@
         return result;
     }
 
-    function enforceConstraintKind(kind, cells)
+    // Return value is either:
+    // { valid: false, message: 'error message' }
+    // { valid: true, value?: new value (may or may not be the same as the input) (may be a single cell, list, list of lists, or absent) }
+    function enforceConstraintKind(kind, value)
     {
-        if (cells.length === 0)
-        {
-            alert("Please select some cells for this constraint.");
-            return false;
-        }
-
         switch (kind)
         {
             case 'Path':
-                if (cells.length < 2)
-                {
-                    alert("This constraint requires at least two cells.");
-                    return false;
-                }
-                if (Array(cells.length - 1).fill(null).some((_, c) => !adjacent(cells[c]).includes(cells[c + 1])))
-                {
-                    alert("This constraint requires each cell to be adjacent to the previous, forming a path.");
-                    return false;
-                }
-                return cells;
+                if (!Array.isArray(value) || value.length < 2)
+                    return { valid: false, message: 'This constraint requires at least two cells.' };
+
+                if (Array(value.length - 1).fill(null).some((_, c) => !adjacent(value[c]).includes(value[c + 1])))
+                    return { valid: false, message: 'This constraint requires each cell to be adjacent to the previous, forming a path.' };
+
+                return { valid: true, value: value };
 
             case 'Region':
-                let copy = [...cells];
+                if (!Array.isArray(value) || value.length < 1)
+                    return { valid: false, message: 'This constraint requires an orthogonally-connected region of cells.' };
+
+                let copy = [...value];
                 let region = [copy.pop()];
                 while (copy.length > 0)
                 {
                     let ix = copy.findIndex(cell => region.some(r => orthogonal(cell).includes(r)));
                     if (ix === -1)
-                    {
-                        alert("This constraint requires an orthogonally-connected region of cells.");
-                        return false;
-                    }
+                        return { valid: false, message: 'This constraint requires an orthogonally-connected region of cells.' };
                     region.push(copy[ix]);
                     copy.splice(ix, 1);
                 }
                 region.sort((c1, c2) => c1 - c2);
-                return region;
+                return { valid: true, value: region };
 
             case 'MatchingRegions':
-                let regions = findMatchingRegions(cells);
-                if (regions.length === 0)
+                if (Array.isArray(value) && value.every(inner => Array.isArray(inner) &&
+                    inner.map((v, ix) => v % 9 - value[0][ix] % 9).every(df => df === inner[0] % 9 - value[0][0] % 9) &&
+                    inner.map((v, ix) => ((v / 9) | 0) - ((value[0][ix] / 9) | 0)).every(df => df === ((inner[0] / 9) | 0) - ((value[0][0] / 9) | 0))))
+                    return { valid: true, value: value };
+
+                if (Array.isArray(value) && value.every(c => typeof c === 'number'))
                 {
-                    alert("This constraint requires multiple orthogonally-connected regions of cells of the same shape.");
-                    return false;
+                    let regions = findMatchingRegions(value);
+                    if (regions.length === 0)
+                        return { valid: false, message: 'This constraint requires multiple orthogonally-connected regions of cells of the same shape.' };
+                    regions.sort((r1, r2) => r1.length - r2.length);
+                    return { valid: true, value: regions[0] };
                 }
-                regions.sort((r1, r2) => r1.length - r2.length);
-                return regions[0];
+
+                return { valid: false, message: 'This constraint requires multiple orthogonally-connected regions of cells of the same shape.' };
 
             case 'RowColumn':
-                if (cells.length < 2)
-                {
-                    alert("Select at least two cells that are in the same row or column.");
-                    return false;
-                }
-                let row = cells.every(c => ((c / 9) | 0) === ((cells[0] / 9) | 0)) ? ((cells[0] / 9) | 0) : null;
-                let col = cells.every(c => (c % 9) === (cells[0] % 9)) ? (cells[0] % 9) : null;
+                if (!Array.isArray(value) || value.length < 2)
+                    return { valid: false, message: 'Select at least two cells that are in the same row or column.' };
+
+                let row = value.every(c => ((c / 9) | 0) === ((value[0] / 9) | 0)) ? ((value[0] / 9) | 0) : null;
+                let col = value.every(c => (c % 9) === (value[0] % 9)) ? (value[0] % 9) : null;
                 if (row === null && col === null)
-                {
-                    alert("This constraint requires a row or a column.");
-                    return false;
-                }
-                if (cells[1] > cells[0])
-                    cells = row !== null ? Array(9).fill(null).map((_, c) => c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * r);
-                else
-                    cells = row !== null ? Array(9).fill(null).map((_, c) => 8 - c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * (8 - r));
-                return cells;
+                    return { valid: false, message: 'This constraint requires a row or a column.' };
+
+                return {
+                    valid: true,
+                    value: value[1] > value[0]
+                        ? (row !== null ? Array(9).fill(null).map((_, c) => c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * r))
+                        : (row !== null ? Array(9).fill(null).map((_, c) => 8 - c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * (8 - r)))
+                };
 
             case 'Diagonal':
-                if (cells.length < 2)
-                {
-                    alert("Select at least two cells that are on the same diagonal.");
-                    return false;
-                }
-                let forward = cells.every(c => (c % 9) - ((c / 9) | 0) === (cells[0] % 9) - ((cells[0] / 9) | 0)) ? (cells[0] % 9) - ((cells[0] / 9) | 0) : null;
-                let backward = cells.every(c => (c % 9) + ((c / 9) | 0) === (cells[0] % 9) + ((cells[0] / 9) | 0)) ? (cells[0] % 9) + ((cells[0] / 9) | 0) : null;
+                if (!Array.isArray(value) || value.length < 2)
+                    return { valid: false, message: 'Select at least two cells that are on the same diagonal.' };
+
+                let forward = value.every(c => (c % 9) - ((c / 9) | 0) === (value[0] % 9) - ((value[0] / 9) | 0)) ? (value[0] % 9) - ((value[0] / 9) | 0) : null;
+                let backward = value.every(c => (c % 9) + ((c / 9) | 0) === (value[0] % 9) + ((value[0] / 9) | 0)) ? (value[0] % 9) + ((value[0] / 9) | 0) : null;
                 if (forward === null && backward === null)
-                {
-                    alert("This constraint requires a diagonal.");
-                    return false;
-                }
-                cells = (cells[1] > cells[0] ? Array(81).fill(null).map((_, c) => c) : Array(81).fill(null).map((_, c) => 80 - c))
-                    .filter(c => forward !== null ? ((c % 9) - ((c / 9) | 0) === forward) : ((c % 9) + ((c / 9) | 0) === backward));
-                return cells;
+                    return { valid: false, message: 'This constraint requires a diagonal.' };
+
+                return {
+                    valid: true,
+                    value: Array(81).fill(null).map((_, c) => value[1] > value[0] ? c : 80 - c)
+                        .filter(c => forward !== null ? ((c % 9) - ((c / 9) | 0) === forward) : ((c % 9) + ((c / 9) | 0) === backward))
+                };
 
             case 'TwoCells':
-                if (cells.length !== 2 || !orthogonal(cells[0]).includes(cells[1]))
-                {
-                    alert("Select two cells that are orthogonally adjacent to one another.");
-                    return false;
-                }
-                return cells;
+                if (!Array.isArray(value) || value.length !== 2 || !orthogonal(value[0]).includes(value[1]))
+                    return { valid: false, message: 'Select two cells that are orthogonally adjacent to one another.' };
+                return { valid: true, value: [Math.min(...value), Math.max(...value)] };
 
             case 'FourCells':
-                if (cells.length !== 4)
-                {
-                    alert("Select four cells that form a 2×2 square.");
-                    return false;
-                }
-                let sorted = [...cells];
+                if (typeof value === 'number' && value % 9 >= 0 && value % 9 < 9 - 1 && ((value / 9) | 0) >= 0 && ((value / 9) | 0) < 9 - 1)
+                    return { valid: true, value: value };
+
+                if (!Array.isArray(value) || value.length !== 4)
+                    return { valid: false, message: 'Select four cells that form a 2×2 square.' };
+
+                let sorted = [...value];
                 sorted.sort((c1, c2) => c1 - c2);
                 if (sorted[0] % 9 === 9 - 1 || sorted[1] != sorted[0] + 1 || ((sorted[0] / 9) | 0) === 9 - 1 || sorted[2] != sorted[0] + 9 || sorted[3] != sorted[0] + 9 + 1)
-                {
-                    alert("Select four cells that form a 2×2 square.");
-                    return;
-                }
-                return sorted;
+                    return { valid: false, message: 'Select four cells that form a 2×2 square.' };
+
+                return { valid: true, value: sorted[0] };
+
+            case 'Custom':
+            case 'Global':
+                return { valid: true };
         }
 
-        return cells;
+        console.error(`Unknown constraint kind: ${kind}`);
+        return { valid: true };
     }
 
     function addConstraintWithShortcut(letter)
@@ -1211,35 +1223,35 @@
         if (sc.length === 0)
             return;
 
+        let cIx = state.constraints.length;
         let cType = constraintTypes[sc[0]];
-        let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
-        if (enforceResult === false)
-            return;
+        let specialVariable = getSpecialVariable(cType.kind);
+        let newConstraint = { type: (sc[0] | 0) };
+        if (specialVariable[0] !== null)
+        {
+            let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
+            if (!enforceResult.valid)
+            {
+                alert(enforceResult.message);
+                return;
+            }
+            newConstraint[specialVariable[0]] = enforceResult.value;
+        }
 
         saveUndo();
-        let prevLength = state.constraints.length;
-        if (cType.kind === 'FourCells')
-            state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'topleftcell': selectedCells[0] } });
-        else
-            state.constraints.push({ 'type': (sc[0] | 0), 'values': { 'cells': enforceResult } });
-        selectedConstraints = Array(state.constraints.length - prevLength).fill(null).map((_, c) => c + prevLength);
-        editingConstraintType = null;
-        selectedCells = [];
-        updateVisuals({ storage: true, svg: true, ui: true });
 
-        for (let cIx = prevLength; cIx < state.constraints.length; cIx++)
+        state.constraints.push(newConstraint);
+        selectConstraintRange(cIx, cIx, { storage: true, svg: true, ui: true });
+
+        let constraintElem = document.getElementById(`constraint-${cIx}`);
+        let uiElement = constraintElem.querySelector('input,textarea,select');
+        if (uiElement !== null)
         {
-            let constraintElem = document.getElementById(`constraint-${cIx}`);
-            let uiElement = constraintElem.querySelector('input,textarea,select');
-            if (uiElement !== null)
-            {
-                selectTab('constraints');
-                setClass(constraintElem, 'expanded', true);
-                uiElement.focus();
-                if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
-                    uiElement.select();
-                break;
-            }
+            selectTab('constraints');
+            setClass(constraintElem, 'expanded', true);
+            uiElement.focus();
+            if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
+                uiElement.select();
         }
     }
 
@@ -1371,7 +1383,7 @@
 
             default:
                 anyFunction = false;
-                console.log(str, ev.code);
+                //console.log(str, ev.code);
                 break;
         }
 

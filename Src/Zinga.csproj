@@ -101,6 +101,7 @@
     <Compile Include="Database\Configuration.cs" />
     <Compile Include="Database\Constraint.cs" />
     <Compile Include="Database\ConstraintKind.cs" />
+    <Compile Include="Database\ConstraintKindInfoAttribute.cs" />
     <Compile Include="Database\Db.cs" />
     <Compile Include="Database\Puzzle.cs" />
     <Compile Include="Database\PuzzleConstraint.cs" />
