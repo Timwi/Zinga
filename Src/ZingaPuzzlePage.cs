@@ -127,10 +127,13 @@ namespace Zinga
                         new DIV { class_ = "title" }._(puzzle?.Title),
                         new DIV { class_ = "author" }._("by ", puzzle?.Author)),
                     new DIV { class_ = "puzzle" }
+                        .Data("puzzleid", puzzle?.UrlName ?? "test")
+                        .Data("givens", puzzle?.GivensJson)
+                        .Data("title", puzzle?.Title)
+                        .Data("author", puzzle?.Author)
+                        .Data("rules", puzzle?.Rules)
                         .Data("constrainttypes", constraintTypesJson)
                         .Data("constraints", constraintsJson)
-                        .Data("givens", puzzle?.GivensJson)
-                        .Data("puzzleid", puzzle?.UrlName ?? "test")
                         ._(
                             new DIV { class_ = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
                                 <svg viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
@@ -198,6 +201,7 @@ namespace Zinga
                                             ?? (object) "Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.")),
                                     puzzle?.Links == null || puzzle.Links.Length == 0 ? null : new UL { class_ = "links" }._(puzzle.Links.Select(link => new LI(new A { href = link.Url }._(link.Text)))),
                                     new DIV { class_ = "options" }._(
+                                        new DIV { class_ = "opt-minor" }._(new BUTTON { type = btype.button, id = "opt-edit" }._("Edit this puzzle")),
                                         new DIV(new INPUT { type = itype.checkbox, id = "opt-show-errors" }, new LABEL { for_ = "opt-show-errors" }._(" Show conflicts")),
                                         new DIV(new INPUT { type = itype.checkbox, id = "opt-multi-color" }, new LABEL { for_ = "opt-multi-color" }._(" Multi-color mode")))))))));
         }

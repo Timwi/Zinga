@@ -91,11 +91,11 @@
     function makeEmptyState()
     {
         return {
-            givens: Array(81).fill(null),
-            constraints: [],
             title: 'Sudoku',
             author: 'unknown',
             rules: '',
+            givens: Array(81).fill(null),
+            constraints: [],
             customConstraintTypes: []
         };
     }
@@ -126,7 +126,7 @@
 
     try
     {
-        str = localStorage.getItem(`zinga-edit`);
+        let str = localStorage.getItem(`zinga-edit`);
         try { item = JSON.parse(str); }
         catch { }
         if (item && item.givens && item.constraints)
@@ -208,16 +208,19 @@
         let constraintSelectionUpdated = false;
         if (opt && opt.svg)
         {
-            // Constraint SVGs
+            // Re-render all constraint SVGs
             constraintSelectionUpdated = true;
             dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints), editingConstraintType, editingConstraintTypeParameter], results =>
             {
                 let list = JSON.parse(results);
                 document.getElementById('constraint-defs').innerHTML = list[0];
                 document.getElementById('constraint-svg').innerHTML = list[1];
-                let reportingBox = document.getElementById(`reporting-${editingConstraintTypeParameter}`);
-                if (reportingBox !== null)
-                    reportingBox.innerText = JSON.stringify(list[2]);
+                if (editingConstraintTypeParameter !== null)
+                {
+                    let reportingBox = document.getElementById(`reporting-${editingConstraintTypeParameter}`);
+                    if (reportingBox !== null)
+                        reportingBox.innerText = JSON.stringify(list[2]);
+                }
                 updateConstraintSelection();
                 fixViewBox();
             });
@@ -1348,7 +1351,7 @@
             case 'Ctrl+Shift+ArrowRight': selectCellLine('e'); break;
 
             case 'Escape': selectedCells = []; selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
-            case 'Ctrl+KeyA': selectedCells = Array(81).fill(null).map((_, c) => c); updateVisuals(); break;
+            case 'Ctrl+KeyA': selectedCells = Array(81).fill(null).map((_, c) => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
 
             // Undo/redo
             case 'Backspace':
@@ -1430,7 +1433,7 @@
             case 'ArrowLeft': selectedConstraints.forEach(cIx => { state.constraints[cIx].expanded = false; }); updateVisuals({ storage: true }); break;
 
             case 'Escape': selectedCells = []; selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
-            case 'Ctrl+KeyA': selectedConstraints = state.constraints.map((_, c) => c); editingConstraintType = null; updateVisuals(); break;
+            case 'Ctrl+KeyA': selectedCells = []; selectedConstraints = state.constraints.map((_, c) => c); editingConstraintType = null; updateVisuals(); break;
 
             // Undo/redo
             case 'Backspace':

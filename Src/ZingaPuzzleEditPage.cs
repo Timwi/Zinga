@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Data;
+﻿using System.Data;
 using System.Data.Entity;
 using System.IO;
 using System.Linq;
@@ -10,8 +9,6 @@ using RT.Util;
 using RT.Util.ExtensionMethods;
 using Zinga.Database;
 
-using DbConstraint = Zinga.Database.Constraint;
-
 namespace Zinga
 {
     public partial class ZingaPropellerModule
@@ -19,32 +16,9 @@ namespace Zinga
         public HttpResponse PuzzleEditPage(HttpRequest req)
         {
             using var db = new Db();
-            var constraintsWithShortcuts = db.Constraints.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).ToArray();
 
-            Puzzle puzzle;
-            Dictionary<int, DbConstraint> constraintTypes;
-            PuzzleConstraint[] constraints;
-
-            var url = req.Url.Path.SubstringSafe(1);
-            if (url.Length == 0)
-            {
-                puzzle = new Puzzle { Title = "Sudoku", Author = "unknown", Rules = "" };
-                constraintTypes = new Dictionary<int, DbConstraint>();
-                constraints = new PuzzleConstraint[0];
-            }
-            else
-            {
-                url = url.UrlUnescape();
-                puzzle = db.Puzzles.FirstOrDefault(p => p.UrlName == url);
-                if (puzzle == null)
-                    return HttpResponse.Html("<h1>404 — Not Found</h1>", HttpStatusCode._404_NotFound);
-                constraints = db.PuzzleConstraints.Where(c => c.PuzzleID == puzzle.PuzzleID).ToArray();
-                var constraintIds = constraints.Select(c => c.ConstraintID).Distinct().ToArray();
-                constraintTypes = db.Constraints.Where(c => constraintIds.Contains(c.ConstraintID)).AsEnumerable().ToDictionary(c => c.ConstraintID);
-            }
-
-            foreach (var cws in constraintsWithShortcuts)
-                constraintTypes[cws.ConstraintID] = cws;
+            var puzzle = new Puzzle { Title = "Sudoku", Author = "unknown", Rules = "" };
+            var constraintTypes = db.Constraints.Where(c => c.Public).ToDictionary(c => c.ConstraintID);
 
             const double btnHeight = .8;
             const double margin = .135;
@@ -70,11 +44,6 @@ namespace Zinga
                     renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
             }).JoinString();
 
-            var constraintsJson = constraints.Select(c => new JsonDict
-            {
-                ["type"] = c.ConstraintID,
-                ["values"] = new JsonRaw(c.ValuesJson)
-            }).ToJsonList().ToString();
             var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp =>
             {
                 var dic = new JsonDict
@@ -137,7 +106,6 @@ namespace Zinga
                         puzzle.Author == null ? null : new DIV { class_ = "author" }._("by ", puzzle.Author)),
                     new DIV { class_ = "puzzle" }
                         .Data("constrainttypes", constraintTypesJson)
-                        .Data("constraints", constraintsJson)
                         .Data("title", puzzle.Title)
                         .Data("author", puzzle.Author)
                         .Data("rules", puzzle.Rules)
@@ -257,7 +225,7 @@ namespace Zinga
                                                 new LI("Press Shift with a letter to search for more constraints.")),
                                             new HR(),
                                             new P("Common constraint shortcuts:"),
-                                            new TABLE(constraintsWithShortcuts.Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))))))))))));
+                                            new TABLE(constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))))))))))));
         }
     }
 }

@@ -40,20 +40,19 @@
         else
             blazorQueue.push([method, args, callback]);
     }
-    Blazor.start({})
-        .then(() =>
+    Blazor.start({}).then(() =>
+    {
+        DotNet.invokeMethodAsync('ZingaWasm', 'GetVersion', []).then(v => { console.log(`Version: ${v}`); });
+        DotNet.invokeMethodAsync('ZingaWasm', 'GetLibVersion', []).then(v => { console.log(`Lib Version: ${v}`); });
+        for (let i = 0; i < blazorQueue.length; i++)
         {
-            DotNet.invokeMethodAsync('ZingaWasm', 'GetVersion', []).then(v => { console.log(`Version: ${v}`); });
-            DotNet.invokeMethodAsync('ZingaWasm', 'GetLibVersion', []).then(v => { console.log(`Lib Version: ${v}`); });
-            for (let i = 0; i < blazorQueue.length; i++)
-            {
-                if (blazorQueue[i][0] === null)
-                    blazorQueue[i][2]();
-                else
-                    DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
-            }
-            blazorQueue = null;
-        });
+            if (blazorQueue[i][0] === null)
+                blazorQueue[i][2]();
+            else
+                DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
+        }
+        blazorQueue = null;
+    });
 
     let puzzleDiv = document.querySelector('div.puzzle');
     let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
@@ -337,7 +336,7 @@
     {
         if (!document.hidden && puzzleId === 'test')
         {
-            let state;
+            let state = null;
             try { state = JSON.parse(localStorage.getItem(`zinga-edit`)); }
             catch { }
             if (state && state.givens && state.constraints)
@@ -791,6 +790,46 @@
     setButtonHandler(puzzleDiv.querySelector(`#btn-sidebar>rect`), function() { sidebarOn = !sidebarOn; updateVisuals(true); });
     document.getElementById(`opt-show-errors`).onchange = function() { showErrors = !showErrors; updateVisuals(true); };
     document.getElementById(`opt-multi-color`).onchange = function() { multiColorMode = !multiColorMode; updateVisuals(true); };
+
+    setButtonHandler(document.getElementById('opt-edit'), () =>
+    {
+        if (puzzleId !== 'test')
+        {
+            let editUndoBuffer = [], editState = null;
+
+            let undoB = localStorage.getItem('zinga-edit-undo');
+            try { editUndoBuffer = undoB ? JSON.parse(undoB) : []; }
+            catch { }
+
+            let str = localStorage.getItem('zinga-edit');
+            try { editState = JSON.parse(str); }
+            catch { }
+
+            if (editState !== null)
+                editUndoBuffer.push(editState);
+
+            localStorage.setItem('zinga-edit-undo', JSON.stringify(editUndoBuffer));
+            localStorage.setItem('zinga-edit-redo', "[]");
+
+            let newEditState = {
+                title: puzzleDiv.dataset.title,
+                author: puzzleDiv.dataset.author,
+                rules: puzzleDiv.dataset.rules,
+                givens: givens,
+                constraints: [],
+                customConstraintTypes: []
+            };
+
+            for (let c of Object.keys(constraintTypes))
+                if (!constraintTypes[c].public)
+                    newEditState.customConstraintTypes.push(constraintTypes[c]);
+            for (let c of constraints)
+                newEditState.constraints.push({ type: constraintTypes[c.type].public ? c.type : ~newEditState.customConstraintTypes.indexOf(constraintTypes[c.type]), values: c.values });
+
+            localStorage.setItem('zinga-edit', JSON.stringify(newEditState));
+        }
+        window.open(`${window.location.protocol}//${window.location.host}/edit`);
+    });
 
     function selectCell(cell, mode)
     {

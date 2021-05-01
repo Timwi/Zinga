@@ -319,8 +319,17 @@ svg.puzzle-svg {
         }
 
     .sidebar .options {
-        margin-top: 1cm;
+        margin-top: .5cm;
         font-size: 18pt;
+    }
+
+    .sidebar .options .opt-minor {
+        margin-bottom: .5cm;
+        text-align: right;
+    }
+
+    .sidebar .options #opt-edit {
+        font-size: 12pt;
     }
 
 .puzzle-container, .sidebar {
@@ -677,7 +686,7 @@ svg.puzzle-svg {
         }
 
         .sidebar #constraint-add-section .main table {
-            border-spacing: .05cm;
+            border-spacing: 2px;
             width: 100%;
         }
             .sidebar #constraint-add-section .main th {
