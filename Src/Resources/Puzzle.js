@@ -42,8 +42,6 @@
     }
     Blazor.start({}).then(() =>
     {
-        DotNet.invokeMethodAsync('ZingaWasm', 'GetVersion', []).then(v => { console.log(`Version: ${v}`); });
-        DotNet.invokeMethodAsync('ZingaWasm', 'GetLibVersion', []).then(v => { console.log(`Lib Version: ${v}`); });
         for (let i = 0; i < blazorQueue.length; i++)
         {
             if (blazorQueue[i][0] === null)

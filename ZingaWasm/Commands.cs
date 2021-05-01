@@ -5,12 +5,6 @@ namespace Zinga.Wasm
     public static class Commands
     {
         [JSInvokable]
-        public static string GetVersion() => "1.0";
-
-        [JSInvokable]
-        public static string GetLibVersion() => Lib.Commands.GetVersion();
-
-        [JSInvokable]
         public static string CompileSuco(string suco, string variableTypesJson) => Lib.Commands.CompileSuco(suco, variableTypesJson);
 
         [JSInvokable]
