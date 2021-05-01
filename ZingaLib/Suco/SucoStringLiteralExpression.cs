@@ -21,11 +21,11 @@ namespace Zinga.Suco
                 if (p is not SucoStringLiteralPieceExpression expr)
                     return p;
                 var typedExpr = expr.Expression.DeduceTypes(env, context);
-                if (!typedExpr.Type.ImplicitlyConvertibleTo(SucoStringType.Instance))
+                if (!typedExpr.Type.ImplicitlyConvertibleTo(SucoType.String))
                     throw new SucoCompileException($"Expression interpolated into a string literal is of type “{typedExpr.Type}”, which not implicitly convertible to string.", expr.Expression.StartIndex, expr.Expression.EndIndex);
-                return typedExpr.ImplicitlyConvertTo(SucoStringType.Instance);
+                return typedExpr.ImplicitlyConvertTo(SucoType.String);
             }).ToArray();
-            return new SucoStringLiteralExpression(StartIndex, EndIndex, newPieces, SucoStringType.Instance);
+            return new SucoStringLiteralExpression(StartIndex, EndIndex, newPieces, SucoType.String);
         }
 
         public override object Interpret(SucoEnvironment env)

@@ -48,7 +48,7 @@ namespace Zinga.Suco
                 case "righttop":
                 case "leftbottom":
                 case "rightbottom":
-                    if (!elementType.Equals(SucoCellType.Instance))
+                    if (!elementType.Equals(SucoType.Cell))
                         throw new SucoCompileException($"“{Name}” can only be used on lists of cells.", StartIndex, EndIndex);
                     break;
 

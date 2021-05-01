@@ -14,35 +14,35 @@ namespace Zinga.Suco
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
             // Comparison with Int
-            (BinaryOperator.Equal, SucoIntegerType) => SucoBooleanType.Instance,
-            (BinaryOperator.NotEqual, SucoIntegerType) => SucoBooleanType.Instance,
-            (BinaryOperator.LessThan, SucoIntegerType) => SucoBooleanType.Instance,
-            (BinaryOperator.LessThanOrEqual, SucoIntegerType) => SucoBooleanType.Instance,
-            (BinaryOperator.GreaterThan, SucoIntegerType) => SucoBooleanType.Instance,
-            (BinaryOperator.GreaterThanOrEqual, SucoIntegerType) => SucoBooleanType.Instance,
+            (BinaryOperator.Equal, SucoIntegerType) => SucoType.Boolean,
+            (BinaryOperator.NotEqual, SucoIntegerType) => SucoType.Boolean,
+            (BinaryOperator.LessThan, SucoIntegerType) => SucoType.Boolean,
+            (BinaryOperator.LessThanOrEqual, SucoIntegerType) => SucoType.Boolean,
+            (BinaryOperator.GreaterThan, SucoIntegerType) => SucoType.Boolean,
+            (BinaryOperator.GreaterThanOrEqual, SucoIntegerType) => SucoType.Boolean,
 
             // Comparison with Decimal
-            (BinaryOperator.Equal, SucoDecimalType) => SucoBooleanType.Instance,
-            (BinaryOperator.NotEqual, SucoDecimalType) => SucoBooleanType.Instance,
-            (BinaryOperator.LessThan, SucoDecimalType) => SucoBooleanType.Instance,
-            (BinaryOperator.LessThanOrEqual, SucoDecimalType) => SucoBooleanType.Instance,
-            (BinaryOperator.GreaterThan, SucoDecimalType) => SucoBooleanType.Instance,
-            (BinaryOperator.GreaterThanOrEqual, SucoDecimalType) => SucoBooleanType.Instance,
+            (BinaryOperator.Equal, SucoDecimalType) => SucoType.Boolean,
+            (BinaryOperator.NotEqual, SucoDecimalType) => SucoType.Boolean,
+            (BinaryOperator.LessThan, SucoDecimalType) => SucoType.Boolean,
+            (BinaryOperator.LessThanOrEqual, SucoDecimalType) => SucoType.Boolean,
+            (BinaryOperator.GreaterThan, SucoDecimalType) => SucoType.Boolean,
+            (BinaryOperator.GreaterThanOrEqual, SucoDecimalType) => SucoType.Boolean,
 
             // Arithmetic with Int
-            (BinaryOperator.Plus, SucoIntegerType) => SucoIntegerType.Instance,
-            (BinaryOperator.Minus, SucoIntegerType) => SucoIntegerType.Instance,
-            (BinaryOperator.Times, SucoIntegerType) => SucoIntegerType.Instance,
-            (BinaryOperator.Modulo, SucoIntegerType) => SucoIntegerType.Instance,
-            (BinaryOperator.Divide, SucoIntegerType) => context != SucoContext.Constraint ? SucoDecimalType.Instance : throw new SucoTempCompileException("Suco does not allow the use of division in puzzle constraints. Rewrite the equation to use multiplication instead (for example: instead of a.value/b.value = 2, write a.value = 2*b.value)."),
-            (BinaryOperator.Power, SucoIntegerType) => SucoIntegerType.Instance,
+            (BinaryOperator.Plus, SucoIntegerType) => SucoType.Integer,
+            (BinaryOperator.Minus, SucoIntegerType) => SucoType.Integer,
+            (BinaryOperator.Times, SucoIntegerType) => SucoType.Integer,
+            (BinaryOperator.Modulo, SucoIntegerType) => SucoType.Integer,
+            (BinaryOperator.Divide, SucoIntegerType) => context != SucoContext.Constraint ? SucoType.Decimal : throw new SucoTempCompileException("Suco does not allow the use of division in puzzle constraints. Rewrite the equation to use multiplication instead (for example: instead of a.value/b.value = 2, write a.value = 2*b.value)."),
+            (BinaryOperator.Power, SucoIntegerType) => SucoType.Integer,
 
             // Arithmetic with Decimal
-            (BinaryOperator.Plus, SucoDecimalType) => SucoDecimalType.Instance,
-            (BinaryOperator.Minus, SucoDecimalType) => SucoDecimalType.Instance,
-            (BinaryOperator.Times, SucoDecimalType) => SucoDecimalType.Instance,
-            (BinaryOperator.Modulo, SucoDecimalType) => SucoDecimalType.Instance,
-            (BinaryOperator.Power, SucoDecimalType) => SucoDecimalType.Instance,
+            (BinaryOperator.Plus, SucoDecimalType) => SucoType.Decimal,
+            (BinaryOperator.Minus, SucoDecimalType) => SucoType.Decimal,
+            (BinaryOperator.Times, SucoDecimalType) => SucoType.Decimal,
+            (BinaryOperator.Modulo, SucoDecimalType) => SucoType.Decimal,
+            (BinaryOperator.Power, SucoDecimalType) => SucoType.Decimal,
             _ => base.GetBinaryOperatorType(op, rightType, context),
         };
 
@@ -86,7 +86,7 @@ namespace Zinga.Suco
 
         public override SucoType GetUnaryOperatorType(UnaryOperator op) => op switch
         {
-            UnaryOperator.Negative => SucoIntegerType.Instance,
+            UnaryOperator.Negative => SucoType.Integer,
             _ => base.GetUnaryOperatorType(op),
         };
 
@@ -114,13 +114,13 @@ namespace Zinga.Suco
         {
             switch (memberName)
             {
-                case "abs": return SucoIntegerType.Instance;
+                case "abs": return SucoType.Integer;
             }
 
             // See InterpretMemberAccess
             try
             {
-                return SucoDecimalType.Instance.GetMemberType(memberName, context);
+                return SucoType.Decimal.GetMemberType(memberName, context);
             }
             catch (SucoTempCompileException)
             {
@@ -138,7 +138,7 @@ namespace Zinga.Suco
             // We want all functions that SucoDecimalType supports to also work on integers by implicitly converting the integer to decimal.
             try
             {
-                return SucoDecimalType.Instance.InterpretMemberAccess(memberName, (double) (int) operand);
+                return SucoType.Decimal.InterpretMemberAccess(memberName, (double) (int) operand);
             }
             catch (SucoTempCompileException)
             {

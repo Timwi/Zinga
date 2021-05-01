@@ -12,7 +12,7 @@ namespace Zinga.Suco
             NumericalValue = numericalValue;
         }
 
-        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => new SucoIntegerLiteralExpression(StartIndex, EndIndex, NumericalValue, SucoIntegerType.Instance);
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => new SucoIntegerLiteralExpression(StartIndex, EndIndex, NumericalValue, SucoType.Integer);
         public override object Interpret(SucoEnvironment env) => NumericalValue;
     }
 }

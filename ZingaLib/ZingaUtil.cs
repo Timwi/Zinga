@@ -33,6 +33,8 @@ namespace Zinga.Lib
             _ => throw new NotImplementedException($"Programmer has neglected to include code to deserialize “{type}”.")
         };
 
+        public static SucoType List(this SucoType inner) => SucoType.List(inner);
+
         #region Algorithm to generate outlines around cells
         private enum CellDirection { Up, Right, Down, Left }
 

@@ -10,7 +10,7 @@
             NumericalValue = numericalValue;
         }
 
-        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => new SucoDecimalLiteralExpression(StartIndex, EndIndex, NumericalValue, SucoDecimalType.Instance);
+        protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => new SucoDecimalLiteralExpression(StartIndex, EndIndex, NumericalValue, SucoType.Decimal);
         public override object Interpret(SucoEnvironment env) => NumericalValue;
     }
 }

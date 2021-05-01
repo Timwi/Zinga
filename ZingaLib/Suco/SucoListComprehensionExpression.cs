@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using RT.Util.ExtensionMethods;
+using Zinga.Lib;
 
 namespace Zinga.Suco
 {
@@ -32,7 +33,7 @@ namespace Zinga.Suco
                 if (newFromExpression != null)
                     collectionType = newFromExpression.Type;
                 else if (clause.HasDollar)
-                    collectionType = new SucoListType(SucoCellType.Instance);
+                    collectionType = SucoType.Cell.List();
                 else
                 {
                     try
@@ -56,22 +57,22 @@ namespace Zinga.Suco
                     anySingleton = true;
             }
 
-            SucoType selectorType;
+            SucoType resultType;
             SucoExpression newSelector = null;
             if (newClauses.Count == 1 && Selector == null)
-                selectorType = new SucoListType(SucoCellType.Instance);
+                resultType = newClauses[0].VariableType.List();
             else if (Selector == null)
                 throw new SucoCompileException("A list comprehension without a selector cannot have more than one clause.", StartIndex, EndIndex);
             else
             {
                 newSelector = Selector.DeduceTypes(newEnv, context);
-                selectorType = new SucoListType(newSelector.Type);
+                resultType = newSelector.Type.List();
             }
 
-            if (anySingleton && !selectorType.Equals(new SucoListType(SucoBooleanType.Instance)))
+            if (anySingleton && !resultType.Equals(SucoType.Boolean.List()))
                 throw new SucoCompileException("A list comprehension with a “1” extra must have a boolean selector.", StartIndex, EndIndex);
 
-            return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, selectorType);
+            return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, resultType);
         }
 
         public override object Interpret(SucoEnvironment env)

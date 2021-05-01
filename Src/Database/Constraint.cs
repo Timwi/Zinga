@@ -5,6 +5,7 @@ using System.Linq;
 using RT.Json;
 using RT.Serialization;
 using RT.Util;
+using Zinga.Lib;
 using Zinga.Suco;
 
 namespace Zinga.Database
@@ -38,7 +39,7 @@ namespace Zinga.Database
         {
             if (SvgDefsSuco == null)
                 return Enumerable.Empty<string>();
-            _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, Variables, SucoContext.Svg, new SucoListType(SucoStringType.Instance));
+            _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, Variables, SucoContext.Svg, SucoType.String.List());
             return ((IEnumerable<object>) _svgDefsCache.Interpret(env)).Cast<string>();
         }
 
@@ -48,7 +49,7 @@ namespace Zinga.Database
         {
             if (SvgSuco == null)
                 return null;
-            _svgCache ??= SucoParser.ParseCode(SvgSuco, Variables, SucoContext.Svg, SucoStringType.Instance);
+            _svgCache ??= SucoParser.ParseCode(SvgSuco, Variables, SucoContext.Svg, SucoType.String);
             return (string) _svgCache.Interpret(env);
         }
     }

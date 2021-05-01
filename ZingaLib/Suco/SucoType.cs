@@ -1,10 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using Zinga.Lib;
 
 namespace Zinga.Suco
 {
     public abstract class SucoType : IEquatable<SucoType>
     {
+        public static readonly SucoType Boolean = SucoBooleanType.Instance;
+        public static readonly SucoType Cell = SucoCellType.Instance;
+        public static readonly SucoType Decimal = SucoDecimalType.Instance;
+        public static readonly SucoType Integer = SucoIntegerType.Instance;
+        public static readonly SucoType String = SucoStringType.Instance;
+
+        public static SucoType List(SucoType inner) => new SucoListType(inner);
+
         public virtual SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => throw new SucoTempCompileException($"Binary operator “{op}” not defined on types “{this}” and “{rightType}”.");
         public virtual object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => throw new SucoTempCompileException($"Binary operator “{op}” not defined on types “{this}” and “{rightType}”.");
 
@@ -47,11 +56,11 @@ namespace Zinga.Suco
 
                 switch (tok.StringValue)
                 {
-                    case "bool": return SucoBooleanType.Instance;
-                    case "cell": return SucoCellType.Instance;
-                    case "decimal": return SucoDecimalType.Instance;
-                    case "int": return SucoIntegerType.Instance;
-                    case "string": return SucoStringType.Instance;
+                    case "bool": return SucoType.Boolean;
+                    case "cell": return SucoType.Cell;
+                    case "decimal": return SucoType.Decimal;
+                    case "int": return SucoType.Integer;
+                    case "string": return SucoType.String;
 
                     case "list":
                         if (!token("(", out int oldIx))
@@ -59,7 +68,7 @@ namespace Zinga.Suco
                         var innerType = ParseType();
                         if (!token(")"))
                             throw new SucoParseException("Expected ‘)’.", _ix, oldIx);
-                        return new SucoListType(innerType);
+                        return innerType.List();
 
                     default:
                         throw new SucoParseException($"Unknown type name: “{tok.StringValue}”.", _ix);

@@ -12,10 +12,10 @@ namespace Zinga.Suco
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
-            (BinaryOperator.Equal, SucoBooleanType) => SucoBooleanType.Instance,
-            (BinaryOperator.NotEqual, SucoBooleanType) => SucoBooleanType.Instance,
-            (BinaryOperator.And, SucoBooleanType) => SucoBooleanType.Instance,
-            (BinaryOperator.Or, SucoBooleanType) => SucoBooleanType.Instance,
+            (BinaryOperator.Equal, SucoBooleanType) => SucoType.Boolean,
+            (BinaryOperator.NotEqual, SucoBooleanType) => SucoType.Boolean,
+            (BinaryOperator.And, SucoBooleanType) => SucoType.Boolean,
+            (BinaryOperator.Or, SucoBooleanType) => SucoType.Boolean,
             _ => base.GetBinaryOperatorType(op, rightType, context)
         };
 
@@ -32,7 +32,7 @@ namespace Zinga.Suco
 
         public override SucoType GetUnaryOperatorType(UnaryOperator op) => op switch
         {
-            UnaryOperator.Not => SucoBooleanType.Instance,
+            UnaryOperator.Not => SucoType.Boolean,
             _ => base.GetUnaryOperatorType(op)
         };
 

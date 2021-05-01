@@ -41,7 +41,7 @@ namespace Zinga.Lib
                 var constraint = constraints[cIx];
                 var typeId = constraint["type"].GetInt();
                 var type = typeId < 0 ? customConstraintTypes[~typeId] : constraintTypes[typeId.ToString()].GetDict();
-                var (expr, env, _) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoBooleanType.Instance);
+                var (expr, env, _) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoType.Boolean);
                 var variableValues = ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), env.GetVariables(), enteredDigits)
                     .DeclareVariable("allcells", Ut.NewArray(81, cIx => new Cell(cIx, null, enteredDigits[cIx])));
                 if ((bool?) expr.Interpret(variableValues) == false)
@@ -96,14 +96,14 @@ namespace Zinga.Lib
                     }
                 }
 
-                process("svgdefs", new SucoListType(SucoStringType.Instance), str => { resultSvgDefs.AddRange(((IEnumerable<object>) str).Cast<string>()); });
-                process("svg", SucoStringType.Instance, str => { svgCode = (string) str; });
+                process("svgdefs", SucoType.String.List(), str => { resultSvgDefs.AddRange(((IEnumerable<object>) str).Cast<string>()); });
+                process("svg", SucoType.String, str => { svgCode = (string) str; });
 
                 if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == "logic" && type["logic"] != null)
                 {
                     try
                     {
-                        var (expr, env, interpreted) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoBooleanType.Instance);
+                        var (expr, env, interpreted) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoType.Boolean);
                     }
                     catch (SucoCompileException sce)
                     {
@@ -130,7 +130,7 @@ namespace Zinga.Lib
                 var variableTypes = JsonDict.Parse(variableTypesJson);
                 foreach (var (key, value) in variableTypes.ToTuples())
                     env = env.DeclareVariable(key, SucoType.Parse(value.GetString()));
-                var parseTree = SucoParser.ParseCode(suco, env, SucoContext.Svg, SucoStringType.Instance);
+                var parseTree = SucoParser.ParseCode(suco, env, SucoContext.Svg, SucoType.String);
                 return new JsonDict { ["status"] = "ok" }.ToString();
             }
             catch (SucoParseException e)

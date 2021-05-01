@@ -24,7 +24,7 @@ namespace Zinga
             var code = req.Post["code"].Value;
             var environment = new SucoTypeEnvironment()
                 // built-ins
-                .DeclareVariable("cells", new SucoListType(new SucoListType(SucoCellType.Instance)));
+                .DeclareVariable("cells", SucoType.Cell.List().List());
 
             if (code != null)
             {
@@ -261,7 +261,7 @@ namespace Zinga
         private HttpResponse DebugSucoStuff(HttpRequest req)
         {
             var suco = @"a/2";
-            var parsed = SucoParser.ParseCode(suco, new SucoTypeEnvironment().DeclareVariable("a", SucoDecimalType.Instance), SucoContext.Svg, SucoDecimalType.Instance);
+            var parsed = SucoParser.ParseCode(suco, new SucoTypeEnvironment().DeclareVariable("a", SucoType.Decimal), SucoContext.Svg, SucoType.Decimal);
             var interpreted = parsed.Interpret(new SucoEnvironment().DeclareVariable("a", 5));
             return HttpResponse.PlainText(interpreted.ToString());
         }

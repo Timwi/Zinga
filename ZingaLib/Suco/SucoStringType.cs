@@ -14,7 +14,7 @@ namespace Zinga.Suco
 
         public override SucoType GetMemberType(string memberName, SucoContext context) => memberName switch
         {
-            "hash" => SucoStringType.Instance,
+            "hash" => SucoType.String,
             _ => base.GetMemberType(memberName, context)
         };
 
@@ -26,7 +26,7 @@ namespace Zinga.Suco
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
-            (BinaryOperator.Plus, SucoStringType) => SucoStringType.Instance,
+            (BinaryOperator.Plus, SucoStringType) => SucoType.String,
             _ => GetBinaryOperatorType(op, rightType, context)
         };
 

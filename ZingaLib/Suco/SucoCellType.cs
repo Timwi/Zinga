@@ -12,19 +12,19 @@ namespace Zinga.Suco
 
         public override SucoType GetMemberType(string memberName, SucoContext context) => memberName switch
         {
-            //"value" => SucoIntegerType.Instance,
-            "pos" => SucoIntegerType.Instance,
-            "x" => SucoIntegerType.Instance,
-            "y" => SucoIntegerType.Instance,
-            "box" => SucoIntegerType.Instance,
-            "index" => SucoIntegerType.Instance,
-            "value" => context != SucoContext.Constraint ? throw new SucoTempCompileException($"Member “cell.value” can only be used in constraint logic (not SVG code).") : SucoIntegerType.Instance,
+            //"value" => SucoType.Integer,
+            "pos" => SucoType.Integer,
+            "x" => SucoType.Integer,
+            "y" => SucoType.Integer,
+            "box" => SucoType.Integer,
+            "index" => SucoType.Integer,
+            "value" => context != SucoContext.Constraint ? throw new SucoTempCompileException($"Member “cell.value” can only be used in constraint logic (not SVG code).") : SucoType.Integer,
 
-            "cx" => SucoDecimalType.Instance,
-            "cy" => SucoDecimalType.Instance,
+            "cx" => SucoType.Decimal,
+            "cy" => SucoType.Decimal,
 
-            "orthogonal" => new SucoFunctionType((new[] { SucoCellType.Instance }, SucoBooleanType.Instance)),
-            "adjacent" => new SucoFunctionType((new[] { SucoCellType.Instance }, SucoBooleanType.Instance)),
+            "orthogonal" => new SucoFunctionType((new[] { SucoType.Cell }, SucoType.Boolean)),
+            "adjacent" => new SucoFunctionType((new[] { SucoType.Cell }, SucoType.Boolean)),
 
             _ => base.GetMemberType(memberName, context)
         };
@@ -44,8 +44,8 @@ namespace Zinga.Suco
                 "cx" => op.X + .5,
                 "cy" => op.Y + .5,
 
-                "orthogonal" => new SucoFunction((parameters: new[] { SucoCellType.Instance }, returnType: SucoBooleanType.Instance, interpreter: args => op.Orthogonal((Cell) args[0]))),
-                "adjacent" => new SucoFunction((parameters: new[] { SucoCellType.Instance }, returnType: SucoBooleanType.Instance, interpreter: args => op.Adjacent((Cell) args[0]))),
+                "orthogonal" => new SucoFunction((parameters: new[] { SucoType.Cell }, returnType: SucoType.Boolean, interpreter: args => op.Orthogonal((Cell) args[0]))),
+                "adjacent" => new SucoFunction((parameters: new[] { SucoType.Cell }, returnType: SucoType.Boolean, interpreter: args => op.Adjacent((Cell) args[0]))),
 
                 _ => base.InterpretMemberAccess(memberName, operand)
             };
