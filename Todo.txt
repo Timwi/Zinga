@@ -3,4 +3,6 @@
 • Suco parse tree / error reporting
 • Support other grid sizes
 • Account system
-• Bug: changing name doesn’t italicize
+• Bug: italicization
+    [3:28 PM] 🥊Brawlbox🥊: it seems they only update through undoing and redoing, and changing the kind
+• Put notation above the constraint SVG
