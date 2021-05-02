@@ -1,15 +1,13 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
 {
     public class SucoEnvironment
     {
-        private readonly Dictionary<string, object> _variableValues = new();
-
-        private readonly (string name, object value, IList list, int index)? _lastDeclared;
-        private readonly (string name, object value, IList list, int index)? _prevLastDeclared;
+        private readonly List<(string name, object value, IList list, int index)> _variables = new();
 
         public SucoEnvironment()
         {
@@ -17,14 +15,7 @@ namespace Zinga.Suco
 
         public SucoEnvironment(Dictionary<string, object> variableValues)
         {
-            _variableValues = variableValues;
-        }
-
-        private SucoEnvironment(Dictionary<string, object> newValues, (string name, object value, IList list, int index)? prevLastDeclared, (string name, object value, IList list, int index)? lastDeclared)
-        {
-            _variableValues = newValues;
-            _prevLastDeclared = prevLastDeclared;
-            _lastDeclared = lastDeclared;
+            _variables = variableValues.Select(kvp => (name: kvp.Key, value: kvp.Value, list: (IList) null, index: 0)).ToList();
         }
 
         /// <summary>
@@ -32,9 +23,10 @@ namespace Zinga.Suco
         ///     cref="GetLastValue"/> and <see cref="GetPrevLastValue"/>.</summary>
         public SucoEnvironment DeclareVariable(string name, object value)
         {
-            var copy = _variableValues.ToDictionary();
-            copy[name] = value;
-            return new SucoEnvironment(copy, _prevLastDeclared, _lastDeclared);
+            var env = new SucoEnvironment();
+            env._variables.AddRange(_variables);
+            env._variables.Add((name, value, null, 0));
+            return env;
         }
 
         /// <summary>
@@ -42,19 +34,40 @@ namespace Zinga.Suco
         ///     <see cref="GetLastValue"/> and <see cref="GetPrevLastValue"/>.</summary>
         public SucoEnvironment DeclareVariable(string name, IList collection, int index)
         {
-            var copy = _variableValues.ToDictionary();
-            copy[name] = collection[index];
-            return new SucoEnvironment(copy, _lastDeclared, (name, collection[index], collection, index));
+            var env = new SucoEnvironment();
+            env._variables.AddRange(_variables);
+            env._variables.Add((name, collection[index], collection, index));
+            return env;
         }
 
-        public object GetValue(string variableName) => _variableValues.TryGetValue(variableName, out var value) ? value : throw new SucoTempCompileException($"The variable “{variableName}” is not defined.");
+        public object GetValue(string variableName)
+        {
+            var match = _variables.FirstOrNull(tup => tup.name == variableName);
+            if (match == null)
+                throw new SucoTempCompileException($"The variable “{variableName}” is not defined.");
+            return match.Value.value;
+        }
 
-        public object GetLastValue() => _lastDeclared == null ? throw new SucoTempCompileException($"No current variable in scope from a list comprehension.") : _lastDeclared.Value.value;
-        public IList GetLastList() => _lastDeclared == null ? throw new SucoTempCompileException($"No current variable in scope from a list comprehension.") : _lastDeclared.Value.list;
-        public int GetLastIndex() => _lastDeclared == null ? throw new SucoTempCompileException($"No current variable in scope from a list comprehension.") : _lastDeclared.Value.index;
+        private int GetLastListVariableIndex(int howMany)
+        {
+            for (var i = _variables.Count - 1; i >= 0; i--)
+            {
+                if (_variables[i].list != null)
+                {
+                    howMany--;
+                    if (howMany == 0)
+                        return i;
+                }
+            }
+            throw new SucoTempCompileException($"Not enough prior variables in scope from list comprehensions.");
+        }
 
-        public object GetPrevLastValue() => _prevLastDeclared == null ? throw new SucoTempCompileException($"No previous variable in scope from a list comprehension.") : _prevLastDeclared.Value.value;
-        public IList GetPrevLastList() => _prevLastDeclared == null ? throw new SucoTempCompileException($"No previous variable in scope from a list comprehension.") : _prevLastDeclared.Value.list;
-        public int GetPrevLastIndex() => _prevLastDeclared == null ? throw new SucoTempCompileException($"No previous variable in scope from a list comprehension.") : _prevLastDeclared.Value.index;
+        public object GetLastValue() => _variables[GetLastListVariableIndex(1)].value;
+        public IList GetLastList() => _variables[GetLastListVariableIndex(1)].list;
+        public int GetLastIndex() => _variables[GetLastListVariableIndex(1)].index;
+
+        public object GetPrevLastValue() => _variables[GetLastListVariableIndex(2)].value;
+        public IList GetPrevLastList() => _variables[GetLastListVariableIndex(2)].list;
+        public int GetPrevLastIndex() => _variables[GetLastListVariableIndex(2)].index;
     }
 }

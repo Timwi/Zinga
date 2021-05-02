@@ -38,6 +38,5 @@ namespace Zinga.Suco
             throw new InvalidOperationException("Unexpected implicit conversion. Call Type.ImplicitlyConvertibleTo first to ensure convertibility.");
 
         public abstract object Interpret(SucoEnvironment env);
-
     }
 }
