@@ -64,13 +64,12 @@
         else
             blazorQueue.push([method, args, callback]);
     }
-    Blazor.start({})
-        .then(() =>
-        {
-            for (let i = 0; i < blazorQueue.length; i++)
-                DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
-            blazorQueue = null;
-        });
+    Blazor.start({}).then(() =>
+    {
+        for (let i = 0; i < blazorQueue.length; i++)
+            DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
+        blazorQueue = null;
+    });
 
     let puzzleDiv = document.querySelector('div.puzzle');
     let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
