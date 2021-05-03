@@ -3,4 +3,3 @@
 • Suco parse tree / error reporting
 • Support other grid sizes
 • Account system
-• Put notation above the constraint SVG

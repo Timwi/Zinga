@@ -54,9 +54,9 @@ namespace Zinga.Suco
         public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid) => (memberName, Inner) switch
         {
             // Lists of cells
-            ("sum", SucoCellType) => ((IEnumerable<object>) operand)?.Cast<Cell>().Aggregate((int?) 0, (prev, next) => prev == null || grid[next.Index] == null ? null : prev.Value + grid[next.Index].Value),
-            ("min", SucoCellType) => minMax(((IEnumerable<object>) operand)?.Cast<Cell>(), grid, min: true),
-            ("max", SucoCellType) => minMax(((IEnumerable<object>) operand)?.Cast<Cell>(), grid, min: false),
+            ("sum", SucoCellType) => ((IEnumerable<Cell>) operand)?.Aggregate((int?) 0, (prev, next) => prev == null || grid[next.Index] == null ? null : prev.Value + grid[next.Index].Value),
+            ("min", SucoCellType) => minMax((IEnumerable<Cell>) operand, grid, min: true),
+            ("max", SucoCellType) => minMax((IEnumerable<Cell>) operand, grid, min: false),
             ("unique", SucoCellType) => operand == null ? null : checkUnique(((IEnumerable<Cell>) operand).Select(c => grid[c.Index])),
             ("outline", SucoCellType) => operand == null ? null : outline(((IEnumerable<object>) operand).Cast<Cell>().Select(c => c.Index).ToArray()),
 
@@ -65,9 +65,9 @@ namespace Zinga.Suco
             ("same", SucoIntegerType) => operand == null ? null : same(((IEnumerable<int?>) operand)),
 
             // Lists of booleans
-            ("all", SucoBooleanType) => ((IEnumerable<object>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == false ? false : prev == null || next == null ? null : true),
-            ("any", SucoBooleanType) => ((IEnumerable<object>) operand)?.Aggregate((bool?) false, (prev, next) => prev == true || (bool?) next == true ? true : prev == null || next == null ? null : false),
-            ("none", SucoBooleanType) => ((IEnumerable<object>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == true ? false : prev == null || next == null ? null : true),
+            ("all", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == false ? false : prev == null || next == null ? null : true),
+            ("any", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) false, (prev, next) => prev == true || (bool?) next == true ? true : prev == null || next == null ? null : false),
+            ("none", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == true ? false : prev == null || next == null ? null : true),
 
             // Lists of lists of integers
             ("unique", SucoListType { Inner: SucoIntegerType }) =>

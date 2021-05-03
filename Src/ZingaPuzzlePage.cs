@@ -139,7 +139,7 @@ namespace Zinga
                                 <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
                                     <style></style>
                                     <defs>
-                                        <filter id='constraint-invalid-shadow' x='-1' y='-1' width='500%' height='500%'>
+                                        <filter id='constraint-invalid-shadow' x='-1' y='-1' width='500%' height='500%' filterUnits='userSpaceOnUse'>
                                             <feMorphology in='SourceGraphic' operator='dilate' radius='.05' result='constraint-selection-shadow-1'></feMorphology>
                                             <feColorMatrix in='constraint-selection-shadow-1' type='matrix' result='constraint-selection-shadow-2' values='0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0'></feColorMatrix>
                                             <feGaussianBlur stdDeviation='.05' in='constraint-selection-shadow-2' result='constraint-selection-shadow-3'></feGaussianBlur>
@@ -171,20 +171,9 @@ namespace Zinga
                                                 .JoinString()}</g>
 
                                             <g id='bb-puzzle-without-global'>
-                                                {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25' stroke-width='0'>
+                                                {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
                                                     <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
                                                     <g id='sudoku-multicolor-{cell}' transform='translate({cell % 9 + .5}, {cell / 9 + .5})'></g>
-                                                    <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
-
-                                                    <text class='notation' id='sudoku-center-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .62}' font-size='.3'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-0' x='{cell % 9 + .1}' y='{cell / 9 + .3}' text-anchor='start'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-1' x='{cell % 9 + .9}' y='{cell / 9 + .3}' text-anchor='end'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-2' x='{cell % 9 + .1}' y='{cell / 9 + .875}' text-anchor='start'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-3' x='{cell % 9 + .9}' y='{cell / 9 + .875}' text-anchor='end'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-4' x='{cell % 9 + .5}' y='{cell / 9 + .3}'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-5' x='{cell % 9 + .9}' y='{cell / 9 + .6125}' text-anchor='end'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-6' x='{cell % 9 + .5}' y='{cell / 9 + .875}'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % 9 + .1}' y='{cell / 9 + .6125}' text-anchor='start'></text>
                                                 </g>").JoinString()}
 
                                                 <line x1='1' y1='0' x2='1' y2='9' stroke='black' stroke-width='.01' />
@@ -235,6 +224,19 @@ namespace Zinga
 
                                                 <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
                                                 <g id='over-svg'>{puzzle?.ExtraSvg}</g>
+
+                                                {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
+                                                    <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
+                                                    <text class='notation' id='sudoku-center-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .62}' font-size='.3'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-0' x='{cell % 9 + .1}' y='{cell / 9 + .3}' text-anchor='start'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-1' x='{cell % 9 + .9}' y='{cell / 9 + .3}' text-anchor='end'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-2' x='{cell % 9 + .1}' y='{cell / 9 + .875}' text-anchor='start'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-3' x='{cell % 9 + .9}' y='{cell / 9 + .875}' text-anchor='end'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-4' x='{cell % 9 + .5}' y='{cell / 9 + .3}'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-5' x='{cell % 9 + .9}' y='{cell / 9 + .6125}' text-anchor='end'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-6' x='{cell % 9 + .5}' y='{cell / 9 + .875}'></text>
+                                                    <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % 9 + .1}' y='{cell / 9 + .6125}' text-anchor='start'></text>
+                                                </g>").JoinString()}
                                             </g>
                                         </g>
                                     </g>

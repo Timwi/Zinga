@@ -27,15 +27,28 @@
             elem.classList.remove(className);
     }
 
+    let outputBlazorTimings = false;
     let blazorQueue = [];
     function dotNet(method, args, callback)
     {
         if (blazorQueue === null)
         {
             if (method === null)
-                callback();
+            {
+                if (callback)
+                    callback();
+            }
             else
-                DotNet.invokeMethodAsync('ZingaWasm', method, ...args).then(callback);
+            {
+                let start = new Date();
+                DotNet.invokeMethodAsync('ZingaWasm', method, ...args).then(result =>
+                {
+                    if (outputBlazorTimings)
+                        console.log(`${method} took ${new Date() - start} ms.`);
+                    if (callback)
+                        callback(result);
+                });
+            }
         }
         else
             blazorQueue.push([method, args, callback]);
@@ -44,13 +57,19 @@
     {
         for (let i = 0; i < blazorQueue.length; i++)
         {
-            if (blazorQueue[i][0] === null)
-                blazorQueue[i][2]();
+            let bq = blazorQueue[i];
+            if (bq[0] === null)
+                bq[2]();
             else
             {
-                var r = DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]);
-                if (blazorQueue[i][2])
-                    r.then(blazorQueue[i][2]);
+                let start = new Date();
+                var r = DotNet.invokeMethodAsync('ZingaWasm', bq[0], ...bq[1]).then(result =>
+                {
+                    if (outputBlazorTimings)
+                        console.log(`${bq[0]} took ${new Date() - start} ms.`);
+                    if (bq[2])
+                        r.then(bq[2](result));
+                });
             }
         }
         blazorQueue = null;
@@ -254,7 +273,8 @@
     {
     }
 
-    dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
+    if (puzzleId !== 'test')
+        dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
 
     function resetClearButton()
     {
@@ -277,33 +297,39 @@
         // Check the Sudoku rules (rows, columns and boxes)
         for (let i = 0; i < 9; i++)
         {
-            for (let colA = 0; colA < 9; colA++)
-                for (let colB = colA + 1; colB < 9; colB++)
+            // Check rows
+            let go = true;
+            for (let colA = 0; colA < 9 && go; colA++)
+                for (let colB = colA + 1; colB < 9 && go; colB++)
                     if (grid[colA + 9 * i] !== null && grid[colA + 9 * i] === grid[colB + 9 * i])
                     {
                         if (showErrors)
                             document.getElementById(`row-invalid-${i}`).setAttribute('opacity', 1);
                         isValid = false;
-                        break;
+                        go = false;
                     }
-            for (let rowA = 0; rowA < 9; rowA++)
-                for (let rowB = rowA + 1; rowB < 9; rowB++)
+            // Check columns
+            go = true;
+            for (let rowA = 0; rowA < 9 && go; rowA++)
+                for (let rowB = rowA + 1; rowB < 9 && go; rowB++)
                     if (grid[i + 9 * rowA] !== null && grid[i + 9 * rowA] === grid[i + 9 * rowB])
                     {
                         if (showErrors)
                             document.getElementById(`column-invalid-${i}`).setAttribute('opacity', 1);
                         isValid = false;
-                        break;
+                        go = false;
                     }
-            for (let cellA = 0; cellA < 9; cellA++)
-                for (let cellB = cellA + 1; cellB < 9; cellB++)
+            // Check boxes
+            go = true;
+            for (let cellA = 0; cellA < 9 && go; cellA++)
+                for (let cellB = cellA + 1; cellB < 9 && go; cellB++)
                     if (grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] !== null &&
                         grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] === grid[cellB % 3 + 3 * (i % 3) + 9 * (((cellB / 3) | 0) + 3 * ((i / 3) | 0))])
                     {
                         if (showErrors)
                             document.getElementById(`box-invalid-${i}`).setAttribute('opacity', 1);
                         isValid = false;
-                        break;
+                        go = false;
                     }
         }
 
@@ -340,10 +366,12 @@
             Array.from(document.querySelectorAll('#constraint-svg>g,#constraint-svg-global>g')).forEach(g => { g.removeAttribute('filter'); });
     }
 
-    function updateConstraints() 
+    function updateConstraints()
     {
         if (!document.hidden && puzzleId === 'test')
         {
+            if (outputBlazorTimings)
+                console.log('Re-initializing');
             let state = null;
             try { state = JSON.parse(localStorage.getItem(`zinga-edit`)); }
             catch { }
@@ -364,12 +392,7 @@
                 document.getElementById('rules-text').innerHTML = paragraphs.map(_ => '<p></p>').join('');
                 Array.from(document.querySelectorAll('#rules-text>p')).forEach((p, pIx) => { p.innerText = paragraphs[pIx]; });
 
-                dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)], () =>
-                {
-                    updateVisuals();
-                    fixViewBox();
-                    window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
-                });
+                dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)]);
 
                 dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints), null, null], svgs =>
                 {
@@ -379,12 +402,16 @@
                     document.getElementById('constraint-svg-global').innerHTML = list[2];
                     updateVisuals();
                     fixViewBox();
+                    window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
                 });
             }
         }
     }
-    updateConstraints();    // Make sure this happens before the first call to updateVisuals()
-    document.addEventListener('visibilitychange', updateConstraints);
+    if (puzzleId === 'test')
+    {
+        updateConstraints();    // Make sure this happens before the first call to updateVisuals()
+        document.addEventListener('visibilitychange', updateConstraints);
+    }
 
     function updateVisuals(udpateStorage)
     {
@@ -398,15 +425,19 @@
         }
         resetClearButton();
 
-        // Sudoku grid (digits, highlights — not red glow, that’s done further up)
+        // Sudoku grid (digits, selection/highlight)
         let digitCounts = Array(9).fill(0);
+        Array.from(document.querySelectorAll('.cell')).forEach(cellElem =>
+        {
+            let cell = cellElem.dataset.cell | 0;
+            setClass(cellElem, 'highlighted', selectedCells.includes(cell) || highlightedDigits.includes(getDisplayedSudokuDigit(state, cell)));
+            for (let color = 0; color < 9; color++)
+                setClass(cellElem, `c${color}`, state.colors[cell].length >= 1 && state.colors[cell][0] === color);
+        });
         for (let cell = 0; cell < 81; cell++)
         {
             let digit = getDisplayedSudokuDigit(state, cell);
             digitCounts[digit - 1]++;
-
-            let sudokuCell = document.getElementById(`sudoku-${cell}`);
-            setClass(sudokuCell, 'highlighted', selectedCells.includes(cell) || highlightedDigits.includes(digit));
 
             let intendedText = null;
             let intendedCenterDigits = null;
@@ -424,9 +455,6 @@
             document.getElementById(`sudoku-center-text-${cell}`).textContent = intendedCenterDigits !== null ? intendedCenterDigits : '';
             for (let i = 0; i < 8; i++)
                 document.getElementById(`sudoku-corner-text-${cell}-${i}`).textContent = intendedCornerDigits !== null && i < intendedCornerDigits.length ? intendedCornerDigits[i] : '';
-
-            for (let color = 0; color < 9; color++)
-                setClass(sudokuCell, `c${color}`, state.colors[cell].length >= 1 && state.colors[cell][0] === color);
 
             function getPerimeterPoint(angle)
             {
@@ -456,7 +484,7 @@
                 path += getPerimeterPoint(angle2);
                 multiColorSvg += `<path d='${path}z' class='c${state.colors[cell][i]}' />`;
             }
-            puzzleDiv.querySelector(`#sudoku-multicolor-${cell}`).innerHTML = multiColorSvg;
+            document.getElementById(`sudoku-multicolor-${cell}`).innerHTML = multiColorSvg;
         }
 
         // Button highlights

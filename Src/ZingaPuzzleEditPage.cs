@@ -115,7 +115,7 @@ namespace Zinga
                                     <style></style>
                                     <defs>
                                         <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
-                                        <filter id='constraint-selection-shadow' x='-1' y='-1' width='500%' height='500%'>
+                                        <filter id='constraint-selection-shadow' x='-1' y='-1' width='500%' height='500%' filterUnits='userSpaceOnUse'>
                                             <feMorphology in='SourceGraphic' operator='dilate' radius='.05' result='constraint-selection-shadow-1' />
                                             <feColorMatrix in='constraint-selection-shadow-1' type='matrix' values='0 0 0 0 .1 0 0 0 0 .39 0 0 0 0 .95 0 0 0 5 0' result='constraint-selection-shadow-2' />
                                             <feGaussianBlur in='constraint-selection-shadow-2' stdDeviation='.05' result='constraint-selection-shadow-3' />

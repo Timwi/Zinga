@@ -193,20 +193,6 @@ svg.puzzle-svg {
         fill: white;
     }
 
-    svg.puzzle-svg .frame.invalid {
-        opacity: 1;
-        stroke: #f00;
-    }
-
-    svg.puzzle-svg .frame.solved {
-        opacity: 1;
-        stroke: #0f0;
-    }
-
-    svg.puzzle-svg .frame {
-        opacity: 0;
-    }
-
     svg.puzzle-svg .button > rect.clickable {
         fill: white;
         stroke: black;
@@ -240,24 +226,9 @@ svg.puzzle-svg {
         opacity: 0;
     }
 
-    svg.puzzle-svg .edge-cell {
-        fill: transparent;
-        stroke: none;
-    }
-
-    svg.puzzle-svg .frame.invalid {
-        opacity: 1;
-        stroke: #f00;
-    }
-
 .puzzle.solved {
     background: hsl(115, 50%, 40%);
 }
-
-    .puzzle.solved svg .frame {
-        opacity: 1;
-        stroke: #0f0;
-    }
 
 .puzzle.mode-color svg .button rect.color {
     opacity: 1;

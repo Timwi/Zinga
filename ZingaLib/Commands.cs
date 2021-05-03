@@ -30,6 +30,9 @@ namespace Zinga.Lib
 
         public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson, int? editingConstraintTypeId, string editingConstraintTypeParameter)
         {
+#if DEBUG
+            Console.WriteLine($@"Zinga.Lib.Commands.RenderConstraintSvgs(""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"", {(editingConstraintTypeId == null ? "null" : editingConstraintTypeId.ToString())}, ""{editingConstraintTypeParameter.CLiteralEscape()}"");");
+#endif
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
             var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
             var constraints = JsonList.Parse(constraintsJson);
@@ -111,6 +114,10 @@ namespace Zinga.Lib
 
         public static void SetupConstraints(string givensJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
         {
+#if DEBUG
+            Console.WriteLine($@"Zinga.Lib.Commands.SetupConstraints(""{givensJson.CLiteralEscape()}"", ""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
+#endif
+
             var givens = JsonList.Parse(givensJson).Select(v => v?.GetInt()).ToArray();
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
             var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
@@ -137,6 +144,10 @@ namespace Zinga.Lib
 
         public static string CheckConstraints(string enteredDigitsJson, string constraintsJson)
         {
+#if DEBUG
+            Console.WriteLine($@"Zinga.Lib.Commands.CheckConstraints(""{enteredDigitsJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
+#endif
+
             var enteredDigits = JsonList.Parse(enteredDigitsJson).Select(v => v?.GetInt()).ToArray();
             var constraints = JsonList.Parse(constraintsJson);
             var results = new JsonList();

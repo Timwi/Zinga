@@ -19,6 +19,14 @@ namespace Zinga.Lib
             return new SucoEnvironment(list);
         }
 
+        private static object convertList(JsonList list, SucoType inner)
+        {
+            var result = Array.CreateInstance(inner.CsType, list.Count);
+            for (var i = 0; i < list.Count; i++)
+                result.SetValue(convertVariableValue(inner, list[i]), i);
+            return result;
+        }
+
         private static object convertVariableValue(SucoType type, JsonValue j) => type switch
         {
             SucoBooleanType => j.GetBoolLenientSafe() ?? false,
@@ -26,7 +34,7 @@ namespace Zinga.Lib
             SucoDecimalType => j.GetDoubleLenientSafe() ?? 0d,
             SucoIntegerType => j.GetIntLenientSafe() ?? 0,
             SucoStringType => j.GetStringLenientSafe() ?? "",
-            SucoListType lst => (j.GetListSafe() ?? new JsonList()).Select((v, ix) => convertVariableValue(lst.Inner, v)).ToArray(),
+            SucoListType lst => convertList(j.GetListSafe() ?? new JsonList(), lst.Inner),
             _ => throw new NotImplementedException($"Programmer has neglected to include code to deserialize “{type}”.")
         };
 
