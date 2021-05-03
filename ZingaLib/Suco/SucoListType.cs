@@ -24,6 +24,8 @@ namespace Zinga.Suco
         {
             // Lists of cells
             ("sum", SucoCellType) => SucoType.Integer,
+            ("min", SucoCellType) => SucoType.Integer,
+            ("max", SucoCellType) => SucoType.Integer,
             ("unique", SucoCellType) => SucoType.Boolean,
             ("outline", SucoCellType) => new SucoFunctionType(
                 (new[] { SucoType.Decimal, SucoType.Decimal }, SucoType.String),
@@ -53,6 +55,8 @@ namespace Zinga.Suco
         {
             // Lists of cells
             ("sum", SucoCellType) => ((IEnumerable<object>) operand)?.Cast<Cell>().Aggregate((int?) 0, (prev, next) => prev == null || grid[next.Index] == null ? null : prev.Value + grid[next.Index].Value),
+            ("min", SucoCellType) => minMax(((IEnumerable<object>) operand)?.Cast<Cell>(), grid, min: true),
+            ("max", SucoCellType) => minMax(((IEnumerable<object>) operand)?.Cast<Cell>(), grid, min: false),
             ("unique", SucoCellType) => operand == null ? null : checkUnique(((IEnumerable<Cell>) operand).Select(c => grid[c.Index])),
             ("outline", SucoCellType) => operand == null ? null : outline(((IEnumerable<object>) operand).Cast<Cell>().Select(c => c.Index).ToArray()),
 
@@ -75,6 +79,21 @@ namespace Zinga.Suco
 
             _ => base.InterpretMemberAccess(memberName, operand, env, grid)
         };
+
+        private int? minMax(IEnumerable<Cell> cells, int?[] grid, bool min)
+        {
+            using var e = cells.GetEnumerator();
+            if (!e.MoveNext() || grid[e.Current.Index] == null)
+                return null;
+            var result = grid[e.Current.Index].Value;
+            while (e.MoveNext())
+            {
+                if (e.Current == null || grid[e.Current.Index] == null)
+                    return null;
+                result = min ? Math.Min(result, grid[e.Current.Index].Value) : Math.Max(result, grid[e.Current.Index].Value);
+            }
+            return result;
+        }
 
         private int? count(IEnumerable<object> operand)
         {
