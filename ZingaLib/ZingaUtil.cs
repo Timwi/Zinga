@@ -11,25 +11,22 @@ namespace Zinga.Lib
 {
     public static class ZingaUtil
     {
-        public static SucoEnvironment ConvertVariableValues(JsonDict valuesJson, SucoVariable[] variables, int?[] grid = null)
+        public static SucoEnvironment ConvertVariableValues(JsonDict variablesJson, JsonDict valuesJson)
         {
-            var dic = new Dictionary<string, object>();
-            foreach (var variable in variables)
-            {
-                var jsonValue = valuesJson.Safe[variable.Name];
-                dic[variable.Name] = convertVariableValue(variable.Type, jsonValue, null, grid);
-            }
-            return new SucoEnvironment(dic);
+            var list = new List<(string name, object value)>();
+            foreach (var (varName, varType) in variablesJson.ToTuples())
+                list.Add((varName, convertVariableValue(SucoType.Parse(varType.GetString()), valuesJson[varName])));
+            return new SucoEnvironment(list);
         }
 
-        private static object convertVariableValue(SucoType type, JsonValue j, int? position, int?[] grid = null) => type switch
+        private static object convertVariableValue(SucoType type, JsonValue j) => type switch
         {
             SucoBooleanType => j.GetBoolLenientSafe() ?? false,
-            SucoCellType => (j.GetIntLenientSafe() ?? 0).Apply(cell => new Cell(cell, position, grid.NullOr(g => g[cell]))),
+            SucoCellType => (j.GetIntLenientSafe() ?? 0).Apply(cell => new Cell(cell)),
             SucoDecimalType => j.GetDoubleLenientSafe() ?? 0d,
             SucoIntegerType => j.GetIntLenientSafe() ?? 0,
             SucoStringType => j.GetStringLenientSafe() ?? "",
-            SucoListType lst => (j.GetListSafe() ?? new JsonList()).Select((v, ix) => convertVariableValue(lst.Inner, v, ix + 1, grid)).ToArray(),
+            SucoListType lst => (j.GetListSafe() ?? new JsonList()).Select((v, ix) => convertVariableValue(lst.Inner, v)).ToArray(),
             _ => throw new NotImplementedException($"Programmer has neglected to include code to deserialize “{type}”.")
         };
 

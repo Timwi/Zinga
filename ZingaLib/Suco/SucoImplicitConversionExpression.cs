@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public class SucoImplicitConversionExpression : SucoExpression
     {
@@ -13,6 +11,14 @@ namespace Zinga.Suco
         }
 
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => this;
-        public override object Interpret(SucoEnvironment env) => Expression.Type.InterpretImplicitConversionTo(Type, Expression.Interpret(env));
+        public override object Interpret(SucoEnvironment env, int?[] grid) => Expression.Type.InterpretImplicitConversionTo(Type, Expression.Interpret(env, grid));
+
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var optimized = Expression.Optimize(env, givens);
+            return optimized is SucoConstant c
+                ? new SucoConstant(StartIndex, EndIndex, Type, optimized.Type.InterpretImplicitConversionTo(Type, c.Value))
+                : new SucoImplicitConversionExpression(StartIndex, EndIndex, optimized, Type);
+        }
     }
 }

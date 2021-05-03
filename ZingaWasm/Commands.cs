@@ -15,6 +15,9 @@ namespace Zinga.Wasm
         public static string GenerateOutline(string regionsJson) => Lib.Commands.GenerateOutline(regionsJson);
 
         [JSInvokable]
-        public static string CheckConstraints(string enteredDigitsJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson) => Lib.Commands.CheckConstraints(enteredDigitsJson, constraintTypesJson, customConstraintTypesJson, constraintsJson);
+        public static void SetupConstraints(string givensJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson) => Lib.Commands.SetupConstraints(givensJson, constraintTypesJson, customConstraintTypesJson, constraintsJson);
+
+        [JSInvokable]
+        public static string CheckConstraints(string enteredDigitsJson, string constraintsJson) => Lib.Commands.CheckConstraints(enteredDigitsJson, constraintsJson);
     }
 }

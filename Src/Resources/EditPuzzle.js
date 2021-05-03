@@ -98,13 +98,6 @@
     }
 
     let state = makeEmptyState();
-    state.title = puzzleDiv.dataset.title || 'Sudoku';
-    state.author = puzzleDiv.dataset.author || 'unknown';
-    state.rules = puzzleDiv.dataset.rules || '';
-    if (puzzleDiv.dataset.constraints)
-        state.constraints = JSON.parse(puzzleDiv.dataset.constraints);
-    for (let givenInf of JSON.parse(puzzleDiv.dataset.givens || null) || [])
-        state.givens[givenInf[0]] = givenInf[1];
 
     let undoBuffer = [];
     let redoBuffer = [];
@@ -133,6 +126,19 @@
             if (state.author === undefined || state.author === null) state.author = 'unknown';
             if (state.rules === undefined || state.rules === null) state.author = '';
             if (state.customConstraintTypes === undefined || state.customConstraintTypes === null) state.customConstraintTypes = [];
+
+            if (!Array.isArray(state.givens) || state.givens.length != 81 || state.givens.some(g => g != null && (g < 1 || g > 9)))
+                state.givens = Array(81).fill(null);
+            state.constraints = Array.isArray(state.constraints) ? state.constraints.filter(c => 'type' in c && Number.isInteger(c.type)) : [];
+            for (let i = 0; i < state.constraints.length; i++)
+            {
+                let cType = getConstraintType(state.constraints[i].type);
+                for (let varName of Object.keys(state.constraints[i].values))
+                    if (!(varName in cType.variables))
+                        delete state.constraints[i].values[varName];
+                for (let varName of Object.keys(cType.variables))
+                    state.constraints[i].values[varName] = coerceValue(state.constraints[i].values[varName], cType.variables[varName]);
+            }
         }
 
         let undoB = localStorage.getItem(`zinga-edit-undo`);
@@ -143,6 +149,24 @@
     }
     catch
     {
+    }
+
+    function coerceValue(value, type)
+    {
+        let result = /^list\((.*)\)$/.exec(type);
+        if (result && !Array.isArray(value))
+            return [];
+        if (result)
+            return value.map(val => coerceValue(val, result[1]));
+        switch (type)
+        {
+            case 'cell':
+            case 'int': return value | 0;
+            case 'string': return `${value}`;
+            case 'boolean': return !!value;
+            case 'decimal': return +value;
+        }
+        return null;
     }
 
     function resetClearButton()
@@ -308,7 +332,7 @@
                     variableHtml += `<div class='variable'><div class='name'>${v}</div><div class='value'>${variableUi(constraintType.variables[v], constraint.values[v], `constraint-${cIx}-${v}`, constraintType.kind, cIx)}</div></div>`;
 
                 constraintListHtml += `
-                    <div class='constraint${constraint.type < 0 ? ' custom' : ''}${constraint.expanded ? ' expanded' : ''}' id='constraint-${cIx}' data-index='${cIx}'>
+                    <div class='constraint${constraint.expanded ? ' expanded' : ''}' id='constraint-${cIx}' data-index='${cIx}'>
                         <div class='name'><span></span><div class='expand'></div><button class='mini-btn merge' title='Merge constraint types (set selected constraints to match this type)'></button></div>
                         <div class='variables'>${variableHtml}</div>
                     </div>`;
@@ -402,16 +426,12 @@
                 let mergeBtn = constraintDiv.querySelector('.mini-btn.merge');
                 setButtonHandler(mergeBtn, () =>
                 {
-                    console.log(`Selected: [${selectedConstraints.map(c => `#${c}=${state.constraints[c].type}`).join(', ')}]`);
-                    console.log(mergeBtn);
                     let targetTypeId = state.constraints[cIx].type;
                     let targetType = getConstraintType(targetTypeId);
-                    console.log(`Target ID: ${targetTypeId}`);
                     saveUndo();
                     for (let selCIx of selectedConstraints)
                         if (state.constraints[selCIx].type !== targetTypeId)
                         {
-                            console.log(`Setting constraint ${selCIx} from ${state.constraints[selCIx].type} to ${targetTypeId}`);
                             state.constraints[selCIx].type = targetTypeId;
                             for (let varName of Object.keys(state.constraints[selCIx].values))
                                 if (!(varName in targetType.variables))
@@ -459,6 +479,7 @@
             let constraint = state.constraints[cIx];
             constraintDiv.style.backgroundColor = getConstraintColor(constraint.type, selectedConstraints.includes(cIx));
             constraintDiv.style.color = selectedConstraints.includes(cIx) ? 'white' : 'black';
+            setClass(constraintDiv, 'custom', constraint.type < 0);
             let cType = getConstraintType(constraint.type);
             constraintDiv.querySelector('.name>span').innerText = cType.name;
             constraintDiv.querySelector('.mini-btn.merge').style.display = selectedConstraints.length > 1 && !allSimilar && selectedConstraints.includes(cIx) ? 'block' : 'none';
@@ -893,13 +914,13 @@
 
                 if (variableName !== specialVariable)
                 {
-                    // Button to delete a variable
+                    // Button to delete a property
                     setButtonHandler(tr.querySelector('button.remove'), () =>
                     {
                         saveUndo();
                         delete cType.variables[variableName];
                         generateVariablesTable();
-                        updateVisuals({ storage: true, ui: true });
+                        updateVisuals({ storage: true, ui: true, svg: true });
                     });
 
                     tr.querySelector('th').ondblclick = function()
@@ -922,7 +943,7 @@
                                 delete cType.variables[variableName];
                                 generateVariablesTable();
                                 updateVisuals({ storage: true, ui: true });
-                                document.getElementById(`constraint-code-variable-${variableName}-0`).focus();
+                                document.getElementById(`constraint-code-variable-${newName}-0`).focus();
                             }
                             break;
                         }
@@ -974,22 +995,14 @@
             let i = 1;
             while (`property${i === 1 ? '' : i}` in cType.variables)
                 i++;
-            cType.variables[`property${i === 1 ? '' : i}`] = 'cell';
+            let varName = `property${i === 1 ? '' : i}`;
+            cType.variables[varName] = 'cell';
+            for (let i = 0; i < state.constraints.length; i++)
+                if (state.constraints[i].type === cTypeId)
+                    state.constraints[i].values[varName] = [0];
             generateVariablesTable();
-            updateVisuals({ storage: true, ui: true });
+            updateVisuals({ storage: true, ui: true, svg: true });
         });
-
-        // Drop-down to change the kind
-        document.getElementById('constraint-code-kind').onchange = function()
-        {
-            saveUndo();
-            cType.kind = document.getElementById('constraint-code-kind').value;
-            let inf = getSpecialVariable(cType.kind);
-            if (inf[0] !== null)
-                cType.variables[inf[0]] = inf[1];
-            generateVariablesTable();
-            updateVisuals({ storage: true, ui: true });
-        };
 
         generateVariablesTable();
     }
@@ -1035,6 +1048,16 @@
             editingConstraintType = cTypeId;
             editingConstraintTypeParameter = paramName;
             setter(cTypeId, newValue);
+
+            if (paramName === 'kind')
+            {
+                let cType = getConstraintType(cTypeId);
+                let inf = getSpecialVariable(newValue);
+                if (inf[0] !== null)
+                    cType.variables[inf[0]] = inf[1];
+                populateConstraintEditBox(cTypeId);
+            }
+
             updateVisuals({ storage: true, svg: true });
         };
     }
@@ -1048,6 +1071,7 @@
 
     // — Text boxes
     document.getElementById('constraint-code-name').onkeyup = editConstraintParameter(document.getElementById('constraint-code-name'), 'name', cTypeId => getConstraintType(cTypeId).name, (cTypeId, value) => { getConstraintType(cTypeId).name = value; });
+    document.getElementById('constraint-code-kind').onchange = editConstraintParameter(document.getElementById('constraint-code-kind'), 'kind', cTypeId => getConstraintType(cTypeId).kind, (cTypeId, value) => { getConstraintType(cTypeId).kind = value; });
     document.getElementById('constraint-code-logic').onkeyup = editConstraintParameter(document.getElementById('constraint-code-logic'), 'logic', cTypeId => getConstraintType(cTypeId).logic, (cTypeId, value) => { getConstraintType(cTypeId).logic = value; });
     document.getElementById('constraint-code-svg').onkeyup = editConstraintParameter(document.getElementById('constraint-code-svg'), 'svg', cTypeId => getConstraintType(cTypeId).svg, (cTypeId, value) => { getConstraintType(cTypeId).svg = value; });
     document.getElementById('constraint-code-svgdefs').onkeyup = editConstraintParameter(document.getElementById('constraint-code-svgdefs'), 'svgdefs', cTypeId => getConstraintType(cTypeId).svgdefs, (cTypeId, value) => { getConstraintType(cTypeId).svgdefs = value; });
@@ -1227,15 +1251,20 @@
         let cType = constraintTypes[sc[0]];
         let specialVariable = getSpecialVariable(cType.kind);
         let newConstraint = { type: (sc[0] | 0), values: {} };
-        if (specialVariable[0] !== null)
+        for (let variableName of Object.keys(cType.variables))
         {
-            let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
-            if (!enforceResult.valid)
+            if (variableName === specialVariable[0])
             {
-                alert(enforceResult.message);
-                return;
+                let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
+                if (!enforceResult.valid)
+                {
+                    alert(enforceResult.message);
+                    return;
+                }
+                newConstraint.values[specialVariable[0]] = enforceResult.value;
             }
-            newConstraint.values[specialVariable[0]] = enforceResult.value;
+            else
+                newConstraint.values[variableName] = coerceValue(null, cType.variables[variableName]);
         }
 
         saveUndo();

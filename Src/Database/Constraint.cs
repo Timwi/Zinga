@@ -2,9 +2,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
-using RT.Json;
 using RT.Serialization;
-using RT.Util;
 using Zinga.Lib;
 using Zinga.Suco;
 
@@ -26,21 +24,13 @@ namespace Zinga.Database
         public string Shortcut { get; set; }
 
         [ClassifyIgnore]
-        private SucoVariable[] _variablesCache;
-        public SucoVariable[] Variables
-        {
-            get => _variablesCache ??= VariablesJson.NullOr(v => JsonDict.Parse(v).Select(kvp => new SucoVariable(kvp.Key, SucoType.Parse(kvp.Value.GetString()))).ToArray());
-            set { VariablesJson = value.ToJsonDict(v => v.Name, v => v.Type.ToString()).ToString(); _variablesCache = value; }
-        }
-
-        [ClassifyIgnore]
         private SucoExpression _svgDefsCache;
         public IEnumerable<string> GetSvgDefs(SucoEnvironment env)
         {
             if (SvgDefsSuco == null)
                 return Enumerable.Empty<string>();
-            _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, Variables, SucoContext.Svg, SucoType.String.List());
-            return ((IEnumerable<object>) _svgDefsCache.Interpret(env)).Cast<string>();
+            _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, SucoTypeEnvironment.FromVariablesJson(VariablesJson), SucoContext.Svg, SucoType.String.List());
+            return ((IEnumerable<object>) _svgDefsCache.Interpret(env, null)).Cast<string>();
         }
 
         [ClassifyIgnore]
@@ -49,8 +39,8 @@ namespace Zinga.Database
         {
             if (SvgSuco == null)
                 return null;
-            _svgCache ??= SucoParser.ParseCode(SvgSuco, Variables, SucoContext.Svg, SucoType.String);
-            return (string) _svgCache.Interpret(env);
+            _svgCache ??= SucoParser.ParseCode(SvgSuco, SucoTypeEnvironment.FromVariablesJson(VariablesJson), SucoContext.Svg, SucoType.String);
+            return (string) _svgCache.Interpret(env, null);
         }
     }
 }

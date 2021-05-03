@@ -28,29 +28,6 @@ namespace Zinga.Lib
             return _parsedSuco[key];
         }
 
-        public static string CheckConstraints(string enteredDigitsJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
-        {
-            var enteredDigits = JsonList.Parse(enteredDigitsJson).Select(v => v?.GetInt()).ToArray();
-            var constraintTypes = JsonDict.Parse(constraintTypesJson);
-            var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
-            var constraints = JsonList.Parse(constraintsJson);
-            var results = new JsonList();
-
-            for (var cIx = 0; cIx < constraints.Count; cIx++)
-            {
-                var constraint = constraints[cIx];
-                var typeId = constraint["type"].GetInt();
-                var type = typeId < 0 ? customConstraintTypes[~typeId] : constraintTypes[typeId.ToString()].GetDict();
-                var (expr, env, _) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoType.Boolean);
-                var variableValues = ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), env.GetVariables(), enteredDigits)
-                    .DeclareVariable("allcells", Ut.NewArray(81, cIx => new Cell(cIx, null, enteredDigits[cIx])));
-                if ((bool?) expr.Interpret(variableValues) == false)
-                    results.Add(cIx);
-            }
-
-            return results.ToString();
-        }
-
         public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson, int? editingConstraintTypeId, string editingConstraintTypeParameter)
         {
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
@@ -81,8 +58,8 @@ namespace Zinga.Lib
                         var cacheKey = constraint["values"].ToString();
                         if (!cache.ContainsKey(cacheKey))
                         {
-                            variableValues ??= ZingaUtil.ConvertVariableValues(constraint["values"].GetDict(), env.GetVariables());
-                            cache[cacheKey] = expr.Interpret(variableValues);
+                            variableValues ??= ZingaUtil.ConvertVariableValues(type["variables"].GetDict(), constraint["values"].GetDict());
+                            cache[cacheKey] = expr.Interpret(variableValues, null);
                         }
                         callback(cache[cacheKey]);
                     }
@@ -128,6 +105,51 @@ namespace Zinga.Lib
             }
 
             return new JsonList { resultSvgDefs.JoinString(), resultSvg.ToString(), resultGlobalSvg.ToString(), editingResult }.ToString();
+        }
+
+        public static (SucoExpression expr, JsonDict variables)[] _constraintLogic;
+
+        public static void SetupConstraints(string givensJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
+        {
+            var givens = JsonList.Parse(givensJson).Select(v => v?.GetInt()).ToArray();
+            var constraintTypes = JsonDict.Parse(constraintTypesJson);
+            var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
+            var parsedSucos = new Dictionary<int, (SucoExpression expr, JsonDict variables)>();
+            var constraints = JsonList.Parse(constraintsJson);
+            var allCells = Ut.NewArray(81, c => new Cell(c));
+
+            _constraintLogic = new (SucoExpression expr, JsonDict variables)[constraints.Count];
+            for (var i = 0; i < constraints.Count; i++)
+            {
+                var cTypeId = constraints[i]["type"].GetInt();
+                var cType = cTypeId < 0 ? customConstraintTypes[~cTypeId] : constraintTypes[cTypeId.ToString()];
+                if (!parsedSucos.TryGetValue(cTypeId, out var sucoTup))
+                {
+                    var tEnv = SucoTypeEnvironment.FromVariablesJson(cType["variables"].GetDict())
+                        .DeclareVariable("allcells", SucoType.List(SucoType.Cell));
+                    sucoTup = parsedSucos[cTypeId] = (SucoParser.ParseCode(cType["logic"].GetString(), tEnv, SucoContext.Constraint, SucoType.Boolean), cType["variables"].GetDict());
+                }
+
+                var env = ZingaUtil.ConvertVariableValues(sucoTup.variables, constraints[i]["values"].GetDict()).DeclareVariable("allcells", allCells);
+                _constraintLogic[i] = (sucoTup.expr.Optimize(env, givens), sucoTup.variables);
+            }
+        }
+
+        public static string CheckConstraints(string enteredDigitsJson, string constraintsJson)
+        {
+            var enteredDigits = JsonList.Parse(enteredDigitsJson).Select(v => v?.GetInt()).ToArray();
+            var constraints = JsonList.Parse(constraintsJson);
+            var results = new JsonList();
+            var allCells = Ut.NewArray(81, c => new Cell(c));
+
+            for (var cIx = 0; cIx < _constraintLogic.Length; cIx++)
+            {
+                var variableValues = ZingaUtil.ConvertVariableValues(_constraintLogic[cIx].variables, constraints[cIx]["values"].GetDict()).DeclareVariable("allcells", allCells);
+                if ((bool?) _constraintLogic[cIx].expr.Interpret(variableValues, enteredDigits) == false)
+                    results.Add(cIx);
+            }
+
+            return results.ToString();
         }
 
         public static string CompileSuco(string suco, string variableTypesJson)

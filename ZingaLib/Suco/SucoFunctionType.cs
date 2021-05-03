@@ -9,6 +9,7 @@ namespace Zinga.Suco
     public class SucoFunctionType : SucoType
     {
         private readonly Dictionary<SucoType[], SucoType> _dic = new(SucoTypeArrayComparer.Instance);
+        public override Type CsType => typeof(SucoFunction);
 
         public SucoFunctionType(params (SucoType[] parameters, SucoType returnType)[] overloads)
         {

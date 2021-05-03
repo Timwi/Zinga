@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public class SucoIdentifierExpression : SucoExpression
     {
@@ -16,10 +14,10 @@ namespace Zinga.Suco
         {
             try
             {
-                var variable = env.GetVariable(Name);
-                if (variable == null)
+                var type = env.GetVariableType(Name);
+                if (type == null)
                     throw new SucoCompileException($"Unknown variable “{Name}”.", StartIndex, EndIndex);
-                return new SucoIdentifierExpression(StartIndex, EndIndex, Name, variable.Type);
+                return new SucoIdentifierExpression(StartIndex, EndIndex, Name, type);
             }
             catch (SucoTempCompileException tc)
             {
@@ -27,7 +25,7 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(SucoEnvironment env)
+        public override object Interpret(SucoEnvironment env, int?[] grid)
         {
             try
             {
@@ -37,6 +35,12 @@ namespace Zinga.Suco
             {
                 throw new SucoCompileException(tce.Message, StartIndex, EndIndex);
             }
+        }
+
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var val = env.GetValue(Name);
+            return val == null ? this : new SucoConstant(StartIndex, EndIndex, Type, val);
         }
     }
 }

@@ -81,7 +81,7 @@ namespace Zinga
                     renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
             }).JoinString();
 
-            var decodedValues = constraints?.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].Variables)).ToArray();
+            var decodedValues = constraints?.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].VariablesJson)).ToArray();
 
             var constraintsJson = constraints?.Select(c => new JsonDict
             {

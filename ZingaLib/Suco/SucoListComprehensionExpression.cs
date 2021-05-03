@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using RT.Util;
 using RT.Util.ExtensionMethods;
 using Zinga.Lib;
 
@@ -39,7 +40,7 @@ namespace Zinga.Suco
                 {
                     try
                     {
-                        collectionType = env.GetVariable("cells").Type;
+                        collectionType = env.GetVariableType("cells");
                     }
                     catch (SucoTempCompileException tc)
                     {
@@ -51,7 +52,7 @@ namespace Zinga.Suco
                     throw new SucoCompileException($"The clause for variable “{clause.VariableName}” is attempting to draw elements from something that is not a list.", clause.StartIndex, clause.EndIndex);
 
                 // Ensure the inner condition expressions are all implicitly convertible to booleans
-                newEnv = newEnv.DeclareVariable(clause.VariableName, ((SucoListType) collectionType).Inner);
+                newEnv = newEnv.DeclareVariable(clause.VariableName, ((SucoListType) collectionType).Inner, isInListComprehension: true);
                 var newConditions = clause.Conditions.Select(cond => cond.DeduceTypes(newEnv, context, elementType)).ToList();
                 newClauses.Add(new SucoListClause(clause.StartIndex, clause.EndIndex, clause.VariableName, clause.HasDollar, clause.HasPlus, clause.HasSingleton, newFromExpression, newConditions, elementType));
                 if (clause.HasSingleton)
@@ -76,50 +77,110 @@ namespace Zinga.Suco
             return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, resultType) { _context = context };
         }
 
-        public override object Interpret(SucoEnvironment env)
+        private IList<(SucoListComprehensionVariable[] variables, List<SucoListCondition> conditions, SucoExpression expr)> optimizeClause(int clauseIx, SucoListComprehensionVariable[] variables, SucoEnvironment env, int?[] givens)
         {
-            var indexes = new int[Clauses.Count];
-            var collections = new IList[Clauses.Count];
+            if (clauseIx == Clauses.Count)
+                return new (SucoListComprehensionVariable[] variables, List<SucoListCondition> conditions, SucoExpression expr)[]
+                {
+                    (variables, null, Selector == null ? new SucoConstant(StartIndex, EndIndex, ((SucoListType) Type).Inner, env.GetValue(Clauses[0].VariableName)) : Selector.Optimize(env, givens))
+                };
+
+            var collection = Clauses[clauseIx].FromExpressionResolved.Optimize(env, givens);
+            if (collection is not SucoConstant c)
+                return null;
+
+            var computedResults = new List<(SucoListComprehensionVariable[] variables, List<SucoListCondition> conditions, SucoExpression expr)>();
+            var list = (IEnumerable) c.Value;
+            var pos = 1;
+            foreach (var item in list)
+            {
+                if (!Clauses[clauseIx].HasPlus && variables != null && variables.Any(v => v.List == list && v.Position == pos))
+                    goto skipped;
+
+                var newEnv = env.DeclareVariable(Clauses[clauseIx].VariableName, item, list, pos);
+                var conditions = new List<SucoListCondition>();
+                foreach (var condition in Clauses[clauseIx].Conditions)
+                {
+                    var condResult = condition.Optimize(newEnv, givens);
+                    if (condResult == null)
+                        conditions.Add(condition);
+                    else if (condResult.Equals(false))
+                        goto skipped;
+                }
+                var nextVariable = new SucoListComprehensionVariable(Clauses[clauseIx].VariableName, item, list, position: pos);
+                var innerResult = optimizeClause(clauseIx + 1, variables == null ? new[] { nextVariable } : variables.Insert(variables.Length, nextVariable), newEnv, givens);
+                if (innerResult == null)
+                    return null;
+                computedResults.AddRange(innerResult.Select(ir => (ir.variables, conditions: ir.conditions == null ? conditions.Count == 0 ? null : conditions : conditions.Count == 0 ? ir.conditions : ir.conditions.Concat(conditions).ToList(), ir.expr)));
+                skipped:;
+                pos++;
+            }
+            return computedResults;
+        }
+
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var optimized = optimizeClause(0, null, env, givens);
+            if (optimized == null)
+                return this;
+
+            if (optimized.All(tup => tup.conditions == null && tup.expr is SucoConstant))
+            {
+                var array = Array.CreateInstance(((SucoListType) Type).Inner.CsType, optimized.Count);
+                for (var i = 0; i < array.Length; i++)
+                    array.SetValue(((SucoConstant) optimized[i].expr).Value, i);
+                return new SucoConstant(StartIndex, EndIndex, Type, array);
+            }
+
+            return new SucoOptimizedListComprehensionExpression(StartIndex, EndIndex, optimized, Type);
+        }
+
+        public override object Interpret(SucoEnvironment env, int?[] grid)
+        {
+            var positions = new int[Clauses.Count];
+            var collections = new object[Clauses.Count];
 
             IEnumerable<object> recurse(int clIx, SucoEnvironment curEnv)
             {
                 if (clIx == Clauses.Count)
                 {
-                    yield return Selector.Interpret(curEnv);
+                    yield return Selector.Interpret(curEnv, grid);
                     yield break;
                 }
 
                 var anyConditionNull = false;
-                var collection = (IList) Clauses[clIx].FromExpressionResolved.Interpret(curEnv);
-                collections[clIx] = collection;
-                int? oneFound = null;
+                var list = (IEnumerable) Clauses[clIx].FromExpressionResolved.Interpret(curEnv, grid);
+                collections[clIx] = list;
+                int? oneFoundPosition = null;
+                object oneFoundValue = null;
                 bool nullFound = false;
-                for (var i = 0; i < collection.Count; i++)
+                var pos = 1;
+                foreach (var item in list)
                 {
-                    if (collection[i] is Cell c)
+                    if (item is Cell c)
                     {
                         // Optimization: if the cell value is not known, we’ll assume that the constraint will evaluate as null anyway
-                        if (_context == SucoContext.Constraint && c.Value == null)
+                        if (_context == SucoContext.Constraint && grid[c.Index] == null)
                         {
                             anyConditionNull = true;
                             goto skipped;
                         }
 
                         collections[clIx] = null;
-                        if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == null && indexes[ix] == c.Index))
-                            continue;
-                        indexes[clIx] = c.Index;
+                        if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == null && positions[ix] == c.Index))
+                            goto skipped;
+                        positions[clIx] = c.Index;
                     }
                     else
                     {
-                        if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == collections[clIx] && indexes[ix] == i))
-                            continue;
-                        indexes[clIx] = i;
+                        if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == collections[clIx] && positions[ix] == pos))
+                            goto skipped;
+                        positions[clIx] = pos;
                     }
-                    var newEnv = curEnv.DeclareVariable(Clauses[clIx].VariableName, collection, i);
+                    var newEnv = curEnv.DeclareVariable(Clauses[clIx].VariableName, item, list, pos);
                     foreach (var condition in Clauses[clIx].Conditions)
                     {
-                        var result = condition.Interpret(newEnv);
+                        var result = condition.Interpret(newEnv, grid);
                         if (result == false)
                             goto skipped;
                         else if (result == null && Clauses[clIx].HasSingleton)
@@ -135,12 +196,13 @@ namespace Zinga.Suco
                     }
                     if (Clauses[clIx].HasSingleton)
                     {
-                        if (oneFound != null)
+                        if (oneFoundPosition != null)
                         {
                             yield return false;
                             yield break;
                         }
-                        oneFound = i;
+                        oneFoundPosition = pos;
+                        oneFoundValue = item;
                     }
                     else
                     {
@@ -148,16 +210,17 @@ namespace Zinga.Suco
                             yield return result;
                     }
                     skipped:;
+                    pos++;
                 }
 
                 if (Clauses[clIx].HasSingleton)
                 {
-                    if (oneFound == null)
+                    if (oneFoundPosition == null)
                     {
                         yield return nullFound ? null : false;
                         yield break;
                     }
-                    foreach (var result in recurse(clIx + 1, curEnv.DeclareVariable(Clauses[clIx].VariableName, collection, oneFound.Value)))
+                    foreach (var result in recurse(clIx + 1, curEnv.DeclareVariable(Clauses[clIx].VariableName, oneFoundValue, list, oneFoundPosition.Value)))
                         yield return Equals(result, true) && nullFound ? null : result;
                 }
                 else if (anyConditionNull)

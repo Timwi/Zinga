@@ -58,13 +58,19 @@ namespace Zinga.Suco
             return this;
         }
 
-        public override bool? Interpret(SucoEnvironment env) => Name switch
+        public override object Optimize(SucoEnvironment env, int?[] givens)
         {
-            "first" => env.GetLastIndex() == 0,
-            "last" => env.GetLastIndex() == env.GetLastList().Count - 1,
-            "before" => env.GetLastIndex() < env.GetPrevLastIndex(),
-            "after" => env.GetLastIndex() > env.GetPrevLastIndex(),
-            "~" => env.GetLastList() != env.GetPrevLastList() ? throw new SucoCompileException("“~” requires that both elements are from the same list.", StartIndex, EndIndex) : env.GetLastIndex() == env.GetPrevLastIndex() + 1,
+            var result = Interpret(env, givens);
+            return result == null ? this : result;
+        }
+
+        public override bool? Interpret(SucoEnvironment env, int?[] grid) => Name switch
+        {
+            "first" => env.GetLastPosition() == 1,
+            "last" => env.GetLastPosition() == env.GetLastList().Cast<object>().Count(),
+            "before" => env.GetLastPosition() < env.GetPrevLastPosition(),
+            "after" => env.GetLastPosition() > env.GetPrevLastPosition(),
+            "~" => env.GetLastList() != env.GetPrevLastList() ? throw new SucoCompileException("“~” requires that both elements are from the same list.", StartIndex, EndIndex) : env.GetLastPosition() == env.GetPrevLastPosition() + 1,
             "diagonal" => cellOp(env, (c1, c2) => Math.Abs(c1.X - c2.X) == Math.Abs(c1.Y - c2.Y)),
             "adjacent" => cellOp(env, (c1, c2) => Math.Abs(c1.X - c2.X) <= 1 && Math.Abs(c1.Y - c2.Y) <= 1),
             "orthogonal" => cellOp(env, (c1, c2) => (c1.X == c2.X && Math.Abs(c1.Y - c2.Y) == 1) || (c1.Y == c2.Y && Math.Abs(c1.X - c2.X) == 1)),

@@ -34,11 +34,20 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(SucoEnvironment env)
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
         {
-            var result = Operand.Interpret(env);
+            var optimizedOperand = Operand.Optimize(env, givens);
+            var optimizedArgs = Arguments.Select(arg => arg.Optimize(env, givens)).ToArray();
+            return optimizedOperand is SucoConstant constOperand && optimizedArgs.All(arg => arg is SucoConstant)
+                ? new SucoConstant(StartIndex, EndIndex, Type, ((SucoFunction) constOperand.Value).Interpret(optimizedArgs.Select(a => a.Type).ToArray(), optimizedArgs.Select(a => ((SucoConstant) a).Value).ToArray()))
+                : new SucoCallExpression(StartIndex, EndIndex, optimizedOperand, optimizedArgs, Type);
+        }
+
+        public override object Interpret(SucoEnvironment env, int?[] grid)
+        {
+            var result = Operand.Interpret(env, grid);
             if (result is SucoFunction fnc)
-                return fnc.Interpret(Arguments.Select(a => a.Type).ToArray(), Arguments.Select(a => a.Interpret(env)).ToArray());
+                return fnc.Interpret(Arguments.Select(a => a.Type).ToArray(), Arguments.Select(a => a.Interpret(env, grid)).ToArray());
             throw new SucoCompileException($"Operand isn’t a function.", Operand.StartIndex, Operand.EndIndex);
         }
     }

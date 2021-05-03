@@ -5,14 +5,13 @@ namespace Zinga.Suco
     public class SucoCellType : SucoType
     {
         public override bool Equals(SucoType other) => other is SucoCellType;
-        public SucoCellType() { }
         public override string ToString() => "cell";
         public override int GetHashCode() => 2;
+        public override Type CsType => typeof(Cell);
 
         public override SucoType GetMemberType(string memberName, SucoContext context) => memberName switch
         {
             //"value" => SucoType.Integer,
-            "pos" => SucoType.Integer,
             "x" => SucoType.Integer,
             "y" => SucoType.Integer,
             "box" => SucoType.Integer,
@@ -28,17 +27,16 @@ namespace Zinga.Suco
             _ => base.GetMemberType(memberName, context)
         };
 
-        public override object InterpretMemberAccess(string memberName, object operand)
+        public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid)
         {
             var op = (Cell) operand;
             return memberName switch
             {
-                "pos" => op.Position,
                 "x" => op.X,
                 "y" => op.Y,
                 "box" => op.Box,
                 "index" => op.Index,
-                "value" => op.Value,
+                "value" => grid[op.Index],
 
                 "cx" => op.X + .5,
                 "cy" => op.Y + .5,
@@ -46,7 +44,7 @@ namespace Zinga.Suco
                 "orthogonal" => new SucoFunction((parameters: new[] { SucoType.Cell }, returnType: SucoType.Boolean, interpreter: args => op.Orthogonal((Cell) args[0]))),
                 "adjacent" => new SucoFunction((parameters: new[] { SucoType.Cell }, returnType: SucoType.Boolean, interpreter: args => op.Adjacent((Cell) args[0]))),
 
-                _ => base.InterpretMemberAccess(memberName, operand)
+                _ => base.InterpretMemberAccess(memberName, operand, env, grid)
             };
         }
     }

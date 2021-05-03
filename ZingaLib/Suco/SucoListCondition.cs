@@ -9,6 +9,7 @@
 
         public abstract SucoListCondition DeduceTypes(SucoTypeEnvironment env, SucoContext context, SucoType elementType);
 
-        public abstract bool? Interpret(SucoEnvironment env);
+        public abstract object Optimize(SucoEnvironment env, int?[] givens);
+        public abstract bool? Interpret(SucoEnvironment env, int?[] grid);
     }
 }

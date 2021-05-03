@@ -21,7 +21,7 @@ namespace Zinga.Suco
         public virtual object InterpretUnaryOperator(UnaryOperator op, object operand) => throw new SucoTempCompileException($"Unary operator “{op}” not defined on type “{this}”.");
 
         public virtual SucoType GetMemberType(string memberName, SucoContext context) => throw new SucoTempCompileException($"Member “{memberName}” is not defined on type “{this}”.");
-        public virtual object InterpretMemberAccess(string memberName, object operand) => throw new SucoTempCompileException($"Member “{memberName}” not defined on type “{this}”.");
+        public virtual object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid) => throw new SucoTempCompileException($"Member “{memberName}” not defined on type “{this}”.");
 
         public virtual bool ImplicitlyConvertibleTo(SucoType other) => Equals(other);
         public virtual object InterpretImplicitConversionTo(SucoType type, object operand) => Equals(type) ? operand : throw new SucoTempCompileException($"Implicit conversion not defined from type “{this}” to “{type}”.");
@@ -29,6 +29,7 @@ namespace Zinga.Suco
         public abstract override int GetHashCode();
         public abstract bool Equals(SucoType other);
         public abstract override string ToString();
+        public abstract Type CsType { get; }
 
         public static SucoType Parse(string source)
         {

@@ -7,15 +7,15 @@ namespace Zinga.Suco
 {
     public class SucoEnvironment
     {
-        private readonly List<(string name, object value, IList list, int index)> _variables = new();
+        private readonly List<SucoListComprehensionVariable> _variables = new();
 
         public SucoEnvironment()
         {
         }
 
-        public SucoEnvironment(Dictionary<string, object> variableValues)
+        public SucoEnvironment(IEnumerable<(string name, object value)> variables)
         {
-            _variables = variableValues.Select(kvp => (name: kvp.Key, value: kvp.Value, list: (IList) null, index: 0)).ToList();
+            _variables.AddRange(variables.Select(tup => new SucoListComprehensionVariable(tup.name, tup.value)));
         }
 
         /// <summary>
@@ -25,34 +25,55 @@ namespace Zinga.Suco
         {
             var env = new SucoEnvironment();
             env._variables.AddRange(_variables);
-            env._variables.Add((name, value, null, 0));
+            env._variables.Add(new SucoListComprehensionVariable(name, value));
+            return env;
+        }
+
+        /// <summary>
+        ///     Declares new variables with specified values (and returns the new environment). Has no effect on <see
+        ///     cref="GetLastValue"/> and <see cref="GetPrevLastValue"/>.</summary>
+        public SucoEnvironment DeclareListComprehensionVariables(params SucoListComprehensionVariable[] variables)
+        {
+            var env = new SucoEnvironment();
+            env._variables.AddRange(_variables);
+            env._variables.AddRange(variables);
             return env;
         }
 
         /// <summary>
         ///     Declares a new variable that is a list comprehension iterator (and returns the new environment). This shifts
         ///     <see cref="GetLastValue"/> and <see cref="GetPrevLastValue"/>.</summary>
-        public SucoEnvironment DeclareVariable(string name, IList collection, int index)
+        public SucoEnvironment DeclareVariable(string name, object value, IEnumerable list, int position)
         {
             var env = new SucoEnvironment();
             env._variables.AddRange(_variables);
-            env._variables.Add((name, collection[index], collection, index));
+            env._variables.Add(new SucoListComprehensionVariable(name, value, list, position));
             return env;
         }
 
         public object GetValue(string variableName)
         {
-            var match = _variables.FirstOrNull(tup => tup.name == variableName);
+            var match = _variables.FirstOrNull(v => v.Name == variableName);
             if (match == null)
                 throw new SucoTempCompileException($"The variable “{variableName}” is not defined.");
-            return match.Value.value;
+            return match.Value.Value;
+        }
+
+        public int GetPosition(string variableName)
+        {
+            var match = _variables.FirstOrNull(v => v.Name == variableName);
+            if (match == null)
+                throw new SucoTempCompileException($"The variable “{variableName}” is not defined.");
+            if (match.Value.List == null)
+                throw new SucoTempCompileException($"The variable “{variableName}” is not a list comprehension variable.");
+            return match.Value.Position;
         }
 
         private int GetLastListVariableIndex(int howMany)
         {
             for (var i = _variables.Count - 1; i >= 0; i--)
             {
-                if (_variables[i].list != null)
+                if (_variables[i].List != null)
                 {
                     howMany--;
                     if (howMany == 0)
@@ -62,12 +83,12 @@ namespace Zinga.Suco
             throw new SucoTempCompileException($"Not enough prior variables in scope from list comprehensions.");
         }
 
-        public object GetLastValue() => _variables[GetLastListVariableIndex(1)].value;
-        public IList GetLastList() => _variables[GetLastListVariableIndex(1)].list;
-        public int GetLastIndex() => _variables[GetLastListVariableIndex(1)].index;
+        public object GetLastValue() => _variables[GetLastListVariableIndex(1)].Value;
+        public IEnumerable GetLastList() => _variables[GetLastListVariableIndex(1)].List;
+        public int GetLastPosition() => _variables[GetLastListVariableIndex(1)].Position;
 
-        public object GetPrevLastValue() => _variables[GetLastListVariableIndex(2)].value;
-        public IList GetPrevLastList() => _variables[GetLastListVariableIndex(2)].list;
-        public int GetPrevLastIndex() => _variables[GetLastListVariableIndex(2)].index;
+        public object GetPrevLastValue() => _variables[GetLastListVariableIndex(2)].Value;
+        public IEnumerable GetPrevLastList() => _variables[GetLastListVariableIndex(2)].List;
+        public int GetPrevLastPosition() => _variables[GetLastListVariableIndex(2)].Position;
     }
 }

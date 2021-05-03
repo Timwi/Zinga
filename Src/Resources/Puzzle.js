@@ -47,7 +47,11 @@
             if (blazorQueue[i][0] === null)
                 blazorQueue[i][2]();
             else
-                DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
+            {
+                var r = DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]);
+                if (blazorQueue[i][2])
+                    r.then(blazorQueue[i][2]);
+            }
         }
         blazorQueue = null;
     });
@@ -250,6 +254,8 @@
     {
     }
 
+    dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
+
     function resetClearButton()
     {
         document.getElementById(`btn-clear`).classList.remove('warning');
@@ -314,7 +320,7 @@
         let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
         if (showErrors || grid.every(d => d !== null))
         {
-            dotNet('CheckConstraints', [JSON.stringify(grid), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], result =>
+            dotNet('CheckConstraints', [JSON.stringify(grid), JSON.stringify(constraints)], result =>
             {
                 let violatedConstraintIxs = JSON.parse(result);
                 setClass(puzzleDiv, 'solved', valid === true && violatedConstraintIxs.length === 0);
@@ -351,10 +357,19 @@
                 document.querySelector('#topbar>.author').innerText = `by ${state.author ?? 'unknown'}`;
                 document.title = `Testing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
 
+                puzzleDiv.dataset.title = state.title;
+                puzzleDiv.dataset.author = state.author;
+
                 var paragraphs = (state.rules ?? 'Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.').split(/\r?\n/).filter(s => s !== null && !/^\s*$/.test(s));
                 document.getElementById('rules-text').innerHTML = paragraphs.map(_ => '<p></p>').join('');
                 Array.from(document.querySelectorAll('#rules-text>p')).forEach((p, pIx) => { p.innerText = paragraphs[pIx]; });
-                window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
+
+                dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)], () =>
+                {
+                    updateVisuals();
+                    fixViewBox();
+                    window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
+                });
 
                 dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints), null, null], svgs =>
                 {
@@ -776,7 +791,19 @@
         img.onload = function()
         {
             canvas.getContext('2d').drawImage(img, 0, 0);
-            window.open(canvas.toDataURL());
+            if (navigator.userAgent.includes('Firefox/'))
+                window.open(canvas.toDataURL());
+            else
+            {
+                let a = document.createElement('a');
+                a.setAttribute('href', canvas.toDataURL());
+                a.setAttribute('download', `${puzzleDiv.dataset.title} by ${puzzleDiv.dataset.author}.png`);
+                a.click();
+            }
+        };
+        img.onerror = function()
+        {
+            alert('Unfortunately, a screenshot of the puzzle could not be generated. This may be due to malformed SVG code on the part of the puzzle author.');
         };
         img.src = 'data:image/svg+xml;base64,' + btoa(svgElem.outerHTML
             .replace(/<svg/, `<svg width="${canvas.width}" height="${canvas.height}"`)
@@ -989,7 +1016,7 @@
 
             default:
                 anyFunction = false;
-                console.log(str, ev.code);
+                //console.log(str, ev.code);
                 break;
         }
 

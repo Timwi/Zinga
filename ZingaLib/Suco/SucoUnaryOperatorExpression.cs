@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public class SucoUnaryOperatorExpression : SucoExpression
     {
@@ -14,7 +12,7 @@ namespace Zinga.Suco
             Operator = op;
         }
 
-        public override object Interpret(SucoEnvironment env) => Operand.Type.InterpretUnaryOperator(Operator, Operand.Interpret(env));
+        public override object Interpret(SucoEnvironment env, int?[] grid) => Operand.Type.InterpretUnaryOperator(Operator, Operand.Interpret(env, grid));
 
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
@@ -30,6 +28,14 @@ namespace Zinga.Suco
             {
                 throw new SucoCompileException(ce.Message, StartIndex, EndIndex);
             }
+        }
+
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var optimizedOperand = Operand.Optimize(env, givens);
+            return optimizedOperand is SucoConstant c
+                ? new SucoConstant(StartIndex, EndIndex, Type, Operand.Type.InterpretUnaryOperator(Operator, c))
+                : new SucoUnaryOperatorExpression(StartIndex, EndIndex, optimizedOperand, Operator, Type);
         }
     }
 }

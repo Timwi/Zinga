@@ -257,13 +257,5 @@ namespace Zinga
                             new BUTTON { type = btype.button, accesskey = "w", id = "btn-wasm" }._("Wasm"),
                             new BUTTON { type = btype.submit, accesskey = "r" }._("Remote")))))));
         }
-
-        private HttpResponse DebugSucoStuff(HttpRequest req)
-        {
-            var suco = @"a/2";
-            var parsed = SucoParser.ParseCode(suco, new SucoTypeEnvironment().DeclareVariable("a", SucoType.Decimal), SucoContext.Svg, SucoType.Decimal);
-            var interpreted = parsed.Interpret(new SucoEnvironment().DeclareVariable("a", 5));
-            return HttpResponse.PlainText(interpreted.ToString());
-        }
     }
 }

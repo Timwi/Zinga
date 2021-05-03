@@ -8,6 +8,7 @@ namespace Zinga.Suco
     {
         public string[] Names { get; private set; }
         public override string ToString() => $"[{Names.JoinString(", ")}]";
+        public override Type CsType => typeof(string);
 
         public SucoEnumType(string[] names)
         {

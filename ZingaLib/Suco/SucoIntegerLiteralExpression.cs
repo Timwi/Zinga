@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public class SucoIntegerLiteralExpression : SucoExpression
     {
@@ -13,6 +11,7 @@ namespace Zinga.Suco
         }
 
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => new SucoIntegerLiteralExpression(StartIndex, EndIndex, NumericalValue, SucoType.Integer);
-        public override object Interpret(SucoEnvironment env) => NumericalValue;
+        public override object Interpret(SucoEnvironment env, int?[] grid) => NumericalValue;
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens) => new SucoConstant(StartIndex, EndIndex, SucoType.Integer, NumericalValue);
     }
 }

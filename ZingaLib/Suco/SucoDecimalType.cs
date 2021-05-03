@@ -5,9 +5,9 @@ namespace Zinga.Suco
     public class SucoDecimalType : SucoType
     {
         public override bool Equals(SucoType other) => other is SucoDecimalType;
-        public SucoDecimalType() { }
         public override string ToString() => "decimal";
         public override int GetHashCode() => 5;
+        public override Type CsType => typeof(double?);
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
@@ -109,7 +109,7 @@ namespace Zinga.Suco
             _ => base.GetMemberType(memberName, context)
         };
 
-        public override object InterpretMemberAccess(string memberName, object operand) => memberName switch
+        public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid) => memberName switch
         {
             "atan2" => new SucoFunction((new[] { SucoType.Decimal }, SucoType.Decimal, arr => Math.Atan2((double) operand, (double) arr[0]) * 180 / Math.PI)),
             "sin" => Math.Sin((double) operand * Math.PI / 180),
@@ -117,7 +117,7 @@ namespace Zinga.Suco
             "tan" => Math.Tan((double) operand * Math.PI / 180),
             "sqrt" => Math.Sqrt((double) operand),
             "abs" => Math.Abs((double) operand),
-            _ => base.InterpretMemberAccess(memberName, operand)
+            _ => base.InterpretMemberAccess(memberName, operand, env, grid)
         };
     }
 }

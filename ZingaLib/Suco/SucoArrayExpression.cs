@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using RT.Util.ExtensionMethods;
 using Zinga.Lib;
@@ -15,15 +16,40 @@ namespace Zinga.Suco
             Elements = elements;
         }
 
-        public override object Interpret(SucoEnvironment env) => Elements.Select(e => e.Interpret(env)).ToArray();
-
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
+            if (Elements.Count == 0)
+                throw new SucoCompileException("Empty array literals are not currently supported.", StartIndex, EndIndex);
             var newElements = Elements.Select(e => e.DeduceTypes(env, context)).ToList();
             for (var i = 0; i < newElements.Count; i++)
                 if (newElements.All(e => e.Type.ImplicitlyConvertibleTo(newElements[i].Type)))
                     return new SucoArrayExpression(StartIndex, EndIndex, newElements.Select(e => e.ImplicitlyConvertTo(newElements[i].Type)).ToList(), newElements[i].Type.List());
             throw new SucoCompileException("This array contains elements that are not compatible with one another.", StartIndex, EndIndex);
         }
+
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var constants = Array.CreateInstance(((SucoListType) Type).Inner.CsType, Elements.Count);
+            var expressions = new SucoExpression[Elements.Count];
+            var anyExpressions = false;
+
+            for (var i = 0; i < Elements.Count; i++)
+            {
+                var opt = Elements[i].Optimize(env, givens);
+                if (opt is SucoConstant c)
+                    constants.SetValue(c.Value, i);
+                else
+                {
+                    expressions[i] = opt;
+                    anyExpressions = true;
+                }
+            }
+
+            if (!anyExpressions)
+                return new SucoConstant(StartIndex, EndIndex, Type, constants);
+            return new SucoOptimizedArrayExpression(StartIndex, EndIndex, constants, expressions, Type);
+        }
+
+        public override object Interpret(SucoEnvironment env, int?[] grid) => Elements.Select(e => e.Interpret(env, grid)).ToArray();
     }
 }

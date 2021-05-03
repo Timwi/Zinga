@@ -37,6 +37,7 @@ namespace Zinga.Suco
             Type.ImplicitlyConvertibleTo(type) ? new SucoImplicitConversionExpression(StartIndex, EndIndex, this, type) :
             throw new InvalidOperationException("Unexpected implicit conversion. Call Type.ImplicitlyConvertibleTo first to ensure convertibility.");
 
-        public abstract object Interpret(SucoEnvironment env);
+        public abstract SucoExpression Optimize(SucoEnvironment env, int?[] givens);
+        public abstract object Interpret(SucoEnvironment env, int?[] grid);
     }
 }

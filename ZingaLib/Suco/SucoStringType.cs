@@ -1,13 +1,14 @@
-﻿using Zinga.Lib;
+﻿using System;
+using Zinga.Lib;
 
 namespace Zinga.Suco
 {
     public class SucoStringType : SucoType
     {
         public override bool Equals(SucoType other) => other is SucoStringType;
-        public SucoStringType() { }
         public override string ToString() => "string";
         public override int GetHashCode() => 4;
+        public override Type CsType => typeof(string);
 
         public override SucoType GetMemberType(string memberName, SucoContext context) => memberName switch
         {
@@ -15,10 +16,10 @@ namespace Zinga.Suco
             _ => base.GetMemberType(memberName, context)
         };
 
-        public override object InterpretMemberAccess(string memberName, object operand) => memberName switch
+        public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid) => memberName switch
         {
             "hash" => MD5.ComputeHex((string) operand),
-            _ => base.InterpretMemberAccess(memberName, operand)
+            _ => base.InterpretMemberAccess(memberName, operand, env, grid)
         };
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch

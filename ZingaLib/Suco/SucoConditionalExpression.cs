@@ -17,7 +17,11 @@ namespace Zinga
             False = falsePart;
         }
 
-        public override object Interpret(SucoEnvironment env) => (bool) Condition.Interpret(env) ? True.Interpret(env) : False.Interpret(env);
+        public override object Interpret(SucoEnvironment env, int?[] grid)
+        {
+            var result = Condition.Interpret(env, grid);
+            return result == null ? null : (bool) result ? True.Interpret(env, grid) : False.Interpret(env, grid);
+        }
 
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
@@ -45,6 +49,14 @@ namespace Zinga
                 throw new SucoCompileException($"Types “{trueExpr.Type}” and “{falseExpr.Type}” are not compatible.", True.StartIndex, False.EndIndex);
 
             return new SucoConditionalExpression(StartIndex, EndIndex, condition, trueExpr, falseExpr, thisType);
+        }
+
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var conditionOpt = Condition.Optimize(env, givens);
+            if (conditionOpt is SucoConstant c)
+                return c.Equals(true) ? True.Optimize(env, givens) : False.Optimize(env, givens);
+            return new SucoConditionalExpression(StartIndex, EndIndex, conditionOpt, True.Optimize(env, givens), False.Optimize(env, givens), Type);
         }
     }
 }

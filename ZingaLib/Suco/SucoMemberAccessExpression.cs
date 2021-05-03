@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public class SucoMemberAccessExpression : SucoExpression
     {
@@ -17,12 +15,14 @@ namespace Zinga.Suco
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context)
         {
             var op = Operand.DeduceTypes(env, context);
+
             try
             {
-                var memberType = op.Type.GetMemberType(MemberName, context);
-                if (memberType == null)
-                    throw new SucoCompileException($"“{MemberName}” is not a valid member name on type “{op.Type}”.", Operand.EndIndex, EndIndex);
-                return new SucoMemberAccessExpression(StartIndex, EndIndex, op, MemberName, memberType);
+                // Special case: the “.pos” member should work on any variable from a list comprehension
+                if (MemberName == "pos" && op is SucoIdentifierExpression ident && env.IsVariableInListComprehension(ident.Name))
+                    return new SucoPositionExpression(ident.StartIndex, ident.EndIndex, ident.Name, SucoType.Integer);
+
+                return new SucoMemberAccessExpression(StartIndex, EndIndex, op, MemberName, op.Type.GetMemberType(MemberName, context));
             }
             catch (SucoTempCompileException ce)
             {
@@ -30,6 +30,18 @@ namespace Zinga.Suco
             }
         }
 
-        public override object Interpret(SucoEnvironment env) => Operand.Type.InterpretMemberAccess(MemberName, Operand.Interpret(env));
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var optimizedOperand = Operand.Optimize(env, givens);
+            if (optimizedOperand is SucoConstant c)
+            {
+                var val = optimizedOperand.Type.InterpretMemberAccess(MemberName, c.Value, env, givens);
+                if (val != null)
+                    return new SucoConstant(StartIndex, EndIndex, Type, val);
+            }
+            return new SucoMemberAccessExpression(StartIndex, EndIndex, optimizedOperand, MemberName, Type);
+        }
+
+        public override object Interpret(SucoEnvironment env, int?[] grid) => Operand.Type.InterpretMemberAccess(MemberName, Operand.Interpret(env, grid), env, grid);
     }
 }

@@ -31,6 +31,15 @@
             }
         }
 
-        public override object Interpret(SucoEnvironment env) => Left.Type.InterpretBinaryOperator(Left.Interpret(env), Operator, Right.Type, Right.Interpret(env));
+        public override object Interpret(SucoEnvironment env, int?[] grid) => Left.Type.InterpretBinaryOperator(Left.Interpret(env, grid), Operator, Right.Type, Right.Interpret(env, grid));
+
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var left = Left.Optimize(env, givens);
+            var right = Right.Optimize(env, givens);
+            return left is SucoConstant cl && right is SucoConstant cr
+                ? new SucoConstant(StartIndex, EndIndex, Type, left.Type.InterpretBinaryOperator(cl.Value, Operator, right.Type, cr.Value))
+                : new SucoBinaryOperatorExpression(StartIndex, EndIndex, left, right, Operator, Type);
+        }
     }
 }

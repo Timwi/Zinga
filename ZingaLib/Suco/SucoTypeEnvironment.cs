@@ -1,30 +1,36 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
+using RT.Json;
+using RT.Util;
 using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
 {
     public class SucoTypeEnvironment
     {
-        private readonly Dictionary<string, SucoVariable> _variables = new();
+        private readonly List<(string name, SucoType type, bool isInListComprehension)> _variables = new();
 
         public SucoTypeEnvironment()
         {
         }
 
-        private SucoTypeEnvironment(Dictionary<string, SucoVariable> newVars)
+        public SucoTypeEnvironment DeclareVariable(string name, SucoType type, bool isInListComprehension = false)
         {
-            _variables = newVars;
+            var ne = new SucoTypeEnvironment();
+            ne._variables.AddRange(_variables);
+            ne._variables.Add((name, type, isInListComprehension));
+            return ne;
         }
 
-        public SucoTypeEnvironment DeclareVariable(string name, SucoType type)
-        {
-            var copy = _variables.ToDictionary();
-            copy[name] = new SucoVariable(name, type);
-            return new SucoTypeEnvironment(copy);
-        }
+        public SucoType GetVariableType(string name) => (_variables.FirstOrNull(tup => tup.name == name) ?? throw new SucoTempCompileException($"Unknown variable “{name}”.")).type;
+        public bool IsVariableInListComprehension(string name) => (_variables.FirstOrNull(tup => tup.name == name) ?? throw new SucoTempCompileException($"Unknown variable “{name}”.")).isInListComprehension;
 
-        public SucoVariable GetVariable(string name) => _variables.TryGetValue(name, out var result) ? result : throw new SucoTempCompileException($"Unknown variable “{name}”.");
-        public SucoVariable[] GetVariables() => _variables.Values.ToArray();
+        public static SucoTypeEnvironment FromVariablesJson(string variablesJson) => FromVariablesJson(JsonDict.Parse(variablesJson));
+        public static SucoTypeEnvironment FromVariablesJson(JsonDict variables)
+        {
+            var env = new SucoTypeEnvironment();
+            foreach (var (name, type) in variables.ToTuples())
+                env._variables.Add((name, SucoType.Parse(type.GetString()), false));
+            return env;
+        }
     }
 }

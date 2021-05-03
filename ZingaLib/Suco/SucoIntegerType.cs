@@ -6,9 +6,9 @@ namespace Zinga.Suco
     public class SucoIntegerType : SucoType
     {
         public override bool Equals(SucoType other) => other is SucoIntegerType;
-        public SucoIntegerType() { }
         public override string ToString() => "int";
         public override int GetHashCode() => 3;
+        public override Type CsType => typeof(int?);
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
@@ -127,7 +127,7 @@ namespace Zinga.Suco
             }
         }
 
-        public override object InterpretMemberAccess(string memberName, object operand)
+        public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid)
         {
             switch (memberName)
             {
@@ -137,7 +137,7 @@ namespace Zinga.Suco
             // We want all functions that SucoDecimalType supports to also work on integers by implicitly converting the integer to decimal.
             try
             {
-                return SucoType.Decimal.InterpretMemberAccess(memberName, (double) (int) operand);
+                return SucoType.Decimal.InterpretMemberAccess(memberName, (double) (int) operand, env, grid);
             }
             catch (SucoTempCompileException)
             {

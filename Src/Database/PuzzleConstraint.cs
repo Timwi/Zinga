@@ -19,13 +19,13 @@ namespace Zinga.Database
         [ClassifyIgnore]
         private SucoEnvironment _valuesCache;
         [ClassifyIgnore]
-        private SucoVariable[] _valuesCacheVariables;
-        public SucoEnvironment DecodeValues(SucoVariable[] variables)
+        private string _valuesCacheVariables;
+        public SucoEnvironment DecodeValues(string variablesJson)
         {
-            if (_valuesCache == null || _valuesCacheVariables != variables)
+            if (_valuesCache == null || _valuesCacheVariables != variablesJson)
             {
-                _valuesCacheVariables = variables;
-                _valuesCache = ZingaUtil.ConvertVariableValues(JsonDict.Parse(ValuesJson), variables);
+                _valuesCacheVariables = variablesJson;
+                _valuesCache = ZingaUtil.ConvertVariableValues(JsonDict.Parse(variablesJson), JsonDict.Parse(ValuesJson));
             }
             return _valuesCache;
         }

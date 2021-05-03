@@ -11,6 +11,7 @@
         }
 
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => new SucoDecimalLiteralExpression(StartIndex, EndIndex, NumericalValue, SucoType.Decimal);
-        public override object Interpret(SucoEnvironment env) => NumericalValue;
+        public override object Interpret(SucoEnvironment env, int?[] grid) => NumericalValue;
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens) => new SucoConstant(StartIndex, EndIndex, SucoType.Decimal, NumericalValue);
     }
 }

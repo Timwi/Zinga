@@ -34,9 +34,6 @@ namespace Zinga.Suco
             Context = context;
         }
 
-        public static SucoExpression ParseCode(string source, SucoVariable[] variables, SucoContext context, SucoType expectedResultType = null) =>
-            ParseCode(source, variables.Aggregate(new SucoTypeEnvironment(), (env, variable) => env.DeclareVariable(variable.Name, variable.Type)), context, expectedResultType);
-
         public static SucoExpression ParseCode(string source, SucoTypeEnvironment env, SucoContext context, SucoType expectedResultType = null)
         {
             if (source == null)

@@ -5,9 +5,9 @@ namespace Zinga.Suco
     public class SucoBooleanType : SucoType
     {
         public override bool Equals(SucoType other) => other is SucoBooleanType;
-        public SucoBooleanType() { }
         public override string ToString() => "bool";
         public override int GetHashCode() => 1;
+        public override Type CsType => typeof(bool?);
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {

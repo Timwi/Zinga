@@ -1,7 +1,4 @@
-﻿using System.Collections.Generic;
-using RT.Util.ExtensionMethods;
-
-namespace Zinga.Suco
+﻿namespace Zinga.Suco
 {
     public class SucoLetExpression : SucoExpression
     {
@@ -24,6 +21,13 @@ namespace Zinga.Suco
             return new SucoLetExpression(StartIndex, EndIndex, VariableName, valueExpr, innerExpr, innerExpr.Type);
         }
 
-        public override object Interpret(SucoEnvironment env) => InnerExpression.Interpret(env.DeclareVariable(VariableName, ValueExpression.Interpret(env)));
+        public override object Interpret(SucoEnvironment env, int?[] grid) => InnerExpression.Interpret(env.DeclareVariable(VariableName, ValueExpression.Interpret(env, grid)), grid);
+
+        public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
+        {
+            var valueExpr = ValueExpression.Optimize(env, givens);
+            var innerExpr = InnerExpression.Optimize(env.DeclareVariable(VariableName, valueExpr is SucoConstant c ? c.Value : null), givens);
+            return innerExpr is SucoConstant ? innerExpr : new SucoLetExpression(StartIndex, EndIndex, VariableName, valueExpr, innerExpr, Type);
+        }
     }
 }

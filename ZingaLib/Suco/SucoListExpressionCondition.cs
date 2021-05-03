@@ -18,6 +18,7 @@
             return new SucoListExpressionCondition(StartIndex, EndIndex, innerExpression.ImplicitlyConvertTo(SucoType.Boolean));
         }
 
-        public override bool? Interpret(SucoEnvironment env) => (bool?) Expression.Interpret(env);
+        public override object Optimize(SucoEnvironment env, int?[] givens) => (bool?) (Expression.Optimize(env, givens) as SucoConstant)?.Value;
+        public override bool? Interpret(SucoEnvironment env, int?[] grid) => (bool?) Expression.Interpret(env, grid);
     }
 }
