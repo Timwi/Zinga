@@ -1,5 +1,0 @@
-• Timer
-• Variables UI for list of integers
-• Suco parse tree / error reporting
-• Support other grid sizes
-• Account system
