@@ -31,7 +31,7 @@ namespace Zinga.Lib
         public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson, int? editingConstraintTypeId, string editingConstraintTypeParameter)
         {
 #if DEBUG
-            Console.WriteLine($@"Zinga.Lib.Commands.RenderConstraintSvgs(""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"", {(editingConstraintTypeId == null ? "null" : editingConstraintTypeId.ToString())}, ""{editingConstraintTypeParameter.CLiteralEscape()}"");");
+            Console.WriteLine($@"Zinga.Lib.Commands.RenderConstraintSvgs(""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"", {(editingConstraintTypeId == null ? "null" : editingConstraintTypeId.ToString())}, {(editingConstraintTypeParameter == null ? "null" : $@"""{editingConstraintTypeParameter.CLiteralEscape()}""")});");
 #endif
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
             var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);

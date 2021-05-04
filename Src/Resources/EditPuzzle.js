@@ -163,7 +163,7 @@
             case 'cell':
             case 'int': return value | 0;
             case 'string': return `${value}`;
-            case 'boolean': return !!value;
+            case 'bool': return !!value;
             case 'decimal': return +value;
         }
         return null;
@@ -548,6 +548,11 @@
             // — change the viewBox so that it includes everything
             let fullBBox = document.getElementById('bb-everything').getBBox();
             puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
+            let selectionFilter = document.getElementById('constraint-selection-shadow');
+            selectionFilter.setAttribute('x', fullBBox.x - .1);
+            selectionFilter.setAttribute('y', fullBBox.y - .1);
+            selectionFilter.setAttribute('width', fullBBox.width + .2);
+            selectionFilter.setAttribute('height', fullBBox.height + .5);
         }
         fixViewBox();
 
