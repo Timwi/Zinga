@@ -199,7 +199,11 @@ namespace Zinga
                                             new DIV("Publishing...")))),
                                 new DIV { class_ = "tabc", id = "tab-constraints" }._(
                                     new SECTION { id = "constraints-section" }._(
-                                        new BUTTON { id = "constraint-select-similar", class_ = "mini-btn", title = "Select constraints of the same type", accesskey = "m" },
+                                        new DIV { class_ = "btns" }._(
+                                            new BUTTON { id = "constraint-dup", class_ = "mini-btn", title = "Duplicate selected constraints (Ctrl+D)" },
+                                            new BUTTON { id = "constraint-select-similar", class_ = "mini-btn", title = "Select constraints of the same type (Alt+M)", accesskey = "m" },
+                                            new BUTTON { id = "constraint-move-up", class_ = "mini-btn", title = "Move selected constraints up in the list" },
+                                            new BUTTON { id = "constraint-move-down", class_ = "mini-btn", title = "Move selected constraints down in the list" }),
                                         new DIV { class_ = "label" }._("Constraints"),
                                         new DIV { id = "constraint-list" }),
                                     new SECTION { id = "constraint-code-section" }._(

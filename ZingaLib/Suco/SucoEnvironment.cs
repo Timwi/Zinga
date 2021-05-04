@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using RT.Util.ExtensionMethods;
@@ -23,6 +24,8 @@ namespace Zinga.Suco
         ///     cref="GetLastValue"/> and <see cref="GetPrevLastValue"/>.</summary>
         public SucoEnvironment DeclareVariable(string name, object value)
         {
+            if (_variables.Any(v => v.Name == name))
+                throw new SucoTempCompileException($"A variable with the name “{name}” is already defined. Please use a unique variable name.");
             var env = new SucoEnvironment();
             env._variables.AddRange(_variables);
             env._variables.Add(new SucoListComprehensionVariable(name, value));
@@ -34,6 +37,10 @@ namespace Zinga.Suco
         ///     cref="GetLastValue"/> and <see cref="GetPrevLastValue"/>.</summary>
         public SucoEnvironment DeclareListComprehensionVariables(params SucoListComprehensionVariable[] variables)
         {
+            if (variables == null)
+                throw new ArgumentNullException(nameof(variables));
+            if (variables.FirstOrNull(v1 => _variables.Any(v2 => v2.Name == v1.Name)) is SucoListComprehensionVariable v)
+                throw new SucoTempCompileException($"A variable with the name “{v.Name}” is already defined. Please use a unique variable name.");
             var env = new SucoEnvironment();
             env._variables.AddRange(_variables);
             env._variables.AddRange(variables);
@@ -45,6 +52,8 @@ namespace Zinga.Suco
         ///     <see cref="GetLastValue"/> and <see cref="GetPrevLastValue"/>.</summary>
         public SucoEnvironment DeclareVariable(string name, object value, IEnumerable list, int position)
         {
+            if (_variables.Any(v => v.Name == name))
+                throw new SucoTempCompileException($"A variable with the name “{name}” is already defined. Please use a unique variable name.");
             var env = new SucoEnvironment();
             env._variables.AddRange(_variables);
             env._variables.Add(new SucoListComprehensionVariable(name, value, list, position));

@@ -1090,7 +1090,7 @@
         let right = Math.max(9.4, fullBBox.x + fullBBox.width + .2);
         let bottom = Math.max(9.4, fullBBox.y + fullBBox.height + .2);
         puzzleSvg.setAttribute('viewBox', `${left} ${top} ${right - left} ${bottom - top}`);
-        let selectionFilter = document.getElementById('constraint-selection-shadow');
+        let selectionFilter = document.getElementById('constraint-invalid-shadow');
         selectionFilter.setAttribute('x', left);
         selectionFilter.setAttribute('y', top);
         selectionFilter.setAttribute('width', right - left);

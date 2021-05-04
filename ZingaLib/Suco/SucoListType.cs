@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using RT.Util.ExtensionMethods;
@@ -219,12 +220,11 @@ namespace Zinga.Suco
 
         public override object InterpretImplicitConversionTo(SucoType type, object operand) => (Inner, type) switch
         {
-            (_, SucoStringType) => ((IEnumerable<object>) operand).Select(item => (string) Inner.InterpretImplicitConversionTo(SucoType.String, item)).JoinString(),
+            (_, SucoStringType) => ((IEnumerable) operand)?.Cast<object>().Select(item => (string) Inner.InterpretImplicitConversionTo(SucoType.String, item)).JoinString(),
             (_, SucoBooleanType) =>
                 operand is IEnumerable<bool> bs ? bs.All(b => b) :
                 operand is IEnumerable<bool?> nbs ? nbs.Aggregate((bool?) true, (prev, next) => prev == false ? false : (bool?) next == false ? false : prev == null || next == null ? null : true) :
-                ((IEnumerable<object>) operand)
-                    ?.Select(item => (bool?) Inner.InterpretImplicitConversionTo(SucoType.Boolean, item))
+                ((IEnumerable) operand)?.Cast<object>().Select(item => (bool?) Inner.InterpretImplicitConversionTo(SucoType.Boolean, item))
                     .Aggregate((bool?) true, (prev, next) => prev == false ? false : (bool?) next == false ? false : prev == null || next == null ? null : true),
             _ => base.InterpretImplicitConversionTo(type, operand)
         };

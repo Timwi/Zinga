@@ -466,12 +466,20 @@
         // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
         if (!constraintSelectionUpdated)
             updateConstraintSelection();
-        // Decide whether to show the “select constraints of the same type” button
+
+        // Decide which buttons to show (“select similar”, “move up/down”, “duplicate”)
         let allSimilar = (selectedConstraints.length > 0 && selectedConstraints.every(ix => state.constraints[ix].type === state.constraints[selectedConstraints[0]].type));
-        document.getElementById('constraint-select-similar').style.display = allSimilar ? 'block' : 'none';
-        document.getElementById('constraint-code-section').style.display = allSimilar ? 'block' : 'none';
+        document.getElementById('constraint-select-similar').style.display = allSimilar ? '' : 'none';
+        document.getElementById('constraint-code-section').style.display = allSimilar ? '' : 'none';
         if (allSimilar)
             populateConstraintEditBox(state.constraints[selectedConstraints[0]].type);
+        document.getElementById('constraint-dup').style.display = selectedConstraints.length > 0 ? '' : 'none';
+
+        let firstSel = Math.min(...selectedConstraints);
+        let lastSel = Math.max(...selectedConstraints) + 1;
+        let hasGap = (lastSel - firstSel) !== selectedConstraints.length;
+        document.getElementById('constraint-move-up').style.display = selectedConstraints.length > 0 && (hasGap || firstSel > 0) ? '' : 'none';
+        document.getElementById('constraint-move-down').style.display = selectedConstraints.length > 0 && (hasGap || lastSel < state.constraints.length) ? '' : 'none';
 
         Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv =>
         {
@@ -861,7 +869,7 @@
         req.send(`puzzle=${encodeURIComponent(JSON.stringify(state))}`);
     });
 
-    // “Select similar constraints” button
+    // Constraint command buttons (“Select similar constraints”, “move up/down”, “duplicate”)
     setButtonHandler(document.getElementById('constraint-select-similar'), () =>
     {
         selectedConstraints = state.constraints.map((cstr, cIx) => cstr.type === state.constraints[selectedConstraints[0]].type ? cIx : null).filter(c => c !== null);
@@ -869,6 +877,58 @@
         updateVisuals();
         sidebarDiv.focus();
     });
+
+    function duplicateConstraints()
+    {
+        if (selectedConstraints.length > 0)
+        {
+            saveUndo();
+            let oldLength = state.constraints.length;
+            state.constraints.push(...selectedConstraints.map(c => JSON.parse(JSON.stringify(state.constraints[c]))));
+            selectConstraintRange(oldLength, state.constraints.length - 1, { storage: true, ui: true, svg: true });
+            console.log(state.constraints);
+        }
+    }
+    setButtonHandler(document.getElementById('constraint-dup'), duplicateConstraints);
+
+    function moveConstraints(up)
+    {
+        let firstSel = Math.min(...selectedConstraints);
+        let lastSel = Math.max(...selectedConstraints) + 1;
+        let prevSel = state.constraints[lastSelectedConstraint];
+        // If there is a gap in the selection
+        if ((lastSel - firstSel) !== selectedConstraints.length)
+        {
+            saveUndo();
+            // Move the constraints so that the selected constraints are in one block
+            let gap = state.constraints.filter((_, cIx) => cIx >= firstSel && cIx < lastSel && !selectedConstraints.includes(cIx));
+            let newConstraintList = state.constraints.slice(0, firstSel);
+            if (!up)
+                newConstraintList.push(...gap);
+            newConstraintList.push(...state.constraints.filter((_, cIx) => selectedConstraints.includes(cIx)));
+            if (up)
+                newConstraintList.push(...gap);
+            newConstraintList.push(...state.constraints.slice(lastSel));
+            state.constraints = newConstraintList;
+            selectedConstraints = Array(selectedConstraints.length).fill(null).map((_, c) => c + (up ? firstSel : lastSel - selectedConstraints.length));
+        }
+        else
+        {
+            // Do nothing if the selection is already at the top/bottom
+            if (up ? (firstSel === 0) : (lastSel === state.constraints.length))
+                return;
+            saveUndo();
+            // Move selected constraints up or down one slot as a group
+            let movingConstraintIx = up ? firstSel - 1 : lastSel;
+            let movingConstraint = state.constraints.splice(movingConstraintIx, 1);
+            state.constraints.splice(up ? lastSel - 1 : firstSel, 0, ...movingConstraint);
+            selectedConstraints = selectedConstraints.map(c => up ? (c - 1) : (c + 1));
+        }
+        lastSelectedConstraint = state.constraints.indexOf(prevSel);
+        updateVisuals({ storage: true, ui: true, svg: true });
+    }
+    setButtonHandler(document.getElementById('constraint-move-up'), () => moveConstraints(true));
+    setButtonHandler(document.getElementById('constraint-move-down'), () => moveConstraints(false));
 
     function getSpecialVariable(kind)
     {
@@ -1283,6 +1343,7 @@
         {
             selectTab('constraints');
             setClass(constraintElem, 'expanded', true);
+            newConstraint.expanded = true;
             uiElement.focus();
             if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
                 uiElement.select();
@@ -1448,15 +1509,10 @@
         {
             // Keys that change something
             case 'Delete': clearCells(); break;
-            case 'Ctrl+KeyD':
-                if (selectedConstraints.length > 0)
-                {
-                    saveUndo();
-                    let oldLength = state.constraints.length;
-                    state.constraints.push(...selectedConstraints.map(c => JSON.parse(JSON.stringify(state.constraints[c]))));
-                    selectConstraintRange(oldLength, state.constraints.length - 1, { storage: true, ui: true, svg: true });
-                }
-                break;
+            case 'Ctrl+KeyD': duplicateConstraints(); break;
+
+            case 'Alt+ArrowUp': moveConstraints(true); break;
+            case 'Alt+ArrowDown': moveConstraints(false); break;
 
             // Navigation
             case 'ArrowUp': selectConstraint(selectedConstraints.length === 0 ? 0 : lastSelectedConstraint > 0 ? lastSelectedConstraint - 1 : lastSelectedConstraint); break;

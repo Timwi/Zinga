@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using RT.Json;
 using RT.Util;
 using RT.Util.ExtensionMethods;
@@ -15,6 +16,9 @@ namespace Zinga.Suco
 
         public SucoTypeEnvironment DeclareVariable(string name, SucoType type, bool isInListComprehension = false)
         {
+            if (_variables.Any(v => v.name == name))
+                throw new SucoTempCompileException($"A variable with the name “{name}” is already defined. Please use a unique variable name.");
+
             var ne = new SucoTypeEnvironment();
             ne._variables.AddRange(_variables);
             ne._variables.Add((name, type, isInListComprehension));
