@@ -1123,7 +1123,7 @@
                 populateConstraintEditBox(cTypeId);
             }
 
-            updateVisuals({ storage: true, svg: true });
+            updateVisuals({ storage: true, svg: true, ui: true });
         };
     }
 
@@ -1146,7 +1146,7 @@
     {
         if (cells.length < 2)
             return [];
-        let smallestFactor = 2;
+        let smallestFactor = cells.length <= 5 ? 1 : 2;
         while (cells.length % smallestFactor !== 0)
             smallestFactor++;
         if (smallestFactor === cells.length)
@@ -1156,7 +1156,7 @@
 
         function* recurse(regionSoFar, banned)
         {
-            if (regionSoFar.length > 1 && cells.length % regionSoFar.length === 0)
+            if ((regionSoFar.length > 1 || (regionSoFar.length === 1 && cells.length <= 5)) && cells.length % regionSoFar.length === 0)
             {
                 // Check if the remaining cells form regions that match regionSoFar in shape
                 let rem = cells.filter(c => !regionSoFar.includes(c));
@@ -1173,7 +1173,7 @@
                     regions.push(reg.map(c => c + xOffset + 9 * yOffset));
                     rem = rem.filter(c => !reg.includes(c - xOffset - 9 * yOffset));
                 }
-                if (rem.length === 0)
+                if (rem.length === 0 && regions.length > 1)
                     yield regions;
             }
 
