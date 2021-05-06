@@ -65,7 +65,7 @@ namespace Zinga
                         // Some verifications:
                         // Make sure the variable types parse as valid Suco types
                         var env = new SucoTypeEnvironment();
-                        foreach (var (varName, varType) in cType["variables"].GetDict().ToTuples())
+                        foreach (var (varName, varType) in cType["variables"].GetDict())
                         {
                             if (!SucoType.TryParse(varType.GetString(), out var type))
                                 return HttpResponse.PlainText($"Unrecognized Suco type: {varType.GetString()}.", HttpStatusCode._400_BadRequest);
@@ -92,8 +92,8 @@ namespace Zinga
                             VariablesJson = cType["variables"].ToString()
                         };
                         var already = db.Constraints.FirstOrDefault(c => c.Kind == newConstraintType.Kind && c.LogicSuco == newConstraintType.LogicSuco &&
-                            c.Name == newConstraintType.Name && c.PreviewSvg == newConstraintType.PreviewSvg && !c.Public && c.Shortcut == null &&
-                            c.SvgDefsSuco == newConstraintType.SvgDefsSuco && c.SvgSuco == newConstraintType.SvgSuco && c.VariablesJson == newConstraintType.VariablesJson);
+                            c.Name == newConstraintType.Name && c.PreviewSvg == newConstraintType.PreviewSvg && c.SvgDefsSuco == newConstraintType.SvgDefsSuco &&
+                            c.SvgSuco == newConstraintType.SvgSuco && c.VariablesJson == newConstraintType.VariablesJson);
                         if (already != null)
                             dbConstraintTypes[typeId] = already;
                         else

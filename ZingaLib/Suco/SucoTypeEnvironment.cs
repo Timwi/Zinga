@@ -32,7 +32,7 @@ namespace Zinga.Suco
         public static SucoTypeEnvironment FromVariablesJson(JsonDict variables)
         {
             var env = new SucoTypeEnvironment();
-            foreach (var (name, type) in variables.ToTuples())
+            foreach (var (name, type) in variables)
                 env._variables.Add((name, SucoType.Parse(type.GetString()), false));
             return env;
         }

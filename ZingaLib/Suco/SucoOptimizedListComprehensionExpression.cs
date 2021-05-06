@@ -17,7 +17,7 @@ namespace Zinga.Suco
         public override SucoExpression Optimize(SucoEnvironment env, int?[] givens) => this;
         public override object Interpret(SucoEnvironment env, int?[] grid) => typeof(SucoOptimizedListComprehensionExpression)
             .GetMethod(nameof(interpret), BindingFlags.NonPublic | BindingFlags.Instance)
-            .MakeGenericMethod(((SucoListType) Type).Inner.CsType)
+            .MakeGenericMethod(((SucoListType) Type).ElementType.CsType)
             .Invoke(this, new object[] { env, grid });
 
         private IEnumerable<T> interpret<T>(SucoEnvironment env, int?[] grid)

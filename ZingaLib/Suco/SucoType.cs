@@ -12,7 +12,7 @@ namespace Zinga.Suco
         public static readonly SucoType Integer = new SucoIntegerType();
         public static readonly SucoType String = new SucoStringType();
 
-        public static SucoType List(SucoType inner) => new SucoListType(inner);
+        public static SucoType List(SucoType elementType) => new SucoListType(elementType);
 
         public virtual SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => throw new SucoTempCompileException($"Binary operator “{op}” not defined on types “{this}” and “{rightType}”.");
         public virtual object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => throw new SucoTempCompileException($"Binary operator “{op}” not defined on types “{this}” and “{rightType}”.");

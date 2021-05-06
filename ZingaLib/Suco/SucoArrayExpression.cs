@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using RT.Util.ExtensionMethods;
 using Zinga.Lib;
@@ -9,6 +8,7 @@ namespace Zinga.Suco
     public class SucoArrayExpression : SucoExpression
     {
         public List<SucoExpression> Elements { get; private set; }
+        public SucoType ElementType => ((SucoListType) Type).ElementType;
 
         public SucoArrayExpression(int startIndex, int endIndex, List<SucoExpression> elements, SucoType type = null)
             : base(startIndex, endIndex, type)
@@ -29,7 +29,7 @@ namespace Zinga.Suco
 
         public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
         {
-            var constants = Array.CreateInstance(((SucoListType) Type).Inner.CsType, Elements.Count);
+            var constants = ElementType.CreateArray(Elements.Count);
             var expressions = new SucoExpression[Elements.Count];
             var anyExpressions = false;
 
@@ -50,6 +50,12 @@ namespace Zinga.Suco
             return new SucoOptimizedArrayExpression(StartIndex, EndIndex, constants, expressions, Type);
         }
 
-        public override object Interpret(SucoEnvironment env, int?[] grid) => Elements.Select(e => e.Interpret(env, grid)).ToArray();
+        public override object Interpret(SucoEnvironment env, int?[] grid)
+        {
+            var array = ElementType.CreateArray(Elements.Count);
+            for (var i = 0; i < Elements.Count; i++)
+                array.SetValue(Elements[i].Interpret(env, grid), i);
+            return array;
+        }
     }
 }

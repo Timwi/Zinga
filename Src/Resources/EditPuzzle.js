@@ -257,12 +257,19 @@
             {
                 case 'int':
                     return `<input type='number' step='1' id='${id}' value='${value | 0}' />`;
+
                 case 'bool':
                     return `<input type='checkbox' id='${id}'${value ? ` checked='checked'` : ''} />`;
+
+                case 'cell':
                 case 'list(cell)':
                     return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><button type='button' class='mini-btn set' id='${id}-set' title='Set constraint to the current selection' tabindex='0'></button>`;
+
                 case 'list(list(cell))':
                     return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><span class='matching-regions-controls' id='${id}-set' data-constraintix='${cIx}'></span>`;
+
+                case 'list(int)':
+                    return `<div class='int-list' id='${id}'>${value.map((v, vIx) => `<input type='number' step='1' value='${v}' id='${id}-${vIx}' data-ix='${vIx}' />`).join('')}<input type='number' step='1' id='${id}-${value.length}' data-ix='${value.length}' /></div>`;
             }
 
             let listRx = /^list\((.*)\)$/.exec(type);
@@ -286,28 +293,34 @@
                 case 'int':
                     document.getElementById(id).onchange = function() { setter(document.getElementById(id).value); };
                     return;
+
                 case 'bool':
                     document.getElementById(id).onchange = function() { setter(document.getElementById(id).checked); };
                     return;
+
+                case 'cell':
                 case 'list(cell)':
                     setButtonHandler(document.getElementById(`${id}-show`), function()
                     {
-                        selectedCells = [...getter()];
+                        selectedCells = type === 'cell' ? [getter()] : getter().slice(0);
+                        lastSelectedCell = selectedCells.length > 0 ? Math.min(...selectedCells) : 0;
                         selectedConstraints = [];
                         editingConstraintType = null;
                         updateVisuals();
                     });
-                    setButtonHandler(document.getElementById(`${id}-set`), function()
-                    {
-                        setter(selectedCells);
-                    });
+                    if (type === 'cell')
+                        setButtonHandler(document.getElementById(`${id}-set`), function() { if (selectedCells.length > 0) setter(Math.min(...selectedCells)); });
+                    else
+                        setButtonHandler(document.getElementById(`${id}-set`), function() { setter(selectedCells); });
                     return;
+
                 case 'list(list(cell))':
                     setButtonHandler(document.getElementById(`${id}-show`), function()
                     {
                         selectedCells = [];
                         for (let inner of getter())
                             selectedCells.push(...inner);
+                        lastSelectedCell = selectedCells.length > 0 ? Math.min(...selectedCells) : 0;
                         selectedConstraints = [];
                         editingConstraintType = null;
                         updateVisuals();
@@ -316,6 +329,36 @@
                     setDiv.zingaSetter = setter;
                     setDiv.zingaRegions = getter();
                     return;
+
+                case 'list(int)':
+                    let outerDiv = document.getElementById(id);
+                    let intArray = getter();
+                    Array.from(outerDiv.querySelectorAll('input')).forEach(input =>
+                    {
+                        function inputChangeEvent(inp, ix)
+                        {
+                            return function()
+                            {
+                                if (inp.value === '')
+                                {
+                                    intArray.length = ix;
+                                    Array.from(outerDiv.querySelectorAll('input')).filter(inp => (inp.dataset.ix | 0) > ix).forEach(inp => { inp.remove(); });
+                                }
+                                else if (ix === intArray.length)
+                                {
+                                    intArray.push(inp.value | 0);
+                                    let t = document.createElement('div');
+                                    t.innerHTML = `<input type='number' step='1' id='${id}-${intArray.length}' data-ix='${intArray.length}'>`;
+                                    t.firstChild.onchange = inputChangeEvent(t.firstChild, intArray.length);
+                                    outerDiv.appendChild(t.firstChild);
+                                }
+                                else
+                                    intArray[ix] = (inp.value | 0);
+                                setter(intArray);
+                            };
+                        }
+                        input.onchange = inputChangeEvent(input, input.dataset.ix | 0);
+                    });
             }
         }
 
@@ -940,7 +983,7 @@
             case 'RowColumn': return ['cells', 'list(cell)']; break;
             case 'Diagonal': return ['cells', 'list(cell)']; break;
             case 'TwoCells': return ['cells', 'list(cell)']; break;
-            case 'FourCells': return ['topleftcell', 'cell']; break;
+            case 'FourCells': return ['cells', 'list(cell)']; break;
         }
         return [null, null];
     }
@@ -988,6 +1031,7 @@
                         updateVisuals({ storage: true, ui: true, svg: true });
                     });
 
+                    // Double-click to rename a property
                     tr.querySelector('th').ondblclick = function()
                     {
                         let lastInput = variableName;
@@ -1014,36 +1058,35 @@
                         }
                     };
 
-                    function generateDropdowns()
+                    // Drop-downs for the property types
+                    let type = cType.variables[variableName];
+                    let html = '';
+                    let i = 0;
+                    let regexResult;
+                    while (regexResult = /^list\((.*)\)$/.exec(type))
                     {
-                        let type = cType.variables[variableName];
-                        let html = '';
-                        let i = 0;
-                        let regexResult;
-                        while (regexResult = /^list\((.*)\)$/.exec(type))
-                        {
-                            html += dropdown(`constraint-code-variable-${variableName}-${i}`);
-                            i++;
-                            type = regexResult[1];
-                        }
                         html += dropdown(`constraint-code-variable-${variableName}-${i}`);
-                        tr.querySelector('td').innerHTML = html;
-                        Array.from(tr.querySelectorAll('select')).forEach((sel, selIx) =>
-                        {
-                            sel.value = selIx === i ? type : 'list';
-                            sel.onchange = function()
-                            {
-                                saveUndo();
-                                if (sel.value === 'list')
-                                    cType.variables[variableName] = `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`;
-                                else
-                                    cType.variables[variableName] = `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
-                                generateDropdowns();
-                                updateVisuals({ storage: true, ui: true });
-                            };
-                        });
+                        i++;
+                        type = regexResult[1];
                     }
-                    generateDropdowns();
+                    html += dropdown(`constraint-code-variable-${variableName}-${i}`);
+                    tr.querySelector('td').innerHTML = html;
+                    Array.from(tr.querySelectorAll('select')).forEach((sel, selIx) =>
+                    {
+                        // Change the type of a property
+                        sel.value = selIx === i ? type : 'list';
+                        sel.onchange = function()
+                        {
+                            editConstraintParameter(cTypeId, `variables-${variableName}-type`, newCTypeId =>
+                            {
+                                let newCType = getConstraintType(newCTypeId);
+                                if (sel.value === 'list')
+                                    newCType.variables[variableName] = `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`;
+                                else
+                                    newCType.variables[variableName] = `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
+                            });
+                        };
+                    });
                 }
                 else
                 {
@@ -1072,59 +1115,38 @@
         generateVariablesTable();
     }
 
-    function editConstraintParameter(elem, paramName, getter, setter)
+    function editConstraintParameter(cTypeId, paramName, setter)
     {
-        return function()
+        if (editingConstraintType !== cTypeId || editingConstraintTypeParameter !== paramName)
+            saveUndo();
+
+        if (editingConstraintType !== cTypeId)
         {
-            if (selectedConstraints.length === 0)
-                return;
-            let newValue = elem.value === '' ? null : elem.value;
-            let cTypeId = state.constraints[selectedConstraints[0]].type;
-            let oldValue = getter(cTypeId);
-            if (newValue === oldValue)
-                return;
-
-            if (editingConstraintType !== cTypeId || editingConstraintTypeParameter !== paramName)
-                saveUndo();
-
-            if (editingConstraintType !== cTypeId)
+            // If only some (not all) constraints of the same type are selected, or the constraint type is a public one, create a copy of the constraint type
+            let unselectedSameType = state.constraints.map((c, cIx) => c.type === cTypeId && !selectedConstraints.includes(cIx) ? cIx : null).filter(c => c != null);
+            if (cTypeId >= 0 || unselectedSameType.length > 0)
             {
-                // If only some (not all) constraints of the same type are selected, or the constraint type is a public one, create a copy of the constraint type
-                let unselectedSameType = state.constraints.map((c, cIx) => c.type === cTypeId && !selectedConstraints.includes(cIx) ? cIx : null).filter(c => c != null);
-                if (cTypeId >= 0 || unselectedSameType.length > 0)
+                let cTypeCopy = JSON.parse(JSON.stringify(getConstraintType(cTypeId)));
+                delete cTypeCopy.public;
+                delete cTypeCopy.shortcut;
+                let nIx = state.customConstraintTypes.findIndex(c => c === null);
+                if (nIx === -1)
                 {
-                    let cTypeCopy = JSON.parse(JSON.stringify(getConstraintType(cTypeId)));
-                    delete cTypeCopy.public;
-                    delete cTypeCopy.shortcut;
-                    let nIx = state.customConstraintTypes.findIndex(c => c === null);
-                    if (nIx === -1)
-                    {
-                        nIx = state.customConstraintTypes.length;
-                        state.customConstraintTypes.push(null);
-                    }
-                    let newCTypeId = ~nIx;
-                    state.customConstraintTypes[nIx] = cTypeCopy;
-                    for (let cIx of selectedConstraints)
-                        state.constraints[cIx].type = newCTypeId;
-                    cTypeId = newCTypeId;
+                    nIx = state.customConstraintTypes.length;
+                    state.customConstraintTypes.push(null);
                 }
+                let newCTypeId = ~nIx;
+                state.customConstraintTypes[nIx] = cTypeCopy;
+                for (let cIx of selectedConstraints)
+                    state.constraints[cIx].type = newCTypeId;
+                cTypeId = newCTypeId;
             }
+        }
 
-            editingConstraintType = cTypeId;
-            editingConstraintTypeParameter = paramName;
-            setter(cTypeId, newValue);
-
-            if (paramName === 'kind')
-            {
-                let cType = getConstraintType(cTypeId);
-                let inf = getSpecialVariable(newValue);
-                if (inf[0] !== null)
-                    cType.variables[inf[0]] = inf[1];
-                populateConstraintEditBox(cTypeId);
-            }
-
-            updateVisuals({ storage: true, svg: true, ui: true });
-        };
+        editingConstraintType = cTypeId;
+        editingConstraintTypeParameter = paramName;
+        setter(cTypeId);
+        updateVisuals({ storage: true, svg: true, ui: true });
     }
 
     // — Expander
@@ -1134,13 +1156,36 @@
     setButtonHandler(constraintCodeBox.querySelector('.label'), function() { });
     constraintCodeBox.querySelector('.label').ondblclick = function(ev) { if (ev.target !== constraintCodeExpander) setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); };
 
-    // — Text boxes
-    document.getElementById('constraint-code-name').onkeyup = editConstraintParameter(document.getElementById('constraint-code-name'), 'name', cTypeId => getConstraintType(cTypeId).name, (cTypeId, value) => { getConstraintType(cTypeId).name = value; });
-    document.getElementById('constraint-code-kind').onchange = editConstraintParameter(document.getElementById('constraint-code-kind'), 'kind', cTypeId => getConstraintType(cTypeId).kind, (cTypeId, value) => { getConstraintType(cTypeId).kind = value; });
-    document.getElementById('constraint-code-logic').onkeyup = editConstraintParameter(document.getElementById('constraint-code-logic'), 'logic', cTypeId => getConstraintType(cTypeId).logic, (cTypeId, value) => { getConstraintType(cTypeId).logic = value; });
-    document.getElementById('constraint-code-svg').onkeyup = editConstraintParameter(document.getElementById('constraint-code-svg'), 'svg', cTypeId => getConstraintType(cTypeId).svg, (cTypeId, value) => { getConstraintType(cTypeId).svg = value; });
-    document.getElementById('constraint-code-svgdefs').onkeyup = editConstraintParameter(document.getElementById('constraint-code-svgdefs'), 'svgdefs', cTypeId => getConstraintType(cTypeId).svgdefs, (cTypeId, value) => { getConstraintType(cTypeId).svgdefs = value; });
-    document.getElementById('constraint-code-preview').onkeyup = editConstraintParameter(document.getElementById('constraint-code-preview'), 'preview', cTypeId => getConstraintType(cTypeId).preview, (cTypeId, value) => { getConstraintType(cTypeId).preview = value; });
+    // — Text boxes / drop-downs
+    let editableElements = [
+        { id: 'name', getter: cTypeId => getConstraintType(cTypeId).name, setter: (cTypeId, v) => { getConstraintType(cTypeId).name = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
+        { id: 'logic', getter: cTypeId => getConstraintType(cTypeId).logic, setter: (cTypeId, v) => { getConstraintType(cTypeId).logic = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
+        { id: 'svg', getter: cTypeId => getConstraintType(cTypeId).svg, setter: (cTypeId, v) => { getConstraintType(cTypeId).svg = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
+        { id: 'svgdefs', getter: cTypeId => getConstraintType(cTypeId).svgdefs, setter: (cTypeId, v) => { getConstraintType(cTypeId).svgdefs = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
+        { id: 'preview', getter: cTypeId => getConstraintType(cTypeId).preview, setter: (cTypeId, v) => { getConstraintType(cTypeId).preview = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
+
+        {
+            id: 'kind', getter: cTypeId => getConstraintType(cTypeId).kind, setEvent: (el, ev) => { el.onchange = ev; }, setter: (cTypeId, v) =>
+            {
+                let cType = getConstraintType(cTypeId);
+                cType.kind = v;
+                let inf = getSpecialVariable(v);
+                if (inf[0] !== null)
+                    cType.variables[inf[0]] = inf[1];
+                populateConstraintEditBox(cTypeId);
+            }
+        }
+    ];
+    for (let inf of editableElements)
+    {
+        let elem = document.getElementById(`constraint-code-${inf.id}`);
+        inf.setEvent(elem, () =>
+        {
+            let cTypeId = state.constraints[selectedConstraints[0]].type;
+            if (elem.value !== inf.getter(cTypeId))
+                editConstraintParameter(cTypeId, inf.id, cTypeId => inf.setter(cTypeId, elem.value));
+        });
+    }
 
     function findMatchingRegions(cells)
     {
@@ -1248,7 +1293,7 @@
 
             case 'RowColumn':
                 if (!Array.isArray(value) || value.length < 2)
-                    return { valid: false, message: 'Select at least two cells that are in the same row or column.' };
+                    return { valid: false, message: 'This constraint requires at least two cells that are in the same row or column.' };
 
                 let row = value.every(c => ((c / 9) | 0) === ((value[0] / 9) | 0)) ? ((value[0] / 9) | 0) : null;
                 let col = value.every(c => (c % 9) === (value[0] % 9)) ? (value[0] % 9) : null;
@@ -1264,7 +1309,7 @@
 
             case 'Diagonal':
                 if (!Array.isArray(value) || value.length < 2)
-                    return { valid: false, message: 'Select at least two cells that are on the same diagonal.' };
+                    return { valid: false, message: 'This constraint requires at least two cells that are on the same diagonal.' };
 
                 let forward = value.every(c => (c % 9) - ((c / 9) | 0) === (value[0] % 9) - ((value[0] / 9) | 0)) ? (value[0] % 9) - ((value[0] / 9) | 0) : null;
                 let backward = value.every(c => (c % 9) + ((c / 9) | 0) === (value[0] % 9) + ((value[0] / 9) | 0)) ? (value[0] % 9) + ((value[0] / 9) | 0) : null;
@@ -1279,22 +1324,22 @@
 
             case 'TwoCells':
                 if (!Array.isArray(value) || value.length !== 2 || !orthogonal(value[0]).includes(value[1]))
-                    return { valid: false, message: 'Select two cells that are orthogonally adjacent to one another.' };
+                    return { valid: false, message: 'This constraint requires two cells that are orthogonally adjacent to one another.' };
                 return { valid: true, value: [Math.min(...value), Math.max(...value)] };
 
             case 'FourCells':
                 if (typeof value === 'number' && value % 9 >= 0 && value % 9 < 9 - 1 && ((value / 9) | 0) >= 0 && ((value / 9) | 0) < 9 - 1)
-                    return { valid: true, value: value };
+                    return { valid: true, value: [value, value + 1, value + 10, value + 9] };
 
                 if (!Array.isArray(value) || value.length !== 4)
-                    return { valid: false, message: 'Select four cells that form a 2×2 square.' };
+                    return { valid: false, message: 'This constraint requires four cells that form a 2×2 square.' };
 
                 let sorted = [...value];
                 sorted.sort((c1, c2) => c1 - c2);
                 if (sorted[0] % 9 === 9 - 1 || sorted[1] != sorted[0] + 1 || ((sorted[0] / 9) | 0) === 9 - 1 || sorted[2] != sorted[0] + 9 || sorted[3] != sorted[0] + 9 + 1)
-                    return { valid: false, message: 'Select four cells that form a 2×2 square.' };
+                    return { valid: false, message: 'This constraint requires four cells that form a 2×2 square.' };
 
-                return { valid: true, value: sorted[0] };
+                return { valid: true, value: [0, 1, 3, 2].map(c => sorted[c]) };
 
             case 'Custom':
             case 'Global':

@@ -21,7 +21,7 @@ namespace Zinga.Lib
             if (!_parsedSuco.ContainsKey(key))
             {
                 var env = new SucoTypeEnvironment();
-                foreach (var (varName, varValue) in variablesJson.ToTuples())
+                foreach (var (varName, varValue) in variablesJson)
                     env = env.DeclareVariable(varName, SucoType.Parse(varValue.GetString()));
                 _parsedSuco[key] = (SucoParser.ParseCode(suco, env, context, expectedResultType), env, new Dictionary<string, object>());
             }
@@ -169,7 +169,7 @@ namespace Zinga.Lib
             {
                 var env = new SucoTypeEnvironment();
                 var variableTypes = JsonDict.Parse(variableTypesJson);
-                foreach (var (key, value) in variableTypes.ToTuples())
+                foreach (var (key, value) in variableTypes)
                     env = env.DeclareVariable(key, SucoType.Parse(value.GetString()));
                 var parseTree = SucoParser.ParseCode(suco, env, SucoContext.Svg, SucoType.String);
                 return new JsonDict { ["status"] = "ok" }.ToString();

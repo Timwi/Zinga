@@ -9,19 +9,19 @@ namespace Zinga.Suco
 {
     public class SucoListType : SucoType
     {
-        public SucoType Inner { get; private set; }
+        public SucoType ElementType { get; private set; }
 
-        public SucoListType(SucoType inner)
+        public SucoListType(SucoType elementType)
         {
-            Inner = inner;
+            ElementType = elementType;
         }
 
-        public override bool Equals(SucoType other) => other is SucoListType list && list.Inner.Equals(Inner);
-        public override string ToString() => $"list({Inner})";
-        public override int GetHashCode() => Inner.GetHashCode() * 47;
-        public override Type CsType => typeof(IEnumerable<>).MakeGenericType(Inner.CsType);
+        public override bool Equals(SucoType other) => other is SucoListType list && list.ElementType.Equals(ElementType);
+        public override string ToString() => $"list({ElementType})";
+        public override int GetHashCode() => ElementType.GetHashCode() * 47;
+        public override Type CsType => typeof(IEnumerable<>).MakeGenericType(ElementType.CsType);
 
-        public override SucoType GetMemberType(string memberName, SucoContext context) => (memberName, Inner) switch
+        public override SucoType GetMemberType(string memberName, SucoContext context) => (memberName, ElementType) switch
         {
             // Lists of cells
             ("sum", SucoCellType) => SucoType.Integer,
@@ -44,7 +44,7 @@ namespace Zinga.Suco
             ("none", SucoBooleanType) => SucoType.Boolean,
 
             // Lists of lists of integers
-            ("unique", SucoListType { Inner: SucoIntegerType }) => SucoType.Boolean,
+            ("unique", SucoListType { ElementType: SucoIntegerType }) => SucoType.Boolean,
 
             // All lists
             ("count", _) => SucoType.Integer,
@@ -52,7 +52,7 @@ namespace Zinga.Suco
             _ => base.GetMemberType(memberName, context),
         };
 
-        public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid) => (memberName, Inner) switch
+        public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid) => (memberName, ElementType) switch
         {
             // Lists of cells
             ("sum", SucoCellType) => ((IEnumerable<Cell>) operand)?.Aggregate((int?) 0, (prev, next) => prev == null || grid[next.Index] == null ? null : prev.Value + grid[next.Index].Value),
@@ -64,19 +64,21 @@ namespace Zinga.Suco
             // Lists of integers
             ("contains", SucoIntegerType) => operand == null ? null : contains(((IEnumerable<int?>) operand).ToArray()),
             ("same", SucoIntegerType) => operand == null ? null : same(((IEnumerable<int?>) operand)),
+            ("count", SucoIntegerType) => count<int?>(operand),
 
             // Lists of booleans
             ("all", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == false ? false : prev == null || next == null ? null : true),
             ("any", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) false, (prev, next) => prev == true || (bool?) next == true ? true : prev == null || next == null ? null : false),
             ("none", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == true ? false : prev == null || next == null ? null : true),
+            ("count", SucoBooleanType) => count<bool?>(operand),
 
             // Lists of lists of integers
-            ("unique", SucoListType { Inner: SucoIntegerType }) =>
+            ("unique", SucoListType { ElementType: SucoIntegerType }) =>
                 operand == null || ((IEnumerable<object>) operand).Any(l => l == null || ((IEnumerable<object>) l).Contains(null)) ? null :
                 checkUnique(((IEnumerable<object>) operand)?.Select(obj => ((IEnumerable<object>) obj)?.Select(i => (int?) i).ToArray()).ToArray()),
 
             // All lists
-            ("count", _) => count((IEnumerable<object>) operand),
+            ("count", _) => count<object>(operand),
 
             _ => base.InterpretMemberAccess(memberName, operand, env, grid)
         };
@@ -96,12 +98,12 @@ namespace Zinga.Suco
             return result;
         }
 
-        private int? count(IEnumerable<object> operand)
+        private int? count<T>(object operand)
         {
             if (operand == null)
                 return null;
             var c = 0;
-            foreach (var item in operand)
+            foreach (var item in (IEnumerable<T>) operand)
             {
                 if (item == null)
                     return null;
@@ -169,21 +171,21 @@ namespace Zinga.Suco
 
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
-            (BinaryOperator.Plus, SucoListType { Inner: SucoType i }) when i.ImplicitlyConvertibleTo(Inner) || Inner.ImplicitlyConvertibleTo(i)
-                => (i.ImplicitlyConvertibleTo(Inner) ? Inner : i).List(),
+            (BinaryOperator.Plus, SucoListType { ElementType: SucoType i }) when i.ImplicitlyConvertibleTo(ElementType) || ElementType.ImplicitlyConvertibleTo(i)
+                => (i.ImplicitlyConvertibleTo(ElementType) ? ElementType : i).List(),
             _ => base.GetBinaryOperatorType(op, rightType, context),
         };
 
         public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch
         {
-            (BinaryOperator.Plus, SucoListType { Inner: SucoType i }) when i.ImplicitlyConvertibleTo(Inner) || Inner.ImplicitlyConvertibleTo(i) => concat((IEnumerable<object>) left, (IEnumerable<object>) right, i),
+            (BinaryOperator.Plus, SucoListType { ElementType: SucoType i }) when i.ImplicitlyConvertibleTo(ElementType) || ElementType.ImplicitlyConvertibleTo(i) => concat((IEnumerable<object>) left, (IEnumerable<object>) right, i),
             _ => base.InterpretBinaryOperator(left, op, rightType, right),
         };
 
-        private IEnumerable<object> concat(IEnumerable<object> left, IEnumerable<object> right, SucoType rightInnerType) =>
-            rightInnerType.ImplicitlyConvertibleTo(Inner)
-                ? left.Concat(right.Select(obj => rightInnerType.InterpretImplicitConversionTo(Inner, obj))).ToArray()
-                : left.Select(obj => Inner.InterpretImplicitConversionTo(rightInnerType, obj)).Concat(right).ToArray();
+        private IEnumerable<object> concat(IEnumerable<object> left, IEnumerable<object> right, SucoType rightElementType) =>
+            rightElementType.ImplicitlyConvertibleTo(ElementType)
+                ? left.Concat(right.Select(obj => rightElementType.InterpretImplicitConversionTo(ElementType, obj))).ToArray()
+                : left.Select(obj => ElementType.InterpretImplicitConversionTo(rightElementType, obj)).Concat(right).ToArray();
 
         private SucoFunction outline(int[] constraintCells) => new(
             (parameters: new[] { SucoType.Decimal, SucoType.Decimal }, returnType: SucoType.String, interpreter: arr => ZingaUtil.GenerateSvgPath(constraintCells, (double) arr[0], (double) arr[1])),
@@ -211,20 +213,20 @@ namespace Zinga.Suco
             return anyNull ? null : true;
         }
 
-        public override bool ImplicitlyConvertibleTo(SucoType other) => (Inner, other) switch
+        public override bool ImplicitlyConvertibleTo(SucoType other) => (ElementType, other) switch
         {
-            (_, SucoStringType) => Inner.ImplicitlyConvertibleTo(SucoType.String),
-            (_, SucoBooleanType) => Inner.ImplicitlyConvertibleTo(SucoType.Boolean),
+            (_, SucoStringType) => ElementType.ImplicitlyConvertibleTo(SucoType.String),
+            (_, SucoBooleanType) => ElementType.ImplicitlyConvertibleTo(SucoType.Boolean),
             _ => base.ImplicitlyConvertibleTo(other)
         };
 
-        public override object InterpretImplicitConversionTo(SucoType type, object operand) => (Inner, type) switch
+        public override object InterpretImplicitConversionTo(SucoType type, object operand) => (ElementType, type) switch
         {
-            (_, SucoStringType) => ((IEnumerable) operand)?.Cast<object>().Select(item => (string) Inner.InterpretImplicitConversionTo(SucoType.String, item)).JoinString(),
+            (_, SucoStringType) => ((IEnumerable) operand)?.Cast<object>().Select(item => (string) ElementType.InterpretImplicitConversionTo(SucoType.String, item)).JoinString(),
             (_, SucoBooleanType) =>
                 operand is IEnumerable<bool> bs ? bs.All(b => b) :
                 operand is IEnumerable<bool?> nbs ? nbs.Aggregate((bool?) true, (prev, next) => prev == false ? false : (bool?) next == false ? false : prev == null || next == null ? null : true) :
-                ((IEnumerable) operand)?.Cast<object>().Select(item => (bool?) Inner.InterpretImplicitConversionTo(SucoType.Boolean, item))
+                ((IEnumerable) operand)?.Cast<object>().Select(item => (bool?) ElementType.InterpretImplicitConversionTo(SucoType.Boolean, item))
                     .Aggregate((bool?) true, (prev, next) => prev == false ? false : (bool?) next == false ? false : prev == null || next == null ? null : true),
             _ => base.InterpretImplicitConversionTo(type, operand)
         };

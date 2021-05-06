@@ -14,16 +14,16 @@ namespace Zinga.Lib
         public static SucoEnvironment ConvertVariableValues(JsonDict variablesJson, JsonDict valuesJson)
         {
             var list = new List<(string name, object value)>();
-            foreach (var (varName, varType) in variablesJson.ToTuples())
+            foreach (var (varName, varType) in variablesJson)
                 list.Add((varName, convertVariableValue(SucoType.Parse(varType.GetString()), valuesJson[varName])));
             return new SucoEnvironment(list);
         }
 
-        private static object convertList(JsonList list, SucoType inner)
+        private static object convertList(JsonList list, SucoType elementType)
         {
-            var result = Array.CreateInstance(inner.CsType, list.Count);
+            var result = elementType.CreateArray(list.Count);
             for (var i = 0; i < list.Count; i++)
-                result.SetValue(convertVariableValue(inner, list[i]), i);
+                result.SetValue(convertVariableValue(elementType, list[i]), i);
             return result;
         }
 
@@ -34,11 +34,14 @@ namespace Zinga.Lib
             SucoDecimalType => j.GetDoubleLenientSafe() ?? 0d,
             SucoIntegerType => j.GetIntLenientSafe() ?? 0,
             SucoStringType => j.GetStringLenientSafe() ?? "",
-            SucoListType lst => convertList(j.GetListSafe() ?? new JsonList(), lst.Inner),
+            SucoListType lst => convertList(j.GetListSafe() ?? new JsonList(), lst.ElementType),
             _ => throw new NotImplementedException($"Programmer has neglected to include code to deserialize “{type}”.")
         };
 
-        public static SucoType List(this SucoType inner) => SucoType.List(inner);
+        public static SucoType List(this SucoType elementType) => SucoType.List(elementType);
+
+        public static Array CreateArray(this SucoType elementType, int length) => Array.CreateInstance(elementType.CsType, length);
+
 
         #region Algorithm to generate outlines around cells
         private enum CellDirection { Up, Right, Down, Left }

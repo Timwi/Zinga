@@ -33,7 +33,7 @@ namespace Zinga.Suco
             if (argumentTypes == null)
                 throw new ArgumentNullException(nameof(argumentTypes));
 
-            foreach (var (parameters, tup) in _dic.ToTuples())
+            foreach (var (parameters, tup) in _dic)
                 if (parameters.Length == argumentTypes.Length && Enumerable.Range(0, parameters.Length).All(i => argumentTypes[i].ImplicitlyConvertibleTo(parameters[i])))
                     return tup;
 

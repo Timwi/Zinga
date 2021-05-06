@@ -231,7 +231,7 @@ namespace Zinga
                                                 new LI("Press a lower-case letter to add one of the common constraints listed below."),
                                                 new LI("Press Shift with a letter to search for more constraints.")),
                                             new HR(),
-                                            new P("Common constraint shortcuts:"),
+                                            new P("Shortcuts for common constraint:"),
                                             new TABLE(constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))))))))))));
         }
     }

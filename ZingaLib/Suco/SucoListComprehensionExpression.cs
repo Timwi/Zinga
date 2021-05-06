@@ -14,6 +14,7 @@ namespace Zinga.Suco
         public List<SucoListClause> Clauses { get; private set; }
         public SucoExpression Selector { get; private set; }
         private SucoContext _context;
+        public SucoType ElementType => ((SucoListType) Type).ElementType;
 
         public SucoListComprehensionExpression(int startIndex, int endIndex, List<SucoListClause> clauses, SucoExpression selector, SucoType type = null)
             : base(startIndex, endIndex, type)
@@ -49,11 +50,11 @@ namespace Zinga.Suco
                     }
                 }
 
-                if (collectionType is not SucoListType { Inner: SucoType elementType })
+                if (collectionType is not SucoListType { ElementType: SucoType elementType })
                     throw new SucoCompileException($"The clause for variable “{clause.VariableName}” is attempting to draw elements from something that is not a list.", clause.StartIndex, clause.EndIndex);
 
                 // Ensure the inner condition expressions are all implicitly convertible to booleans
-                newEnv = newEnv.DeclareVariable(clause.VariableName, ((SucoListType) collectionType).Inner, isInListComprehension: true);
+                newEnv = newEnv.DeclareVariable(clause.VariableName, ((SucoListType) collectionType).ElementType, isInListComprehension: true);
                 var newConditions = clause.Conditions.Select(cond => cond.DeduceTypes(newEnv, context, elementType)).ToList();
                 newClauses.Add(new SucoListClause(clause.StartIndex, clause.EndIndex, clause.VariableName, clause.HasDollar, clause.HasPlus, clause.HasSingleton, newFromExpression, newConditions, elementType));
                 if (clause.HasSingleton)
@@ -83,7 +84,7 @@ namespace Zinga.Suco
             if (clIx == Clauses.Count)
                 return new (SucoListComprehensionVariable[] variables, List<SucoListCondition> conditions, SucoExpression expr)[]
                 {
-                    (variables, null, Selector == null ? new SucoConstant(StartIndex, EndIndex, ((SucoListType) Type).Inner, env.GetValue(Clauses[0].VariableName)) : Selector.Optimize(env, givens))
+                    (variables, null, Selector == null ? new SucoConstant(StartIndex, EndIndex, ((SucoListType) Type).ElementType, env.GetValue(Clauses[0].VariableName)) : Selector.Optimize(env, givens))
                 };
 
             var collection = Clauses[clIx].FromExpressionResolved.Optimize(env, givens);
@@ -138,7 +139,7 @@ namespace Zinga.Suco
 
             if (optimized.All(tup => tup.conditions == null && tup.expr is SucoConstant))
             {
-                var array = Array.CreateInstance(((SucoListType) Type).Inner.CsType, optimized.Count);
+                var array = ElementType.CreateArray(optimized.Count);
                 for (var i = 0; i < array.Length; i++)
                     array.SetValue(((SucoConstant) optimized[i].expr).Value, i);
                 return new SucoConstant(StartIndex, EndIndex, Type, array);
