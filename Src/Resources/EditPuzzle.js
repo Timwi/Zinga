@@ -1041,7 +1041,7 @@
                             if (newName !== null && newName !== variableName)
                             {
                                 lastInput = newName;
-                                if (['gw', 'gh', 'allcells'].includes(newName))
+                                if (['gw', 'gh', 'allcells', 'true', 'false'].includes(newName))
                                 {
                                     alert('This property name is reserved. Please choose a different name.');
                                     continue;

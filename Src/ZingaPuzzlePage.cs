@@ -112,12 +112,12 @@ namespace Zinga
                     new META { name = "viewport", content = "width=device-width,initial-scale=1.0" },
                     new TITLE($"{puzzle?.Title} by {puzzle?.Author}"),
                     new RawTag(@"<script src='/_framework/blazor.webassembly.js' autostart='false'></script>"),
+                    new LINK { rel = "stylesheet", href = "/font" },
 
 #if DEBUG
                     new SCRIPTLiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.js"))),
                     new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.css"))),
 #else
-                    new LINK { rel = "stylesheet", href = "/font" },
                     new SCRIPTLiteral(Resources.Js),
                     new STYLELiteral(Resources.Css),
 #endif
@@ -223,7 +223,6 @@ namespace Zinga
                                                 <rect class='region-invalid' id='box-invalid-8' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 6)' />
 
                                                 <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
-                                                <g id='over-svg'>{puzzle?.ExtraSvg}</g>
 
                                                 {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
                                                     <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>

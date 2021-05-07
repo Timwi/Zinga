@@ -319,8 +319,17 @@ namespace Zinga.Suco
                 var innerExpr = parseExpression();
                 return new SucoLetExpression(tok.StartIndex, _ix, variableName, valueExpr, innerExpr);
             }
-
-            if (tok.Type == SucoTokenType.Integer)
+            else if (tok.Type == SucoTokenType.Identifier && tok.StringValue == "true")
+            {
+                _ix = tok.EndIndex;
+                return new SucoBooleanLiteralExpression(tok.StartIndex, tok.EndIndex, true);
+            }
+            else if (tok.Type == SucoTokenType.Identifier && tok.StringValue == "false")
+            {
+                _ix = tok.EndIndex;
+                return new SucoBooleanLiteralExpression(tok.StartIndex, tok.EndIndex, false);
+            }
+            else if (tok.Type == SucoTokenType.Integer)
             {
                 _ix = tok.EndIndex;
                 return new SucoIntegerLiteralExpression(tok.StartIndex, tok.EndIndex, tok.NumericalValue);

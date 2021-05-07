@@ -22,7 +22,6 @@ namespace Zinga.Database
         public DateTime LastAccessed { get; set; }
         public bool Generated { get; set; }
         public string GivensJson { get; set; }
-        public string ExtraSvg { get; set; }
 
         public Puzzle()
         {

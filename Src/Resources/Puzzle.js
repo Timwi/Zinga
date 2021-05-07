@@ -819,7 +819,7 @@
         img.onload = function()
         {
             canvas.getContext('2d').drawImage(img, 0, 0);
-            if (navigator.userAgent.includes('Firefox/'))
+            if (navigator.userAgent.includes('Gecko/'))
                 window.open(canvas.toDataURL());
             else
             {
@@ -836,8 +836,8 @@
         img.src = 'data:image/svg+xml;base64,' + btoa(svgElem.outerHTML
             .replace(/<svg/, `<svg width="${canvas.width}" height="${canvas.height}"`)
             .replace(/viewBox=".*?"/, `viewBox='${nBox.x} ${nBox.y} ${nBox.width} ${nBox.height}'`)
-            .replace(/(?=<\/style>)/, Array.from(document.styleSheets).map(ss => Array.from(ss.rules).map(rule => rule)).reduce((p, n) => p.concat(n), []).filter(rule => rule instanceof CSSStyleRule).filter(rule => rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n"))
-        );
+            .replace(/(?=<\/style>)/, Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.rules)), [])
+                .filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n")));
     });
 
     function selectCell(cell, mode)
