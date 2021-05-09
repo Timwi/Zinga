@@ -1,27 +1,8 @@
 ﻿window.onload = (function()
 {
-    function remoteLog(msg)
-    {
-        //let req = new XMLHttpRequest();
-        //req.open('POST', '/remote-log', true);
-        //req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        //req.send(`msg=${encodeURIComponent(msg)}`);
-    }
+    /// — FUNCTIONS
 
-    function handler(fnc)
-    {
-        return function(ev)
-        {
-            if (fnc(ev) !== true)
-            {
-                ev.stopPropagation();
-                ev.preventDefault();
-                return false;
-            }
-        };
-    }
-
-    function inRange(x) { return x >= 0 && x < 9; }
+    // Utility
     function adjacent(cell)
     {
         let list = [];
@@ -34,7 +15,81 @@
                         list.push(xx + 9 * yy);
         return list;
     }
+    function dotNet(method, args, callback)
+    {
+        if (blazorQueue === null)
+            DotNet.invokeMethodAsync('ZingaWasm', method, ...args).then(callback);
+        else
+            blazorQueue.push([method, args, callback]);
+    }
+    function findMatchingRegions(cells)
+    {
+        if (cells.length < 2)
+            return [];
+        let smallestFactor = cells.length <= 5 ? 1 : 2;
+        while (cells.length % smallestFactor !== 0)
+            smallestFactor++;
+        if (smallestFactor === cells.length)
+            return [];
+        cells = cells.slice(0);
+        cells.sort((c1, c2) => c1 - c2);
 
+        function* recurse(regionSoFar, banned)
+        {
+            if ((regionSoFar.length > 1 || (regionSoFar.length === 1 && cells.length <= 5)) && cells.length % regionSoFar.length === 0)
+            {
+                // Check if the remaining cells form regions that match regionSoFar in shape
+                let rem = cells.filter(c => !regionSoFar.includes(c));
+                rem.sort((c1, c2) => c1 - c2);
+                let reg = [...regionSoFar];
+                reg.sort((c1, c2) => c1 - c2);
+                let regions = [reg];
+                while (rem.length > 0)
+                {
+                    let xOffset = rem[0] % 9 - reg[0] % 9;
+                    let yOffset = ((rem[0] / 9) | 0) - ((reg[0] / 9) | 0);
+                    if (!reg.every(c => inRange(c % 9 + xOffset) && inRange(((c / 9) | 0) + yOffset) && rem.includes(c + xOffset + 9 * yOffset)))
+                        break;
+                    regions.push(reg.map(c => c + xOffset + 9 * yOffset));
+                    rem = rem.filter(c => !reg.includes(c - xOffset - 9 * yOffset));
+                }
+                if (rem.length === 0 && regions.length > 1)
+                    yield regions;
+            }
+
+            if (regionSoFar.length * smallestFactor < cells.length && regionSoFar.length < 11)
+                for (let ix = 0; ix < cells.length; ix++)
+                {
+                    let adj = cells[ix];
+                    if (regionSoFar.includes(adj) || banned.includes(adj) || !(regionSoFar.length === 0 || orthogonal(adj).some(orth => regionSoFar.includes(orth))))
+                        continue;
+                    regionSoFar.push(adj);
+                    banned.push(adj);
+                    for (let region of recurse([...regionSoFar], [...banned]))
+                        yield region;
+                    regionSoFar.pop();
+                }
+        }
+
+        let result = [...recurse([cells[0]], [cells[0]])];
+        result.sort((r1, r2) => r1.length - r2.length);
+        return result;
+    }
+    function getSpecialVariable(kind)
+    {
+        switch (kind)
+        {
+            case 'Path': return ['cells', 'list(cell)']; break;
+            case 'Region': return ['cells', 'list(cell)']; break;
+            case 'MatchingRegions': return ['cells', 'list(list(cell))']; break;
+            case 'RowColumn': return ['cells', 'list(cell)']; break;
+            case 'Diagonal': return ['cells', 'list(cell)']; break;
+            case 'TwoCells': return ['cells', 'list(cell)']; break;
+            case 'FourCells': return ['cells', 'list(cell)']; break;
+        }
+        return [null, null];
+    }
+    function inRange(x) { return x >= 0 && x < 9; }
     function orthogonal(cell)
     {
         let list = [];
@@ -48,109 +103,70 @@
         return list;
     }
 
-    function setClass(elem, className, setUnset)
+    // State, editing, constraints
+    function addConstraintWithShortcut(letter)
     {
-        if (setUnset)
-            elem.classList.add(className);
-        else
-            elem.classList.remove(className);
-    }
+        // Find constraint with the right shortcut key
+        let sc = Object.keys(constraintTypes).filter(id => constraintTypes[id].shortcut === letter);
+        if (sc.length === 0)
+            return;
 
-    let blazorQueue = [];
-    function dotNet(method, args, callback)
-    {
-        if (blazorQueue === null)
-            DotNet.invokeMethodAsync('ZingaWasm', method, ...args).then(callback);
-        else
-            blazorQueue.push([method, args, callback]);
-    }
-    Blazor.start({}).then(() =>
-    {
-        for (let i = 0; i < blazorQueue.length; i++)
-            DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
-        blazorQueue = null;
-    });
-
-    let puzzleDiv = document.querySelector('div.puzzle');
-    let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
-    let sidebarDiv = document.querySelector('div.sidebar');
-    let constraintList = document.getElementById('constraint-list');
-    let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes || null) || {};
-
-    let draggingMode = null;
-    puzzleContainer.onmouseup = handler(puzzleContainer.ontouchend = function(ev)
-    {
-        if (ev.type !== 'touchend' || ev.touches.length === 0)
-            draggingMode = null;
-        remoteLog(`${ev.type} puzzleContainer`);
-    });
-
-    function makeEmptyState()
-    {
-        return {
-            title: 'Sudoku',
-            author: 'unknown',
-            rules: '',
-            givens: Array(81).fill(null),
-            constraints: [],
-            customConstraintTypes: []
-        };
-    }
-
-    let state = makeEmptyState();
-
-    let undoBuffer = [];
-    let redoBuffer = [];
-
-    let selectedCells = [];
-    let selectedConstraints = [];
-    let lastSelectedCell = 0;
-    let lastSelectedConstraint = 0;
-    let editingConstraintType = null;
-    let editingConstraintTypeParameter = null;
-
-    function remoteLog2(msg)
-    {
-        remoteLog(`${msg} [${selectedCells.join()}] ${draggingMode ?? "null"}`);
-    }
-
-    try
-    {
-        let str = localStorage.getItem(`zinga-edit`);
-        try { item = JSON.parse(str); }
-        catch { }
-        if (item && item.givens && item.constraints)
+        let cIx = state.constraints.length;
+        let cType = constraintTypes[sc[0]];
+        let specialVariable = getSpecialVariable(cType.kind);
+        let newConstraint = { type: (sc[0] | 0), values: {} };
+        for (let variableName of Object.keys(cType.variables))
         {
-            state = item;
-            if (state.title === undefined || state.title === null) state.title = 'Sudoku';
-            if (state.author === undefined || state.author === null) state.author = 'unknown';
-            if (state.rules === undefined || state.rules === null) state.author = '';
-            if (state.customConstraintTypes === undefined || state.customConstraintTypes === null) state.customConstraintTypes = [];
-
-            if (!Array.isArray(state.givens) || state.givens.length != 81 || state.givens.some(g => g != null && (g < 1 || g > 9)))
-                state.givens = Array(81).fill(null);
-            state.constraints = Array.isArray(state.constraints) ? state.constraints.filter(c => 'type' in c && Number.isInteger(c.type)) : [];
-            for (let i = 0; i < state.constraints.length; i++)
+            if (variableName === specialVariable[0])
             {
-                let cType = getConstraintType(state.constraints[i].type);
-                for (let varName of Object.keys(state.constraints[i].values))
-                    if (!(varName in cType.variables))
-                        delete state.constraints[i].values[varName];
-                for (let varName of Object.keys(cType.variables))
-                    state.constraints[i].values[varName] = coerceValue(state.constraints[i].values[varName], cType.variables[varName]);
+                let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
+                if (!enforceResult.valid)
+                {
+                    alert(enforceResult.message);
+                    return;
+                }
+                newConstraint.values[specialVariable[0]] = enforceResult.value;
             }
+            else
+                newConstraint.values[variableName] = coerceValue(null, cType.variables[variableName]);
         }
 
-        let undoB = localStorage.getItem(`zinga-edit-undo`);
-        let redoB = localStorage.getItem(`zinga-edit-redo`);
+        saveUndo();
 
-        undoBuffer = undoB ? JSON.parse(undoB) : [];
-        redoBuffer = redoB ? JSON.parse(redoB) : [];
+        state.constraints.push(newConstraint);
+        selectConstraintRange(cIx, cIx, { storage: true, svg: true });
+
+        let constraintElem = document.getElementById(`constraint-${cIx}`);
+        let uiElement = constraintElem.querySelector('input,textarea,select');
+        if (uiElement !== null)
+        {
+            selectTab('constraints');
+            setClass(constraintElem, 'expanded', true);
+            newConstraint.expanded = true;
+            uiElement.focus();
+            if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
+                uiElement.select();
+        }
     }
-    catch
+    function clearCells()
     {
+        if (selectedCells.length > 0 || selectedConstraints.length > 0)
+        {
+            saveUndo();
+            for (let cell of selectedCells)
+                state.givens[cell] = null;
+            for (let i = state.constraints.length - 1; i >= 0; i--)
+                if (selectedConstraints.includes(i))
+                    state.constraints.splice(i, 1);
+            let anyConstraintsSelected = selectedConstraints.length > 0;
+            selectedConstraints = [];
+            editingConstraintType = null;
+            for (let i = 0; i < state.customConstraintTypes.length; i++)
+                if (state.customConstraintTypes[i] !== null && state.constraints.every(c => c.type !== ~i))
+                    state.customConstraintTypes[i] = null;
+            updateVisuals({ storage: true, svg: anyConstraintsSelected });
+        }
     }
-
     function coerceValue(value, type)
     {
         let result = /^list\((.*)\)$/.exec(type);
@@ -168,13 +184,457 @@
         }
         return null;
     }
-
-    function resetClearButton()
+    function duplicateConstraints()
     {
-        document.getElementById(`btn-clear`).classList.remove('warning');
-        document.querySelector(`#btn-clear>text`).textContent = 'Delete';
+        if (selectedConstraints.length > 0)
+        {
+            saveUndo();
+            let oldLength = state.constraints.length;
+            state.constraints.push(...selectedConstraints.map(c => JSON.parse(JSON.stringify(state.constraints[c]))));
+            selectConstraintRange(oldLength, state.constraints.length - 1, { storage: true, svg: true });
+            console.log(state.constraints);
+        }
+    }
+    function editConstraintParameter(cTypeId, paramName, setter)
+    {
+        if (editingConstraintType !== cTypeId || editingConstraintTypeParameter !== paramName)
+            saveUndo();
+
+        let newCTypeId = cTypeId;
+        if (editingConstraintType !== cTypeId)
+        {
+            // If only some (not all) constraints of the same type are selected, or the constraint type is a public one, create a copy of the constraint type
+            let unselectedSameType = state.constraints.map((c, cIx) => c.type === cTypeId && !selectedConstraints.includes(cIx) ? cIx : null).filter(c => c != null);
+            if (cTypeId >= 0 || unselectedSameType.length > 0)
+            {
+                let cTypeCopy = JSON.parse(JSON.stringify(getConstraintType(cTypeId)));
+                delete cTypeCopy.public;
+                delete cTypeCopy.shortcut;
+                let nIx = state.customConstraintTypes.findIndex(c => c === null);
+                if (nIx === -1)
+                {
+                    nIx = state.customConstraintTypes.length;
+                    state.customConstraintTypes.push(null);
+                }
+                newCTypeId = ~nIx;
+                state.customConstraintTypes[nIx] = cTypeCopy;
+                for (let cIx of selectedConstraints)
+                    state.constraints[cIx].type = newCTypeId;
+            }
+        }
+
+        editingConstraintType = newCTypeId;
+        editingConstraintTypeParameter = paramName;
+        setter(newCTypeId);
+        updateVisuals({ storage: true, svg: true });
+    }
+    function enforceConstraintKind(kind, value)
+    {
+        // Return value is either:
+        // { valid: false, message: 'error message' }
+        // { valid: true, value?: new value (may or may not be the same as the input) (may be a single cell, list, list of lists, or absent) }
+        switch (kind)
+        {
+            case 'Path':
+                if (!Array.isArray(value) || value.length < 2)
+                    return { valid: false, message: 'This constraint requires at least two cells.' };
+
+                if (Array(value.length - 1).fill(null).some((_, c) => !adjacent(value[c]).includes(value[c + 1])))
+                    return { valid: false, message: 'This constraint requires each cell to be adjacent to the previous, forming a path.' };
+
+                return { valid: true, value: value };
+
+            case 'Region':
+                if (!Array.isArray(value) || value.length < 1)
+                    return { valid: false, message: 'This constraint requires an orthogonally-connected region of cells.' };
+
+                let copy = [...value];
+                let region = [copy.pop()];
+                while (copy.length > 0)
+                {
+                    let ix = copy.findIndex(cell => region.some(r => orthogonal(cell).includes(r)));
+                    if (ix === -1)
+                        return { valid: false, message: 'This constraint requires an orthogonally-connected region of cells.' };
+                    region.push(copy[ix]);
+                    copy.splice(ix, 1);
+                }
+                region.sort((c1, c2) => c1 - c2);
+                return { valid: true, value: region };
+
+            case 'MatchingRegions':
+                if (Array.isArray(value) && value.every(inner => Array.isArray(inner) &&
+                    inner.map((v, ix) => v % 9 - value[0][ix] % 9).every(df => df === inner[0] % 9 - value[0][0] % 9) &&
+                    inner.map((v, ix) => ((v / 9) | 0) - ((value[0][ix] / 9) | 0)).every(df => df === ((inner[0] / 9) | 0) - ((value[0][0] / 9) | 0))))
+                    return { valid: true, value: value };
+
+                if (Array.isArray(value) && value.every(c => typeof c === 'number'))
+                {
+                    let regions = findMatchingRegions(value);
+                    if (regions.length === 0)
+                        return { valid: false, message: 'This constraint requires multiple orthogonally-connected regions of cells of the same shape.' };
+                    regions.sort((r1, r2) => r1.length - r2.length);
+                    return { valid: true, value: regions[0] };
+                }
+
+                return { valid: false, message: 'This constraint requires multiple orthogonally-connected regions of cells of the same shape.' };
+
+            case 'RowColumn':
+                if (!Array.isArray(value) || value.length < 2)
+                    return { valid: false, message: 'This constraint requires at least two cells that are in the same row or column.' };
+
+                let row = value.every(c => ((c / 9) | 0) === ((value[0] / 9) | 0)) ? ((value[0] / 9) | 0) : null;
+                let col = value.every(c => (c % 9) === (value[0] % 9)) ? (value[0] % 9) : null;
+                if (row === null && col === null)
+                    return { valid: false, message: 'This constraint requires a row or a column.' };
+
+                return {
+                    valid: true,
+                    value: value[1] > value[0]
+                        ? (row !== null ? Array(9).fill(null).map((_, c) => c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * r))
+                        : (row !== null ? Array(9).fill(null).map((_, c) => 8 - c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * (8 - r)))
+                };
+
+            case 'Diagonal':
+                if (!Array.isArray(value) || value.length < 2)
+                    return { valid: false, message: 'This constraint requires at least two cells that are on the same diagonal.' };
+
+                let forward = value.every(c => (c % 9) - ((c / 9) | 0) === (value[0] % 9) - ((value[0] / 9) | 0)) ? (value[0] % 9) - ((value[0] / 9) | 0) : null;
+                let backward = value.every(c => (c % 9) + ((c / 9) | 0) === (value[0] % 9) + ((value[0] / 9) | 0)) ? (value[0] % 9) + ((value[0] / 9) | 0) : null;
+                if (forward === null && backward === null)
+                    return { valid: false, message: 'This constraint requires a diagonal.' };
+
+                return {
+                    valid: true,
+                    value: Array(81).fill(null).map((_, c) => value[1] > value[0] ? c : 80 - c)
+                        .filter(c => forward !== null ? ((c % 9) - ((c / 9) | 0) === forward) : ((c % 9) + ((c / 9) | 0) === backward))
+                };
+
+            case 'TwoCells':
+                if (!Array.isArray(value) || value.length !== 2 || !orthogonal(value[0]).includes(value[1]))
+                    return { valid: false, message: 'This constraint requires two cells that are orthogonally adjacent to one another.' };
+                return { valid: true, value: [Math.min(...value), Math.max(...value)] };
+
+            case 'FourCells':
+                if (typeof value === 'number' && value % 9 >= 0 && value % 9 < 9 - 1 && ((value / 9) | 0) >= 0 && ((value / 9) | 0) < 9 - 1)
+                    return { valid: true, value: [value, value + 1, value + 10, value + 9] };
+
+                if (!Array.isArray(value) || value.length !== 4)
+                    return { valid: false, message: 'This constraint requires four cells that form a 2×2 square.' };
+
+                let sorted = [...value];
+                sorted.sort((c1, c2) => c1 - c2);
+                if (sorted[0] % 9 === 9 - 1 || sorted[1] != sorted[0] + 1 || ((sorted[0] / 9) | 0) === 9 - 1 || sorted[2] != sorted[0] + 9 || sorted[3] != sorted[0] + 9 + 1)
+                    return { valid: false, message: 'This constraint requires four cells that form a 2×2 square.' };
+
+                return { valid: true, value: [0, 1, 3, 2].map(c => sorted[c]) };
+
+            case 'Custom':
+            case 'Global':
+                return { valid: true };
+        }
+
+        console.error(`Unknown constraint kind: ${kind}`);
+        return { valid: true };
+    }
+    function getConstraintType(id)
+    {
+        return id < 0 ? state.customConstraintTypes[~id] : constraintTypes[id];
+    }
+    function makeEmptyState()
+    {
+        return {
+            title: 'Sudoku',
+            author: 'unknown',
+            rules: '',
+            givens: Array(81).fill(null),
+            constraints: [],
+            customConstraintTypes: []
+        };
+    }
+    function moveConstraints(up)
+    {
+        let firstSel = Math.min(...selectedConstraints);
+        let lastSel = Math.max(...selectedConstraints) + 1;
+        let prevSel = state.constraints[lastSelectedConstraint];
+        // If there is a gap in the selection
+        if ((lastSel - firstSel) !== selectedConstraints.length)
+        {
+            saveUndo();
+            // Move the constraints so that the selected constraints are in one block
+            let gap = state.constraints.filter((_, cIx) => cIx >= firstSel && cIx < lastSel && !selectedConstraints.includes(cIx));
+            let newConstraintList = state.constraints.slice(0, firstSel);
+            if (!up)
+                newConstraintList.push(...gap);
+            newConstraintList.push(...state.constraints.filter((_, cIx) => selectedConstraints.includes(cIx)));
+            if (up)
+                newConstraintList.push(...gap);
+            newConstraintList.push(...state.constraints.slice(lastSel));
+            state.constraints = newConstraintList;
+            selectedConstraints = Array(selectedConstraints.length).fill(null).map((_, c) => c + (up ? firstSel : lastSel - selectedConstraints.length));
+        }
+        else
+        {
+            // Do nothing if the selection is already at the top/bottom
+            if (up ? (firstSel === 0) : (lastSel === state.constraints.length))
+                return;
+            saveUndo();
+            // Move selected constraints up or down one slot as a group
+            let movingConstraintIx = up ? firstSel - 1 : lastSel;
+            let movingConstraint = state.constraints.splice(movingConstraintIx, 1);
+            state.constraints.splice(up ? lastSel - 1 : firstSel, 0, ...movingConstraint);
+            selectedConstraints = selectedConstraints.map(c => up ? (c - 1) : (c + 1));
+        }
+        lastSelectedConstraint = state.constraints.indexOf(prevSel);
+        updateVisuals({ storage: true, svg: true });
+    }
+    function populateConstraintEditBox(cTypeId)
+    {
+        let primitives = 'cell,int,bool,string,decimal'.split(',');
+
+        let cType = getConstraintType(cTypeId);
+        document.getElementById('constraint-code-name').value = cType.name;
+        document.getElementById('constraint-code-kind').value = cType.kind;
+        document.getElementById('constraint-code-logic').value = cType.logic;
+        document.getElementById('constraint-code-svg').value = cType.svg;
+        document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
+        document.getElementById('constraint-code-preview').value = cType.preview;
+
+        function updateConstraints(setter)
+        {
+            for (let i = 0; i < state.constraints.length; i++)
+                if (state.constraints[i].type === cTypeId)
+                    setter(state.constraints[i]);
+        }
+
+        function generateVariablesTable()
+        {
+            let variableNames = Object.keys(cType.variables);
+            let specialVariable = getSpecialVariable(cType.kind)[0];
+            variableNames.sort((a, b) => a === specialVariable ? -1 : b === specialVariable ? 1 : a.localeCompare(b));
+
+            document.getElementById('constraint-code-variables').dataset.variables = JSON.stringify(cType.variables);
+            document.getElementById('constraint-code-variables').innerHTML = variableNames
+                .map(variableName => `<tr data-variablename='${variableName}'${variableName === specialVariable ? " class='fixed'" : ''}><th>${variableName}${variableName === specialVariable ? '' : `<button class='mini-btn remove'></button>`}</th><td></td></tr>`)
+                .join('');
+            Array.from(document.getElementById('constraint-code-variables').querySelectorAll('tr')).forEach(tr =>
+            {
+                function dropdown(id)
+                {
+                    return `<select id='${id}'>${primitives.map(p => `<option value='${p}'>${p}</option>`).join('')}<option value='list'>list of...</option></select>`;
+                }
+
+                let variableName = tr.dataset.variablename;
+
+                if (variableName !== specialVariable)
+                {
+                    // Button to delete a property
+                    setButtonHandler(tr.querySelector('button.remove'), () =>
+                    {
+                        saveUndo();
+                        delete cType.variables[variableName];
+                        updateConstraints(c => { delete c.values[variableName]; });
+                        generateVariablesTable();
+                        updateVisuals({ storage: true, svg: true });
+                    });
+
+                    // Double-click to rename a property
+                    tr.querySelector('th').ondblclick = function()
+                    {
+                        let lastInput = variableName;
+                        while (true)
+                        {
+                            let newName = prompt('Enter the new name for this property:', lastInput);
+                            if (newName === null || newName === variableName)
+                                break;
+
+                            lastInput = newName;
+                            if (['gw', 'gh', 'allcells', 'true', 'false'].includes(newName))
+                            {
+                                alert('This property name is reserved. Please choose a different name.');
+                                continue;
+                            }
+
+                            saveUndo();
+                            cType.variables[newName] = cType.variables[variableName];
+                            delete cType.variables[variableName];
+                            updateConstraints(c =>
+                            {
+                                c.values[newName] = c.values[variableName];
+                                delete c.values[variableName];
+                            });
+                            generateVariablesTable();
+                            updateVisuals({ storage: true, svg: true });
+                            document.getElementById(`constraint-code-variable-${newName}-0`).focus();
+                            break;
+                        }
+                    };
+
+                    // Drop-downs for the property types
+                    let type = cType.variables[variableName];
+                    let html = '';
+                    let i = 0;
+                    let regexResult;
+                    while (regexResult = /^list\((.*)\)$/.exec(type))
+                    {
+                        html += dropdown(`constraint-code-variable-${variableName}-${i}`);
+                        i++;
+                        type = regexResult[1];
+                    }
+                    html += dropdown(`constraint-code-variable-${variableName}-${i}`);
+                    tr.querySelector('td').innerHTML = html;
+                    Array.from(tr.querySelectorAll('select')).forEach((sel, selIx) =>
+                    {
+                        // Change the type of a property
+                        sel.value = selIx === i ? type : 'list';
+                        sel.onchange = function()
+                        {
+                            editConstraintParameter(cTypeId, `variables-${variableName}-type`, newCTypeId =>
+                            {
+                                let newCType = getConstraintType(newCTypeId);
+                                let newType = (sel.value === 'list')
+                                    ? `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`
+                                    : `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
+                                newCType.variables[variableName] = newType;
+                                updateConstraints(c => { c.values[variableName] = coerceValue(c.values[variableName], newType); });
+                            });
+                        };
+                    });
+                }
+                else
+                {
+                    tr.querySelector('td').innerHTML = `<span class='fixed'></span>`;
+                    tr.querySelector('td>span').innerText = cType.variables[variableName];
+                }
+            });
+        }
+
+        // Button to add a new property
+        setButtonHandler(document.getElementById('constraint-code-addvar'), () =>
+        {
+            saveUndo();
+            let i = 1;
+            while (`property${i === 1 ? '' : i}` in cType.variables)
+                i++;
+            let varName = `property${i === 1 ? '' : i}`;
+            cType.variables[varName] = 'int';
+            updateConstraints(c => { c.values[varName] = coerceValue(0, 'int'); });
+            generateVariablesTable();
+            updateVisuals({ storage: true, svg: true });
+        });
+
+        generateVariablesTable();
+    }
+    function setGiven(digit)
+    {
+        if (selectedCells.every(c => state.givens[c] === digit))
+            return;
+        saveUndo();
+        for (let cell of selectedCells)
+            state.givens[cell] = digit;
+        updateVisuals({ storage: true });
     }
 
+    // Undo / redo
+    function saveUndo()
+    {
+        undoBuffer.push(JSON.parse(JSON.stringify(state)));
+        redoBuffer = [];
+    }
+    function undo()
+    {
+        if (undoBuffer.length > 0)
+        {
+            redoBuffer.push(state);
+            state = undoBuffer.pop();
+            updateVisuals({ storage: true, svg: true, metadata: true });
+        }
+    }
+    function redo()
+    {
+        if (redoBuffer.length > 0)
+        {
+            undoBuffer.push(state);
+            state = redoBuffer.pop();
+            updateVisuals({ storage: true, svg: true, metadata: true });
+        }
+    }
+
+    // Selection
+    function cellLine(what, offset)
+    {
+        switch (what)
+        {
+            case 'e': return Array(9).fill(null).map((_, c) => c + 9 * offset);
+            case 'w': return Array(9).fill(null).map((_, c) => 8 - c + 9 * offset);
+            case 's': return Array(9).fill(null).map((_, c) => offset + 9 * c);
+            case 'n': return Array(9).fill(null).map((_, c) => offset + 9 * (8 - c));
+            case 'se': return Array(81).fill(null).map((_, c) => c).filter(c => (c % 9) - ((c / 9) | 0) === offset);
+            case 'sw': return Array(81).fill(null).map((_, c) => c).filter(c => (c % 9) + ((c / 9) | 0) === offset);
+            case 'nw': return Array(81).fill(null).map((_, c) => 80 - c).filter(c => (c % 9) - ((c / 9) | 0) === offset);
+            case 'ne': return Array(81).fill(null).map((_, c) => 80 - c).filter(c => (c % 9) + ((c / 9) | 0) === offset);
+        }
+    }
+    function selectCell(cell, mode)
+    {
+        if (mode === 'toggle')
+        {
+            if (selectedCells.length === 1 && selectedCells[0] === cell && selectedConstraints.length === 0)
+                selectedCells = [];
+            else
+                selectedCells = [cell];
+        }
+        else if (mode === 'remove')
+        {
+            let ix = selectedCells.indexOf(cell);
+            if (ix !== -1)
+                selectedCells.splice(ix, 1);
+        }
+        else if (mode === 'clear')
+        {
+            selectedCells = [cell];
+        }
+        else if (mode === 'add')
+        {
+            let ix = selectedCells.indexOf(cell);
+            if (ix !== -1)
+                selectedCells.splice(ix, 1);
+            selectedCells.push(cell);
+        }
+        else    // mode === 'move'
+        {
+            selectedCells.pop();
+            selectedCells.push(cell);
+        }
+        selectedConstraints = [];
+        lastCellLineDir = null;
+        lastCellLineCell = null;
+        lastSelectedCell = cell;
+        editingConstraintType = null;
+    }
+    function selectCellLine(dir)
+    {
+        let c = lastCellLineCell !== null ? lastCellLineCell : selectedCells.length === 0 ? 0 : selectedCells[selectedCells.length - 1]
+        let cells, nDir = null;
+        if ((lastCellLineDir === 's' && dir === 'e') || (dir === 's' && lastCellLineDir === 'e'))
+            cells = cellLine('se', (c % 9) - ((c / 9) | 0));
+        else if ((lastCellLineDir === 's' && dir === 'w') || (dir === 's' && lastCellLineDir === 'w'))
+            cells = cellLine('sw', (c % 9) + ((c / 9) | 0));
+        else if ((lastCellLineDir === 'n' && dir === 'w') || (dir === 'n' && lastCellLineDir === 'w'))
+            cells = cellLine('nw', (c % 9) - ((c / 9) | 0));
+        else if ((lastCellLineDir === 'n' && dir === 'e') || (dir === 'n' && lastCellLineDir === 'e'))
+            cells = cellLine('ne', (c % 9) + ((c / 9) | 0));
+        else
+        {
+            cells = cellLine(dir, (dir === 'n' || dir === 's') ? (c % 9) : ((c / 9) | 0));
+            nDir = dir;
+        }
+        lastCellLineDir = nDir;
+        selectedCells = cells;
+        selectedConstraints = [];
+        editingConstraintType = null;
+        lastCellLineCell = c;
+        updateVisuals();
+    }
     function selectConstraint(cIx)
     {
         selectedConstraints = [cIx];
@@ -183,7 +643,6 @@
         selectedCells = [];
         updateVisuals();
     }
-
     function selectConstraintRange(cIx1, cIx2, updateOpt)
     {
         if (cIx1 <= cIx2)
@@ -195,17 +654,63 @@
         updateVisuals(updateOpt);
     }
 
-    function getConstraintType(id)
+    // UI
+    function handler(fnc)
     {
-        return id < 0 ? state.customConstraintTypes[~id] : constraintTypes[id];
+        return function(ev)
+        {
+            if (fnc(ev) !== true)
+            {
+                ev.stopPropagation();
+                ev.preventDefault();
+                return false;
+            }
+        };
     }
+    function resetClearButton()
+    {
+        document.getElementById(`btn-clear`).classList.remove('warning');
+        document.querySelector(`#btn-clear>text`).textContent = 'Delete';
+    }
+    function selectTab(tab)
+    {
+        Array.from(document.querySelectorAll('.sidebar>.tabs>.tab')).forEach(t => t.classList.remove('active'));
+        document.querySelector(`.sidebar>.tabs>.tab-${tab}`).classList.add('active');
 
-    // options:
-    //  storage (bool)    — updates localStorage with the current state and the undo/redo history
-    //  svg (bool)          — updates constraint SVG in the grid (this involves Blazor)
-    //  metadata (bool) — updates the title / author / rules textboxes
+        Array.from(document.querySelectorAll('.sidebar>.tabc')).forEach(t => t.classList.remove('active'));
+        document.querySelector(`#tab-${tab}`).classList.add('active');
+
+        sidebarDiv.focus();
+    }
+    function setButtonHandler(btn, click, chk)
+    {
+        btn.onclick = handler(ev => click(ev) || false);
+        btn.onmousedown = chk ? handler(ev => chk(ev) || false) : handler(function() { });
+    }
+    function setClass(elem, className, setUnset)
+    {
+        if (setUnset)
+            elem.classList.add(className);
+        else
+            elem.classList.remove(className);
+    }
+    function setConstraintCodeEditingEvent(id, setEvent, getter, setter)
+    {
+        let elem = document.getElementById(`constraint-code-${id}`);
+        setEvent(elem, () =>
+        {
+            let cTypeId = state.constraints[selectedConstraints[0]].type;
+            if (elem.value !== getter(cTypeId))
+                editConstraintParameter(cTypeId, id, cTypeId => setter(cTypeId, elem.value));
+        });
+    }
     function updateVisuals(opt)
     {
+        // options:
+        //  storage (bool)    — updates localStorage with the current state and the undo/redo history
+        //  svg (bool)          — updates constraint SVG in the grid (this involves Blazor)
+        //  metadata (bool) — updates the title / author / rules textboxes
+
         let wasFocused = null;
         try { wasFocused = document.activeElement.id; }
         catch { }
@@ -638,33 +1143,71 @@
                 elem.focus();
         }
     }
-    updateVisuals({ storage: true, svg: true, metadata: true });
 
-    function saveUndo()
+    // Debugging
+    function remoteLog(msg)
     {
-        undoBuffer.push(JSON.parse(JSON.stringify(state)));
-        redoBuffer = [];
+        //let req = new XMLHttpRequest();
+        //req.open('POST', '/remote-log', true);
+        //req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        //req.send(`msg=${encodeURIComponent(msg)}`);
+    }
+    function remoteLog2(msg)
+    {
+        remoteLog(`${msg} [${selectedCells.join()}] ${draggingMode ?? "null"}`);
     }
 
-    function undo()
+
+    /// — INITIALIZATION
+
+    // Blazor
+    let blazorQueue = [];
+
+    // Variables: UI elements
+    let puzzleDiv = document.querySelector('div.puzzle');
+    let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
+    let sidebarDiv = document.querySelector('div.sidebar');
+    let constraintList = document.getElementById('constraint-list');
+    let constraintCodeBox = document.getElementById('constraint-code-section');
+    let constraintCodeExpander = constraintCodeBox.querySelector('.expand');
+
+    // Variables: UI other
+    let draggingMode = null;
+    let selectedCells = [];
+    let selectedConstraints = [];
+    let lastSelectedCell = 0;
+    let lastSelectedConstraint = 0;
+    let editingConstraintType = null;
+    let editingConstraintTypeParameter = null;
+    let lastCellLineDir = null;
+    let lastCellLineCell = null;
+
+    // Variables: state, editing, constraints
+    let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes || null) || {};
+    let state = makeEmptyState();
+    let undoBuffer = [];
+    let redoBuffer = [];
+
+    // Events
+    puzzleContainer.onmousedown = function(ev)
     {
-        if (undoBuffer.length > 0)
+        if (!ev.shiftKey && !ev.ctrlKey)
         {
-            redoBuffer.push(state);
-            state = undoBuffer.pop();
-            updateVisuals({ storage: true, svg: true, metadata: true });
+            selectedCells = [];
+            selectedConstraints = [];
+            editingConstraintType = null;
+            updateVisuals();
+            remoteLog2(`onmousedown puzzleContainer`);
         }
-    }
-
-    function redo()
+        else
+            remoteLog2(`onmousedown puzzleContainer (canceled)`);
+    };
+    puzzleContainer.onmouseup = handler(puzzleContainer.ontouchend = function(ev)
     {
-        if (redoBuffer.length > 0)
-        {
-            undoBuffer.push(state);
-            state = redoBuffer.pop();
-            updateVisuals({ storage: true, svg: true, metadata: true });
-        }
-    }
+        if (ev.type !== 'touchend' || ev.touches.length === 0)
+            draggingMode = null;
+        remoteLog(`${ev.type} puzzleContainer`);
+    });
 
     Array.from(puzzleDiv.getElementsByClassName('sudoku-cell')).forEach(cellRect =>
     {
@@ -717,169 +1260,8 @@
             remoteLog2(`ontouchmove ${cell}`);
         };
     });
-
-    function setButtonHandler(btn, click, chk)
-    {
-        btn.onclick = handler(ev => click(ev) || false);
-        btn.onmousedown = chk ? handler(ev => chk(ev) || false) : handler(function() { });
-    }
-
-    function clearCells()
-    {
-        if (selectedCells.length > 0 || selectedConstraints.length > 0)
-        {
-            saveUndo();
-            for (let cell of selectedCells)
-                state.givens[cell] = null;
-            for (let i = state.constraints.length - 1; i >= 0; i--)
-                if (selectedConstraints.includes(i))
-                    state.constraints.splice(i, 1);
-            let anyConstraintsSelected = selectedConstraints.length > 0;
-            selectedConstraints = [];
-            editingConstraintType = null;
-            for (let i = 0; i < state.customConstraintTypes.length; i++)
-                if (state.customConstraintTypes[i] !== null && state.constraints.every(c => c.type !== ~i))
-                    state.customConstraintTypes[i] = null;
-            updateVisuals({ storage: true, svg: anyConstraintsSelected });
-        }
-    }
-
-    setButtonHandler(puzzleDiv.querySelector(`#btn-clear>rect`), function()
-    {
-        let elem = document.getElementById(`btn-clear`);
-        if (!elem.classList.contains('warning'))
-        {
-            clearCells();
-            elem.classList.add('warning');
-            puzzleDiv.querySelector(`#btn-clear>text`).textContent = 'Wipe?';
-        }
-        else
-        {
-            resetClearButton();
-            saveUndo();
-            state = makeEmptyState();
-            updateVisuals({ storage: true, svg: true, metadata: true });
-        }
-    });
-
-    setButtonHandler(puzzleDiv.querySelector(`#btn-undo>rect`), undo);
-    setButtonHandler(puzzleDiv.querySelector(`#btn-redo>rect`), redo);
-
-    function cellLine(what, offset)
-    {
-        switch (what)
-        {
-            case 'e': return Array(9).fill(null).map((_, c) => c + 9 * offset);
-            case 'w': return Array(9).fill(null).map((_, c) => 8 - c + 9 * offset);
-            case 's': return Array(9).fill(null).map((_, c) => offset + 9 * c);
-            case 'n': return Array(9).fill(null).map((_, c) => offset + 9 * (8 - c));
-            case 'se': return Array(81).fill(null).map((_, c) => c).filter(c => (c % 9) - ((c / 9) | 0) === offset);
-            case 'sw': return Array(81).fill(null).map((_, c) => c).filter(c => (c % 9) + ((c / 9) | 0) === offset);
-            case 'nw': return Array(81).fill(null).map((_, c) => 80 - c).filter(c => (c % 9) - ((c / 9) | 0) === offset);
-            case 'ne': return Array(81).fill(null).map((_, c) => 80 - c).filter(c => (c % 9) + ((c / 9) | 0) === offset);
-        }
-    }
-
-    let lastCellLineDir = null;
-    let lastCellLineCell = null;
-
-    function selectCell(cell, mode)
-    {
-        if (mode === 'toggle')
-        {
-            if (selectedCells.length === 1 && selectedCells[0] === cell && selectedConstraints.length === 0)
-                selectedCells = [];
-            else
-                selectedCells = [cell];
-        }
-        else if (mode === 'remove')
-        {
-            let ix = selectedCells.indexOf(cell);
-            if (ix !== -1)
-                selectedCells.splice(ix, 1);
-        }
-        else if (mode === 'clear')
-        {
-            selectedCells = [cell];
-        }
-        else if (mode === 'add')
-        {
-            let ix = selectedCells.indexOf(cell);
-            if (ix !== -1)
-                selectedCells.splice(ix, 1);
-            selectedCells.push(cell);
-        }
-        else    // mode === 'move'
-        {
-            selectedCells.pop();
-            selectedCells.push(cell);
-        }
-        selectedConstraints = [];
-        lastCellLineDir = null;
-        lastCellLineCell = null;
-        lastSelectedCell = cell;
-        editingConstraintType = null;
-    }
-
-    function selectCellLine(dir)
-    {
-        let c = lastCellLineCell !== null ? lastCellLineCell : selectedCells.length === 0 ? 0 : selectedCells[selectedCells.length - 1]
-        let cells, nDir = null;
-        if ((lastCellLineDir === 's' && dir === 'e') || (dir === 's' && lastCellLineDir === 'e'))
-            cells = cellLine('se', (c % 9) - ((c / 9) | 0));
-        else if ((lastCellLineDir === 's' && dir === 'w') || (dir === 's' && lastCellLineDir === 'w'))
-            cells = cellLine('sw', (c % 9) + ((c / 9) | 0));
-        else if ((lastCellLineDir === 'n' && dir === 'w') || (dir === 'n' && lastCellLineDir === 'w'))
-            cells = cellLine('nw', (c % 9) - ((c / 9) | 0));
-        else if ((lastCellLineDir === 'n' && dir === 'e') || (dir === 'n' && lastCellLineDir === 'e'))
-            cells = cellLine('ne', (c % 9) + ((c / 9) | 0));
-        else
-        {
-            cells = cellLine(dir, (dir === 'n' || dir === 's') ? (c % 9) : ((c / 9) | 0));
-            nDir = dir;
-        }
-        lastCellLineDir = nDir;
-        selectedCells = cells;
-        selectedConstraints = [];
-        editingConstraintType = null;
-        lastCellLineCell = c;
-        updateVisuals();
-    }
-
-    function selectTab(tab)
-    {
-        Array.from(document.querySelectorAll('.sidebar>.tabs>.tab')).forEach(t => t.classList.remove('active'));
-        document.querySelector(`.sidebar>.tabs>.tab-${tab}`).classList.add('active');
-
-        Array.from(document.querySelectorAll('.sidebar>.tabc')).forEach(t => t.classList.remove('active'));
-        document.querySelector(`#tab-${tab}`).classList.add('active');
-
-        sidebarDiv.focus();
-    }
-
     Array.from(document.querySelectorAll('.sidebar>.tabs>.tab')).forEach(tab => setButtonHandler(tab, function() { selectTab(tab.dataset.tab); }));
-    selectTab('puzzle');
-    puzzleContainer.focus();
-
-    function setGiven(digit)
-    {
-        if (selectedCells.every(c => state.givens[c] === digit))
-            return;
-        saveUndo();
-        for (let cell of selectedCells)
-            state.givens[cell] = digit;
-        updateVisuals({ storage: true });
-    }
-
-    // Title, Author(s), Rules
-    document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
-    document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
-    document.getElementById('puzzle-rules-input').onchange = function() { saveUndo(); state.rules = document.getElementById('puzzle-rules-input').value; updateVisuals({ storage: true }); };
-
-    // Buttons that place givens in the grid
     Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given); }); });
-
-    // Arrows at the side of the grid allowing instant selection of rows, columns and diagonals
     Array.from(document.querySelectorAll('.multi-select')).forEach(btn =>
     {
         btn.onclick = function(ev)
@@ -909,9 +1291,26 @@
         }
     });
 
-    // TEST PUZZLE button
+    setButtonHandler(puzzleDiv.querySelector(`#btn-clear>rect`), function()
+    {
+        let elem = document.getElementById(`btn-clear`);
+        if (!elem.classList.contains('warning'))
+        {
+            clearCells();
+            elem.classList.add('warning');
+            puzzleDiv.querySelector(`#btn-clear>text`).textContent = 'Wipe?';
+        }
+        else
+        {
+            resetClearButton();
+            saveUndo();
+            state = makeEmptyState();
+            updateVisuals({ storage: true, svg: true, metadata: true });
+        }
+    });
+    setButtonHandler(puzzleDiv.querySelector(`#btn-undo>rect`), undo);
+    setButtonHandler(puzzleDiv.querySelector(`#btn-redo>rect`), redo);
     setButtonHandler(document.getElementById('puzzle-test'), () => { window.open(`${window.location.protocol}//${window.location.host}/test`); });
-    // PUBLISH PUZZLE button
     setButtonHandler(document.getElementById('puzzle-save'), () =>
     {
         document.querySelector('.save-section').classList.add('saving');
@@ -930,8 +1329,6 @@
         };
         req.send(`puzzle=${encodeURIComponent(JSON.stringify(state))}`);
     });
-
-    // Constraint command buttons (“Select similar constraints”, “move up/down”, “duplicate”)
     setButtonHandler(document.getElementById('constraint-select-similar'), () =>
     {
         selectedConstraints = state.constraints.map((cstr, cIx) => cstr.type === state.constraints[selectedConstraints[0]].type ? cIx : null).filter(c => c !== null);
@@ -939,499 +1336,38 @@
         updateVisuals();
         sidebarDiv.focus();
     });
-
-    function duplicateConstraints()
-    {
-        if (selectedConstraints.length > 0)
-        {
-            saveUndo();
-            let oldLength = state.constraints.length;
-            state.constraints.push(...selectedConstraints.map(c => JSON.parse(JSON.stringify(state.constraints[c]))));
-            selectConstraintRange(oldLength, state.constraints.length - 1, { storage: true, svg: true });
-            console.log(state.constraints);
-        }
-    }
     setButtonHandler(document.getElementById('constraint-dup'), duplicateConstraints);
-
-    function moveConstraints(up)
-    {
-        let firstSel = Math.min(...selectedConstraints);
-        let lastSel = Math.max(...selectedConstraints) + 1;
-        let prevSel = state.constraints[lastSelectedConstraint];
-        // If there is a gap in the selection
-        if ((lastSel - firstSel) !== selectedConstraints.length)
-        {
-            saveUndo();
-            // Move the constraints so that the selected constraints are in one block
-            let gap = state.constraints.filter((_, cIx) => cIx >= firstSel && cIx < lastSel && !selectedConstraints.includes(cIx));
-            let newConstraintList = state.constraints.slice(0, firstSel);
-            if (!up)
-                newConstraintList.push(...gap);
-            newConstraintList.push(...state.constraints.filter((_, cIx) => selectedConstraints.includes(cIx)));
-            if (up)
-                newConstraintList.push(...gap);
-            newConstraintList.push(...state.constraints.slice(lastSel));
-            state.constraints = newConstraintList;
-            selectedConstraints = Array(selectedConstraints.length).fill(null).map((_, c) => c + (up ? firstSel : lastSel - selectedConstraints.length));
-        }
-        else
-        {
-            // Do nothing if the selection is already at the top/bottom
-            if (up ? (firstSel === 0) : (lastSel === state.constraints.length))
-                return;
-            saveUndo();
-            // Move selected constraints up or down one slot as a group
-            let movingConstraintIx = up ? firstSel - 1 : lastSel;
-            let movingConstraint = state.constraints.splice(movingConstraintIx, 1);
-            state.constraints.splice(up ? lastSel - 1 : firstSel, 0, ...movingConstraint);
-            selectedConstraints = selectedConstraints.map(c => up ? (c - 1) : (c + 1));
-        }
-        lastSelectedConstraint = state.constraints.indexOf(prevSel);
-        updateVisuals({ storage: true, svg: true });
-    }
     setButtonHandler(document.getElementById('constraint-move-up'), () => moveConstraints(true));
     setButtonHandler(document.getElementById('constraint-move-down'), () => moveConstraints(false));
-
-    function getSpecialVariable(kind)
-    {
-        switch (kind)
-        {
-            case 'Path': return ['cells', 'list(cell)']; break;
-            case 'Region': return ['cells', 'list(cell)']; break;
-            case 'MatchingRegions': return ['cells', 'list(list(cell))']; break;
-            case 'RowColumn': return ['cells', 'list(cell)']; break;
-            case 'Diagonal': return ['cells', 'list(cell)']; break;
-            case 'TwoCells': return ['cells', 'list(cell)']; break;
-            case 'FourCells': return ['cells', 'list(cell)']; break;
-        }
-        return [null, null];
-    }
-
-    // “EDIT CONSTRAINT CODE” box
-    function populateConstraintEditBox(cTypeId)
-    {
-        let primitives = 'cell,int,bool,string,decimal'.split(',');
-
-        let cType = getConstraintType(cTypeId);
-        document.getElementById('constraint-code-name').value = cType.name;
-        document.getElementById('constraint-code-kind').value = cType.kind;
-        document.getElementById('constraint-code-logic').value = cType.logic;
-        document.getElementById('constraint-code-svg').value = cType.svg;
-        document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
-        document.getElementById('constraint-code-preview').value = cType.preview;
-
-        function updateConstraints(setter)
-        {
-            for (let i = 0; i < state.constraints.length; i++)
-                if (state.constraints[i].type === cTypeId)
-                    setter(state.constraints[i]);
-        }
-
-        function generateVariablesTable()
-        {
-            let variableNames = Object.keys(cType.variables);
-            let specialVariable = getSpecialVariable(cType.kind)[0];
-            variableNames.sort((a, b) => a === specialVariable ? -1 : b === specialVariable ? 1 : a.localeCompare(b));
-
-            document.getElementById('constraint-code-variables').dataset.variables = JSON.stringify(cType.variables);
-            document.getElementById('constraint-code-variables').innerHTML = variableNames
-                .map(variableName => `<tr data-variablename='${variableName}'${variableName === specialVariable ? " class='fixed'" : ''}><th>${variableName}${variableName === specialVariable ? '' : `<button class='mini-btn remove'></button>`}</th><td></td></tr>`)
-                .join('');
-            Array.from(document.getElementById('constraint-code-variables').querySelectorAll('tr')).forEach(tr =>
-            {
-                function dropdown(id)
-                {
-                    return `<select id='${id}'>${primitives.map(p => `<option value='${p}'>${p}</option>`).join('')}<option value='list'>list of...</option></select>`;
-                }
-
-                let variableName = tr.dataset.variablename;
-
-                if (variableName !== specialVariable)
-                {
-                    // Button to delete a property
-                    setButtonHandler(tr.querySelector('button.remove'), () =>
-                    {
-                        saveUndo();
-                        delete cType.variables[variableName];
-                        updateConstraints(c => { delete c.values[variableName]; });
-                        generateVariablesTable();
-                        updateVisuals({ storage: true, svg: true });
-                    });
-
-                    // Double-click to rename a property
-                    tr.querySelector('th').ondblclick = function()
-                    {
-                        let lastInput = variableName;
-                        while (true)
-                        {
-                            let newName = prompt('Enter the new name for this property:', lastInput);
-                            if (newName === null || newName === variableName)
-                                break;
-
-                            lastInput = newName;
-                            if (['gw', 'gh', 'allcells', 'true', 'false'].includes(newName))
-                            {
-                                alert('This property name is reserved. Please choose a different name.');
-                                continue;
-                            }
-
-                            saveUndo();
-                            cType.variables[newName] = cType.variables[variableName];
-                            delete cType.variables[variableName];
-                            updateConstraints(c =>
-                            {
-                                c.values[newName] = c.values[variableName];
-                                delete c.values[variableName];
-                            });
-                            generateVariablesTable();
-                            updateVisuals({ storage: true, svg: true });
-                            document.getElementById(`constraint-code-variable-${newName}-0`).focus();
-                            break;
-                        }
-                    };
-
-                    // Drop-downs for the property types
-                    let type = cType.variables[variableName];
-                    let html = '';
-                    let i = 0;
-                    let regexResult;
-                    while (regexResult = /^list\((.*)\)$/.exec(type))
-                    {
-                        html += dropdown(`constraint-code-variable-${variableName}-${i}`);
-                        i++;
-                        type = regexResult[1];
-                    }
-                    html += dropdown(`constraint-code-variable-${variableName}-${i}`);
-                    tr.querySelector('td').innerHTML = html;
-                    Array.from(tr.querySelectorAll('select')).forEach((sel, selIx) =>
-                    {
-                        // Change the type of a property
-                        sel.value = selIx === i ? type : 'list';
-                        sel.onchange = function()
-                        {
-                            editConstraintParameter(cTypeId, `variables-${variableName}-type`, newCTypeId =>
-                            {
-                                let newCType = getConstraintType(newCTypeId);
-                                let newType = (sel.value === 'list')
-                                    ? `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`
-                                    : `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
-                                newCType.variables[variableName] = newType;
-                                updateConstraints(c => { c.values[variableName] = coerceValue(c.values[variableName], newType); });
-                            });
-                        };
-                    });
-                }
-                else
-                {
-                    tr.querySelector('td').innerHTML = `<span class='fixed'></span>`;
-                    tr.querySelector('td>span').innerText = cType.variables[variableName];
-                }
-            });
-        }
-
-        // Button to add a new property
-        setButtonHandler(document.getElementById('constraint-code-addvar'), () =>
-        {
-            saveUndo();
-            let i = 1;
-            while (`property${i === 1 ? '' : i}` in cType.variables)
-                i++;
-            let varName = `property${i === 1 ? '' : i}`;
-            cType.variables[varName] = 'int';
-            updateConstraints(c => { c.values[varName] = coerceValue(0, 'int'); });
-            generateVariablesTable();
-            updateVisuals({ storage: true, svg: true });
-        });
-
-        generateVariablesTable();
-    }
-
-    function editConstraintParameter(cTypeId, paramName, setter)
-    {
-        if (editingConstraintType !== cTypeId || editingConstraintTypeParameter !== paramName)
-            saveUndo();
-
-        let newCTypeId = cTypeId;
-        if (editingConstraintType !== cTypeId)
-        {
-            // If only some (not all) constraints of the same type are selected, or the constraint type is a public one, create a copy of the constraint type
-            let unselectedSameType = state.constraints.map((c, cIx) => c.type === cTypeId && !selectedConstraints.includes(cIx) ? cIx : null).filter(c => c != null);
-            if (cTypeId >= 0 || unselectedSameType.length > 0)
-            {
-                let cTypeCopy = JSON.parse(JSON.stringify(getConstraintType(cTypeId)));
-                delete cTypeCopy.public;
-                delete cTypeCopy.shortcut;
-                let nIx = state.customConstraintTypes.findIndex(c => c === null);
-                if (nIx === -1)
-                {
-                    nIx = state.customConstraintTypes.length;
-                    state.customConstraintTypes.push(null);
-                }
-                newCTypeId = ~nIx;
-                state.customConstraintTypes[nIx] = cTypeCopy;
-                for (let cIx of selectedConstraints)
-                    state.constraints[cIx].type = newCTypeId;
-            }
-        }
-
-        editingConstraintType = newCTypeId;
-        editingConstraintTypeParameter = paramName;
-        setter(newCTypeId);
-        updateVisuals({ storage: true, svg: true });
-    }
-
-    // — Expander
-    let constraintCodeBox = document.getElementById('constraint-code-section');
-    let constraintCodeExpander = constraintCodeBox.querySelector('.expand');
     setButtonHandler(constraintCodeExpander, function() { setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); });
     setButtonHandler(constraintCodeBox.querySelector('.label'), function() { });
+
+    document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
+    document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
+    document.getElementById('puzzle-rules-input').onchange = function() { saveUndo(); state.rules = document.getElementById('puzzle-rules-input').value; updateVisuals({ storage: true }); };
+
     constraintCodeBox.querySelector('.label').ondblclick = function(ev) { if (ev.target !== constraintCodeExpander) setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); };
 
-    // — Text boxes / drop-downs
-    let editableElements = [
-        { id: 'name', getter: cTypeId => getConstraintType(cTypeId).name, setter: (cTypeId, v) => { getConstraintType(cTypeId).name = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
-        { id: 'logic', getter: cTypeId => getConstraintType(cTypeId).logic, setter: (cTypeId, v) => { getConstraintType(cTypeId).logic = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
-        { id: 'svg', getter: cTypeId => getConstraintType(cTypeId).svg, setter: (cTypeId, v) => { getConstraintType(cTypeId).svg = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
-        { id: 'svgdefs', getter: cTypeId => getConstraintType(cTypeId).svgdefs, setter: (cTypeId, v) => { getConstraintType(cTypeId).svgdefs = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
-        { id: 'preview', getter: cTypeId => getConstraintType(cTypeId).preview, setter: (cTypeId, v) => { getConstraintType(cTypeId).preview = v; }, setEvent: (el, ev) => { el.onkeyup = ev; } },
-
-        {
-            id: 'kind', getter: cTypeId => getConstraintType(cTypeId).kind, setEvent: (el, ev) => { el.onchange = ev; }, setter: (cTypeId, v) =>
-            {
-                let cType = getConstraintType(cTypeId);
-                cType.kind = v;
-                let inf = getSpecialVariable(v);
-                if (inf[0] !== null)
-                    cType.variables[inf[0]] = inf[1];
-                populateConstraintEditBox(cTypeId);
-            }
-        }
-    ];
-    for (let inf of editableElements)
+    setConstraintCodeEditingEvent('name', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).name, (cTypeId, v) => { getConstraintType(cTypeId).name = v; });
+    setConstraintCodeEditingEvent('logic', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).logic, (cTypeId, v) => { getConstraintType(cTypeId).logic = v; });
+    setConstraintCodeEditingEvent('svg', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).svg, (cTypeId, v) => { getConstraintType(cTypeId).svg = v; });
+    setConstraintCodeEditingEvent('svgdefs', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).svgdefs, (cTypeId, v) => { getConstraintType(cTypeId).svgdefs = v; });
+    setConstraintCodeEditingEvent('preview', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).preview, (cTypeId, v) => { getConstraintType(cTypeId).preview = v; });
+    setConstraintCodeEditingEvent('kind', (el, ev) => { el.onchange = ev; }, cTypeId => getConstraintType(cTypeId).kind, (cTypeId, v) =>
     {
-        let elem = document.getElementById(`constraint-code-${inf.id}`);
-        inf.setEvent(elem, () =>
-        {
-            let cTypeId = state.constraints[selectedConstraints[0]].type;
-            if (elem.value !== inf.getter(cTypeId))
-                editConstraintParameter(cTypeId, inf.id, cTypeId => inf.setter(cTypeId, elem.value));
-        });
-    }
-
-    function findMatchingRegions(cells)
-    {
-        if (cells.length < 2)
-            return [];
-        let smallestFactor = cells.length <= 5 ? 1 : 2;
-        while (cells.length % smallestFactor !== 0)
-            smallestFactor++;
-        if (smallestFactor === cells.length)
-            return [];
-        cells = cells.slice(0);
-        cells.sort((c1, c2) => c1 - c2);
-
-        function* recurse(regionSoFar, banned)
-        {
-            if ((regionSoFar.length > 1 || (regionSoFar.length === 1 && cells.length <= 5)) && cells.length % regionSoFar.length === 0)
-            {
-                // Check if the remaining cells form regions that match regionSoFar in shape
-                let rem = cells.filter(c => !regionSoFar.includes(c));
-                rem.sort((c1, c2) => c1 - c2);
-                let reg = [...regionSoFar];
-                reg.sort((c1, c2) => c1 - c2);
-                let regions = [reg];
-                while (rem.length > 0)
-                {
-                    let xOffset = rem[0] % 9 - reg[0] % 9;
-                    let yOffset = ((rem[0] / 9) | 0) - ((reg[0] / 9) | 0);
-                    if (!reg.every(c => inRange(c % 9 + xOffset) && inRange(((c / 9) | 0) + yOffset) && rem.includes(c + xOffset + 9 * yOffset)))
-                        break;
-                    regions.push(reg.map(c => c + xOffset + 9 * yOffset));
-                    rem = rem.filter(c => !reg.includes(c - xOffset - 9 * yOffset));
-                }
-                if (rem.length === 0 && regions.length > 1)
-                    yield regions;
-            }
-
-            if (regionSoFar.length * smallestFactor < cells.length && regionSoFar.length < 11)
-                for (let ix = 0; ix < cells.length; ix++)
-                {
-                    let adj = cells[ix];
-                    if (regionSoFar.includes(adj) || banned.includes(adj) || !(regionSoFar.length === 0 || orthogonal(adj).some(orth => regionSoFar.includes(orth))))
-                        continue;
-                    regionSoFar.push(adj);
-                    banned.push(adj);
-                    for (let region of recurse([...regionSoFar], [...banned]))
-                        yield region;
-                    regionSoFar.pop();
-                }
-        }
-
-        let result = [...recurse([cells[0]], [cells[0]])];
-        result.sort((r1, r2) => r1.length - r2.length);
-        return result;
-    }
-
-    // Return value is either:
-    // { valid: false, message: 'error message' }
-    // { valid: true, value?: new value (may or may not be the same as the input) (may be a single cell, list, list of lists, or absent) }
-    function enforceConstraintKind(kind, value)
-    {
-        switch (kind)
-        {
-            case 'Path':
-                if (!Array.isArray(value) || value.length < 2)
-                    return { valid: false, message: 'This constraint requires at least two cells.' };
-
-                if (Array(value.length - 1).fill(null).some((_, c) => !adjacent(value[c]).includes(value[c + 1])))
-                    return { valid: false, message: 'This constraint requires each cell to be adjacent to the previous, forming a path.' };
-
-                return { valid: true, value: value };
-
-            case 'Region':
-                if (!Array.isArray(value) || value.length < 1)
-                    return { valid: false, message: 'This constraint requires an orthogonally-connected region of cells.' };
-
-                let copy = [...value];
-                let region = [copy.pop()];
-                while (copy.length > 0)
-                {
-                    let ix = copy.findIndex(cell => region.some(r => orthogonal(cell).includes(r)));
-                    if (ix === -1)
-                        return { valid: false, message: 'This constraint requires an orthogonally-connected region of cells.' };
-                    region.push(copy[ix]);
-                    copy.splice(ix, 1);
-                }
-                region.sort((c1, c2) => c1 - c2);
-                return { valid: true, value: region };
-
-            case 'MatchingRegions':
-                if (Array.isArray(value) && value.every(inner => Array.isArray(inner) &&
-                    inner.map((v, ix) => v % 9 - value[0][ix] % 9).every(df => df === inner[0] % 9 - value[0][0] % 9) &&
-                    inner.map((v, ix) => ((v / 9) | 0) - ((value[0][ix] / 9) | 0)).every(df => df === ((inner[0] / 9) | 0) - ((value[0][0] / 9) | 0))))
-                    return { valid: true, value: value };
-
-                if (Array.isArray(value) && value.every(c => typeof c === 'number'))
-                {
-                    let regions = findMatchingRegions(value);
-                    if (regions.length === 0)
-                        return { valid: false, message: 'This constraint requires multiple orthogonally-connected regions of cells of the same shape.' };
-                    regions.sort((r1, r2) => r1.length - r2.length);
-                    return { valid: true, value: regions[0] };
-                }
-
-                return { valid: false, message: 'This constraint requires multiple orthogonally-connected regions of cells of the same shape.' };
-
-            case 'RowColumn':
-                if (!Array.isArray(value) || value.length < 2)
-                    return { valid: false, message: 'This constraint requires at least two cells that are in the same row or column.' };
-
-                let row = value.every(c => ((c / 9) | 0) === ((value[0] / 9) | 0)) ? ((value[0] / 9) | 0) : null;
-                let col = value.every(c => (c % 9) === (value[0] % 9)) ? (value[0] % 9) : null;
-                if (row === null && col === null)
-                    return { valid: false, message: 'This constraint requires a row or a column.' };
-
-                return {
-                    valid: true,
-                    value: value[1] > value[0]
-                        ? (row !== null ? Array(9).fill(null).map((_, c) => c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * r))
-                        : (row !== null ? Array(9).fill(null).map((_, c) => 8 - c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * (8 - r)))
-                };
-
-            case 'Diagonal':
-                if (!Array.isArray(value) || value.length < 2)
-                    return { valid: false, message: 'This constraint requires at least two cells that are on the same diagonal.' };
-
-                let forward = value.every(c => (c % 9) - ((c / 9) | 0) === (value[0] % 9) - ((value[0] / 9) | 0)) ? (value[0] % 9) - ((value[0] / 9) | 0) : null;
-                let backward = value.every(c => (c % 9) + ((c / 9) | 0) === (value[0] % 9) + ((value[0] / 9) | 0)) ? (value[0] % 9) + ((value[0] / 9) | 0) : null;
-                if (forward === null && backward === null)
-                    return { valid: false, message: 'This constraint requires a diagonal.' };
-
-                return {
-                    valid: true,
-                    value: Array(81).fill(null).map((_, c) => value[1] > value[0] ? c : 80 - c)
-                        .filter(c => forward !== null ? ((c % 9) - ((c / 9) | 0) === forward) : ((c % 9) + ((c / 9) | 0) === backward))
-                };
-
-            case 'TwoCells':
-                if (!Array.isArray(value) || value.length !== 2 || !orthogonal(value[0]).includes(value[1]))
-                    return { valid: false, message: 'This constraint requires two cells that are orthogonally adjacent to one another.' };
-                return { valid: true, value: [Math.min(...value), Math.max(...value)] };
-
-            case 'FourCells':
-                if (typeof value === 'number' && value % 9 >= 0 && value % 9 < 9 - 1 && ((value / 9) | 0) >= 0 && ((value / 9) | 0) < 9 - 1)
-                    return { valid: true, value: [value, value + 1, value + 10, value + 9] };
-
-                if (!Array.isArray(value) || value.length !== 4)
-                    return { valid: false, message: 'This constraint requires four cells that form a 2×2 square.' };
-
-                let sorted = [...value];
-                sorted.sort((c1, c2) => c1 - c2);
-                if (sorted[0] % 9 === 9 - 1 || sorted[1] != sorted[0] + 1 || ((sorted[0] / 9) | 0) === 9 - 1 || sorted[2] != sorted[0] + 9 || sorted[3] != sorted[0] + 9 + 1)
-                    return { valid: false, message: 'This constraint requires four cells that form a 2×2 square.' };
-
-                return { valid: true, value: [0, 1, 3, 2].map(c => sorted[c]) };
-
-            case 'Custom':
-            case 'Global':
-                return { valid: true };
-        }
-
-        console.error(`Unknown constraint kind: ${kind}`);
-        return { valid: true };
-    }
-
-    function addConstraintWithShortcut(letter)
-    {
-        // Find constraint with the right shortcut key
-        let sc = Object.keys(constraintTypes).filter(id => constraintTypes[id].shortcut === letter);
-        if (sc.length === 0)
-            return;
-
-        let cIx = state.constraints.length;
-        let cType = constraintTypes[sc[0]];
-        let specialVariable = getSpecialVariable(cType.kind);
-        let newConstraint = { type: (sc[0] | 0), values: {} };
-        for (let variableName of Object.keys(cType.variables))
-        {
-            if (variableName === specialVariable[0])
-            {
-                let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
-                if (!enforceResult.valid)
-                {
-                    alert(enforceResult.message);
-                    return;
-                }
-                newConstraint.values[specialVariable[0]] = enforceResult.value;
-            }
-            else
-                newConstraint.values[variableName] = coerceValue(null, cType.variables[variableName]);
-        }
-
-        saveUndo();
-
-        state.constraints.push(newConstraint);
-        selectConstraintRange(cIx, cIx, { storage: true, svg: true });
-
-        let constraintElem = document.getElementById(`constraint-${cIx}`);
-        let uiElement = constraintElem.querySelector('input,textarea,select');
-        if (uiElement !== null)
-        {
-            selectTab('constraints');
-            setClass(constraintElem, 'expanded', true);
-            newConstraint.expanded = true;
-            uiElement.focus();
-            if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
-                uiElement.select();
-        }
-    }
+        let cType = getConstraintType(cTypeId);
+        cType.kind = v;
+        let inf = getSpecialVariable(v);
+        if (inf[0] !== null)
+            cType.variables[inf[0]] = inf[1];
+        populateConstraintEditBox(cTypeId);
+    });
 
     puzzleContainer.addEventListener("keyup", ev =>
     {
         if (ev.key === 'Control')
             selectedCells = [...new Set(selectedCells)];
     });
-
     puzzleContainer.addEventListener("keydown", ev =>
     {
         let str = ev.code;
@@ -1565,7 +1501,6 @@
             return false;
         }
     });
-
     sidebarDiv.addEventListener("keydown", ev =>
     {
         if (ev.target !== sidebarDiv)
@@ -1638,17 +1573,54 @@
         }
     });
 
-    puzzleContainer.onmousedown = function(ev)
+
+    /// — RUN
+
+    // Blazor
+    Blazor.start({}).then(() =>
     {
-        if (!ev.shiftKey && !ev.ctrlKey)
+        for (let i = 0; i < blazorQueue.length; i++)
+            DotNet.invokeMethodAsync('ZingaWasm', blazorQueue[i][0], ...blazorQueue[i][1]).then(blazorQueue[i][2]);
+        blazorQueue = null;
+    });
+
+    // Retrieve state from localStorage
+    try
+    {
+        let str = localStorage.getItem(`zinga-edit`);
+        try { item = JSON.parse(str); }
+        catch { }
+        if (item && item.givens && item.constraints)
         {
-            selectedCells = [];
-            selectedConstraints = [];
-            editingConstraintType = null;
-            updateVisuals();
-            remoteLog2(`onmousedown puzzleContainer`);
+            state = item;
+            if (state.title === undefined || state.title === null) state.title = 'Sudoku';
+            if (state.author === undefined || state.author === null) state.author = 'unknown';
+            if (state.rules === undefined || state.rules === null) state.author = '';
+            if (state.customConstraintTypes === undefined || state.customConstraintTypes === null) state.customConstraintTypes = [];
+
+            if (!Array.isArray(state.givens) || state.givens.length != 81 || state.givens.some(g => g != null && (g < 1 || g > 9)))
+                state.givens = Array(81).fill(null);
+            state.constraints = Array.isArray(state.constraints) ? state.constraints.filter(c => 'type' in c && Number.isInteger(c.type)) : [];
+            for (let i = 0; i < state.constraints.length; i++)
+            {
+                let cType = getConstraintType(state.constraints[i].type);
+                for (let varName of Object.keys(state.constraints[i].values))
+                    if (!(varName in cType.variables))
+                        delete state.constraints[i].values[varName];
+                for (let varName of Object.keys(cType.variables))
+                    state.constraints[i].values[varName] = coerceValue(state.constraints[i].values[varName], cType.variables[varName]);
+            }
         }
-        else
-            remoteLog2(`onmousedown puzzleContainer (canceled)`);
-    };
+
+        let undoB = localStorage.getItem(`zinga-edit-undo`);
+        let redoB = localStorage.getItem(`zinga-edit-redo`);
+
+        undoBuffer = undoB ? JSON.parse(undoB) : [];
+        redoBuffer = redoB ? JSON.parse(redoB) : [];
+    }
+    catch { }
+
+    updateVisuals({ storage: true, svg: true, metadata: true });
+    selectTab('puzzle');
+    puzzleContainer.focus();
 });
