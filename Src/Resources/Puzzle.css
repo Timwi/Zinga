@@ -569,6 +569,16 @@ svg.puzzle-svg .multi-select {
                 background: hsl(220, 80%, 95%);
             }
 
+        .sidebar .constraint .variables ol {
+            padding-left: .5cm;
+        }
+        .sidebar .constraint .variables ol li.extra {
+            opacity: .2;
+        }
+            .sidebar .constraint .variables ol li.extra:hover {
+                opacity: 1;
+            }
+
     .sidebar .constraint .mini-btn.show {
         background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 40 5 L 10.09375 35 L 40 65 L 40 44.708984 C 73.379622 44.022868 83.374266 48.868838 65.09375 90 L 80.09375 90 C 98.976958 33.350377 93.159505 23.925067 40 24.757812 L 40 5 z" fill="%23507fcb" /></svg>');
     }
@@ -589,6 +599,14 @@ svg.puzzle-svg .multi-select {
     .sidebar .constraint .int-list input {
         width: 1.1cm;
         margin-right: .1cm;
+    }
+
+    .sidebar .mini-btn.add {
+        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M4 2h2v2h2v2h-2v2h-2v-2h-2v-2h2z" fill="%2339A332" /></svg>');
+    }
+
+    .sidebar .mini-btn.remove {
+        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M2 4h6v2h-6z" fill="%23A33232" /></svg>');
     }
 
 .sidebar #constraint-code-section {
@@ -630,14 +648,12 @@ svg.puzzle-svg .multi-select {
 
     .sidebar #constraint-code-section .mini-btn.add {
         float: right;
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M4 2h2v2h2v2h-2v2h-2v-2h-2v-2h2z" fill="%2339A332" /></svg>');
     }
 
     .sidebar #constraint-code-section .mini-btn.remove {
         position: absolute;
         top: .075cm;
         right: 0;
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M2 4h6v2h-6z" fill="%23A33232" /></svg>');
     }
 
 .sidebar #constraint-code-variables {

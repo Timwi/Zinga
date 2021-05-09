@@ -162,7 +162,7 @@
         {
             case 'cell':
             case 'int': return value | 0;
-            case 'string': return `${value}`;
+            case 'string': return `${value ?? ''}`;
             case 'bool': return !!value;
             case 'decimal': return +value;
         }
@@ -201,12 +201,16 @@
     }
 
     // options:
-    //  storage (bool)
+    //  storage (bool)    — updates localStorage with the current state and the undo/redo history
     //  svg (bool)          — updates constraint SVG in the grid (this involves Blazor)
-    //  ui (bool)            — updates constraint UI in the sidebar
     //  metadata (bool) — updates the title / author / rules textboxes
     function updateVisuals(opt)
     {
+        let wasFocused = null;
+        try { wasFocused = document.activeElement.id; }
+        catch { }
+        console.log(`was focused: ${wasFocused}`);
+
         // Update localStorage
         if (localStorage && opt && opt.storage)
         {
@@ -258,6 +262,9 @@
                 case 'int':
                     return `<input type='number' step='1' id='${id}' value='${value | 0}' />`;
 
+                case 'string':
+                    return `<input type='text' id='${id}' value='${value}' />`;
+
                 case 'bool':
                     return `<input type='checkbox' id='${id}'${value ? ` checked='checked'` : ''} />`;
 
@@ -269,7 +276,7 @@
                     return `<button type='button' class='mini-btn show' id='${id}-show' title='Show' tabindex='0'></button><span class='matching-regions-controls' id='${id}-set' data-constraintix='${cIx}'></span>`;
 
                 case 'list(int)':
-                    return `<div class='int-list' id='${id}'>${value.map((v, vIx) => `<input type='number' step='1' value='${v}' id='${id}-${vIx}' data-ix='${vIx}' />`).join('')}<input type='number' step='1' id='${id}-${value.length}' data-ix='${value.length}' /></div>`;
+                    return `<span class='int-list' id='${id}'>${value.map((v, vIx) => `<input type='number' step='1' value='${v}' id='${id}-${vIx}' data-ix='${vIx}' />`).join('')}<input type='number' step='1' id='${id}-${value.length}' data-ix='${value.length}' /></span>`;
             }
 
             let listRx = /^list\((.*)\)$/.exec(type);
@@ -279,8 +286,8 @@
                 if (!Array.isArray(value))
                     value = [];
                 for (let i = 0; i < value.length; i++)
-                    uis.push(`<li>${variableUi(listRx[1], value[i], `${id}-${i}`, kind, cIx)}</li>`);
-                return `<ul>${uis.join('')}</ul>`;
+                    uis.push(`<li><button class='mini-btn add' id='${id}-add-${i}' data-ix='${i}'></button><button class='mini-btn remove' id='${id}-remove-${i}' data-ix='${i}'></button>${variableUi(listRx[1], value[i], `${id}-${i}`, kind, cIx)}</li>`);
+                return `<ol id='${id}'>${uis.join('')}<li class='extra'><button class='mini-btn add' id='${id}-add-${value.length}' data-ix='${value.length}'></button></li></ol>`;
             }
 
             return "(not implemented)";
@@ -291,6 +298,10 @@
             switch (type)
             {
                 case 'int':
+                    document.getElementById(id).onchange = function() { setter(document.getElementById(id).value | 0); };
+                    return;
+
+                case 'string':
                     document.getElementById(id).onchange = function() { setter(document.getElementById(id).value); };
                     return;
 
@@ -332,178 +343,181 @@
 
                 case 'list(int)':
                     let outerDiv = document.getElementById(id);
-                    let intArray = getter();
-                    Array.from(outerDiv.querySelectorAll('input')).forEach(input =>
+                    function setInputChangeEvent(input)
                     {
-                        function inputChangeEvent(inp, ix)
+                        let ix = input.dataset.ix | 0;
+                        input.onchange = function()
                         {
-                            return function()
+                            let intArray = getter().slice(0);
+                            if (input.value === '')
                             {
-                                if (inp.value === '')
-                                {
-                                    intArray.length = ix;
-                                    Array.from(outerDiv.querySelectorAll('input')).filter(inp => (inp.dataset.ix | 0) > ix).forEach(inp => { inp.remove(); });
-                                }
-                                else if (ix === intArray.length)
-                                {
-                                    intArray.push(inp.value | 0);
-                                    let t = document.createElement('div');
-                                    t.innerHTML = `<input type='number' step='1' id='${id}-${intArray.length}' data-ix='${intArray.length}'>`;
-                                    t.firstChild.onchange = inputChangeEvent(t.firstChild, intArray.length);
-                                    outerDiv.appendChild(t.firstChild);
-                                }
-                                else
-                                    intArray[ix] = (inp.value | 0);
-                                setter(intArray);
-                            };
-                        }
-                        input.onchange = inputChangeEvent(input, input.dataset.ix | 0);
-                    });
+                                intArray.length = ix;
+                                Array.from(outerDiv.querySelectorAll('input')).filter(inp => (inp.dataset.ix | 0) > ix).forEach(inp => { inp.remove(); });
+                            }
+                            else if (ix === intArray.length)
+                            {
+                                intArray.push(input.value | 0);
+                                let t = document.createElement('div');
+                                t.innerHTML = `<input type='number' step='1' id='${id}-${intArray.length}' data-ix='${intArray.length}'>`;
+                                t = t.firstChild;
+                                outerDiv.appendChild(t);
+                                setInputChangeEvent(t);
+                            }
+                            else
+                                intArray[ix] = (input.value | 0);
+                            setter(intArray);
+                        };
+                    }
+                    Array.from(outerDiv.querySelectorAll('input')).forEach(input => { setInputChangeEvent(input); });
+                    return;
+            }
+
+            let listRx = /^list\((.*)\)$/.exec(type);
+            if (listRx !== null)
+            {
+                let elementType = listRx[1];
+                Array.from(document.getElementById(id).querySelectorAll(':scope>li>button.remove')).forEach(btn =>
+                {
+                    let ix = btn.dataset.ix | 0;
+                    setButtonHandler(btn, () => { let arr = getter().slice(0); arr.splice(ix, 1); setter(arr); });
+                });
+                Array.from(document.getElementById(id).querySelectorAll(':scope>li>button.add')).forEach(btn =>
+                {
+                    let ix = btn.dataset.ix | 0;
+                    setButtonHandler(btn, () => { let arr = getter().slice(0); arr.splice(ix, 0, coerceValue(null, elementType)); setter(arr); });
+                });
+                getter().forEach((_, i) => { setVariableEvents(elementType, () => getter()[i], v => { getter()[i] = v; setter(getter()); }, `${id}-${i}`); });
             }
         }
 
-        if (opt && opt.ui)
+        // List of constraints
+        let constraintListHtml = '';
+        for (var cIx = 0; cIx < state.constraints.length; cIx++)
         {
-            // List of constraints
-            let constraintListHtml = '';
-            for (var cIx = 0; cIx < state.constraints.length; cIx++)
-            {
-                let constraint = state.constraints[cIx];
-                let constraintType = getConstraintType(constraint.type);
-                let variableHtml = '';
-                for (let v of Object.keys(constraintType.variables))
-                    variableHtml += `<div class='variable'><div class='name'>${v}</div><div class='value'>${variableUi(constraintType.variables[v], constraint.values[v], `constraint-${cIx}-${v}`, constraintType.kind, cIx)}</div></div>`;
+            let constraint = state.constraints[cIx];
+            let constraintType = getConstraintType(constraint.type);
+            let variableHtml = '';
+            for (let v of Object.keys(constraintType.variables))
+                variableHtml += `<div class='variable'><div class='name'>${v}</div><div class='value'>${variableUi(constraintType.variables[v], constraint.values[v], `constraint-${cIx}-${v}`, constraintType.kind, cIx)}</div></div>`;
 
-                constraintListHtml += `
-                    <div class='constraint${constraint.expanded ? ' expanded' : ''}' id='constraint-${cIx}' data-index='${cIx}'>
-                        <div class='name'><span></span><div class='expand'></div><button class='mini-btn merge' title='Merge constraint types (set selected constraints to match this type)'></button></div>
-                        <div class='variables'>${variableHtml}</div>
-                    </div>`;
-            }
-            constraintList.innerHTML = constraintListHtml;
-            Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv =>
-            {
-                let cIx = constraintDiv.dataset.index | 0;
-                let constraint = state.constraints[cIx];
-                let cType = getConstraintType(constraint.type);
+            constraintListHtml += `
+                <div class='constraint${constraint.expanded ? ' expanded' : ''}' id='constraint-${cIx}' data-index='${cIx}'>
+                    <div class='name'><span></span><div class='expand'></div><button class='mini-btn merge' title='Merge constraint types (set selected constraints to match this type)'></button></div>
+                    <div class='variables'>${variableHtml}</div>
+                </div>`;
+        }
+        constraintList.innerHTML = constraintListHtml;
+        Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv =>
+        {
+            let cIx = constraintDiv.dataset.index | 0;
+            let constraint = state.constraints[cIx];
+            let cType = getConstraintType(constraint.type);
 
-                let specialVariable = getSpecialVariable(cType.kind);
-                if (specialVariable[0] !== null)
+            let specialVariable = getSpecialVariable(cType.kind);
+            if (specialVariable[0] !== null)
+            {
+                let enforceResult = enforceConstraintKind(cType.kind, constraint.values[specialVariable[0]]);
+                if (!enforceResult.valid)
                 {
-                    let enforceResult = enforceConstraintKind(cType.kind, constraint.values[specialVariable[0]]);
-                    if (!enforceResult.valid)
-                    {
-                        constraintDiv.classList.add('warning');
-                        constraintDiv.querySelector('.name').setAttribute('title', `${enforceResult.message} Either change the “${specialVariable[0]}” property accordingly, or (if the constraint works correctly as it is) change its Kind to “Custom”.`);
-                    }
+                    constraintDiv.classList.add('warning');
+                    constraintDiv.querySelector('.name').setAttribute('title', `${enforceResult.message} Either change the “${specialVariable[0]}” property accordingly, or (if the constraint works correctly as it is) change its Kind to “Custom”.`);
                 }
+            }
 
-                for (let v of Object.keys(cType.variables))
-                    setVariableEvents(
-                        cType.variables[v],
-                        () => constraint.values[v],
-                        nv =>
-                        {
-                            if (v === getSpecialVariable(cType.kind)[0])
-                            {
-                                var result = enforceConstraintKind(cType.kind, nv);
-                                if (!result.valid)
-                                {
-                                    alert(result.message);
-                                    return false;
-                                }
-                                nv = result.value;
-                                selectedCells = [];
-                                selectedConstraints = [cIx];
-                                document.getElementById(`constraint-${cIx}`).classList.remove('warning');
-                                document.getElementById(`constraint-${cIx}`).querySelector('.name').removeAttribute('title');
-                            }
-                            saveUndo();
-                            constraint.values[v] = nv;
-                            for (let cIx of selectedConstraints)
-                                if (state.constraints[cIx].type === constraint.type)
-                                    state.constraints[cIx].values[v] = nv;
-                            updateVisuals({ storage: true, svg: true });
-                            return true;
-                        },
-                        `constraint-${cIx}-${v}`);
-
-                setButtonHandler(constraintDiv, ev =>
-                {
-                    if (ev.target.nodeName === 'INPUT')
-                        return true;
-                    sidebarDiv.focus();
-                    if (ev.shiftKey && !ev.ctrlKey)
-                        selectConstraintRange(lastSelectedConstraint, cIx);
-                    else if (ev.ctrlKey && !ev.shiftKey)
+            for (let v of Object.keys(cType.variables))
+                setVariableEvents(
+                    cType.variables[v],
+                    () => constraint.values[v],
+                    nv =>
                     {
-                        if (selectedConstraints.includes(cIx))
-                            selectedConstraints.splice(selectedConstraints.indexOf(cIx), 1);
-                        else
+                        if (v === getSpecialVariable(cType.kind)[0])
                         {
-                            selectedConstraints.push(cIx);
-                            lastSelectedConstraint = cIx;
+                            var result = enforceConstraintKind(cType.kind, nv);
+                            if (!result.valid)
+                            {
+                                alert(result.message);
+                                return false;
+                            }
+                            nv = result.value;
+                            selectedCells = [];
+                            selectedConstraints = [cIx];
+                            document.getElementById(`constraint-${cIx}`).classList.remove('warning');
+                            document.getElementById(`constraint-${cIx}`).querySelector('.name').removeAttribute('title');
                         }
-                        editingConstraintType = null;
-                        updateVisuals();
-                    }
+                        saveUndo();
+                        constraint.values[v] = nv;
+                        for (let cIx of selectedConstraints)
+                            if (state.constraints[cIx].type === constraint.type)
+                                state.constraints[cIx].values[v] = nv;
+                        updateVisuals({ storage: true, svg: true });
+                        return true;
+                    },
+                    `constraint-${cIx}-${v}`);
+
+            setButtonHandler(constraintDiv, ev =>
+            {
+                if (ev.target.nodeName === 'INPUT')
+                    return true;
+                sidebarDiv.focus();
+                if (ev.shiftKey && !ev.ctrlKey)
+                    selectConstraintRange(lastSelectedConstraint, cIx);
+                else if (ev.ctrlKey && !ev.shiftKey)
+                {
+                    if (selectedConstraints.includes(cIx))
+                        selectedConstraints.splice(selectedConstraints.indexOf(cIx), 1);
                     else
                     {
-                        selectedConstraints = [cIx];
+                        selectedConstraints.push(cIx);
                         lastSelectedConstraint = cIx;
-                        selectedCells = [];
-                        editingConstraintType = null;
-                        updateVisuals();
                     }
-                }, ev => ev.target.nodeName === 'INPUT');
-
-                function toggleExpanded()
-                {
-                    constraint.expanded = !constraint.expanded;
-                    updateVisuals({ storage: true });
+                    editingConstraintType = null;
+                    updateVisuals();
                 }
-                let expander = constraintDiv.querySelector('.expand');
-                setButtonHandler(expander, toggleExpanded);
-                constraintDiv.querySelector('.name').ondblclick = function(ev) { if (ev.target !== expander) toggleExpanded(); };
-
-                let mergeBtn = constraintDiv.querySelector('.mini-btn.merge');
-                setButtonHandler(mergeBtn, () =>
+                else
                 {
-                    let targetTypeId = state.constraints[cIx].type;
-                    let targetType = getConstraintType(targetTypeId);
-                    saveUndo();
-                    for (let selCIx of selectedConstraints)
-                        if (state.constraints[selCIx].type !== targetTypeId)
-                        {
-                            state.constraints[selCIx].type = targetTypeId;
-                            for (let varName of Object.keys(state.constraints[selCIx].values))
-                                if (!(varName in targetType.variables))
-                                    delete state.constraints[selCIx].values[varName];
-                            for (let varName of Object.keys(targetType.variables))
-                                if (!(varName in state.constraints[selCIx].values))
-                                    state.constraints[selCIx].values[varName] = constraint.values[varName];
-                        }
-                    updateVisuals({ storage: true, ui: true, svg: true });
-                });
+                    selectedConstraints = [cIx];
+                    lastSelectedConstraint = cIx;
+                    selectedCells = [];
+                    editingConstraintType = null;
+                    updateVisuals();
+                }
+            }, ev => ev.target.nodeName === 'INPUT');
+
+            function toggleExpanded()
+            {
+                constraint.expanded = !constraint.expanded;
+                updateVisuals({ storage: true });
+            }
+            let expander = constraintDiv.querySelector('.expand');
+            setButtonHandler(expander, toggleExpanded);
+            constraintDiv.querySelector('.name').ondblclick = function(ev) { if (ev.target !== expander) toggleExpanded(); };
+
+            let mergeBtn = constraintDiv.querySelector('.mini-btn.merge');
+            setButtonHandler(mergeBtn, () =>
+            {
+                let targetTypeId = state.constraints[cIx].type;
+                let targetType = getConstraintType(targetTypeId);
+                saveUndo();
+                for (let selCIx of selectedConstraints)
+                    if (state.constraints[selCIx].type !== targetTypeId)
+                    {
+                        state.constraints[selCIx].type = targetTypeId;
+                        for (let varName of Object.keys(state.constraints[selCIx].values))
+                            if (!(varName in targetType.variables))
+                                delete state.constraints[selCIx].values[varName];
+                        for (let varName of Object.keys(targetType.variables))
+                            if (!(varName in state.constraints[selCIx].values))
+                                state.constraints[selCIx].values[varName] = constraint.values[varName];
+                    }
+                updateVisuals({ storage: true, svg: true });
             });
-        }
+        });
 
         let uniqueConstraintTypes = [...new Set(state.constraints.map(c => c.type))];
         uniqueConstraintTypes.sort((a, b) => b - a);
         function getConstraintColor(cType, selected)
         {
             return `hsl(${(220 + 360 / uniqueConstraintTypes.length * uniqueConstraintTypes.indexOf(cType)) % 360}, ${selected ? '80%, 50%' : '80%, 90%'})`;
-        }
-
-        function populateVariableUi(type, value, id, kind, cIx)
-        {
-            switch (type)
-            {
-                case 'int':
-                    document.getElementById(id).value = (value | 0); break;
-                case 'bool':
-                    document.getElementById(id).checked = !!value; break;
-            }
         }
 
         // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
@@ -535,8 +549,6 @@
             constraintDiv.querySelector('.name>span').innerText = cType.name;
             constraintDiv.querySelector('.mini-btn.merge').style.display = selectedConstraints.length > 1 && !allSimilar && selectedConstraints.includes(cIx) ? 'block' : 'none';
             setClass(constraintDiv, 'expanded', constraint.expanded);
-            for (let v of Object.keys(cType.variables))
-                populateVariableUi(cType.variables[v], constraint.values[v], `constraint-${cIx}-${v}`, cType.kind, cIx);
         });
 
         // Constraint UI that has cell region UI
@@ -618,8 +630,15 @@
             document.getElementById('puzzle-author-input').value = state.author;
             document.getElementById('puzzle-rules-input').value = state.rules;
         }
+
+        if (wasFocused)
+        {
+            let elem = document.getElementById(wasFocused);
+            if (elem)
+                elem.focus();
+        }
     }
-    updateVisuals({ storage: true, svg: true, ui: true, metadata: true });
+    updateVisuals({ storage: true, svg: true, metadata: true });
 
     function saveUndo()
     {
@@ -633,7 +652,7 @@
         {
             redoBuffer.push(state);
             state = undoBuffer.pop();
-            updateVisuals({ storage: true, svg: true, ui: true, metadata: true });
+            updateVisuals({ storage: true, svg: true, metadata: true });
         }
     }
 
@@ -643,7 +662,7 @@
         {
             undoBuffer.push(state);
             state = redoBuffer.pop();
-            updateVisuals({ storage: true, svg: true, ui: true, metadata: true });
+            updateVisuals({ storage: true, svg: true, metadata: true });
         }
     }
 
@@ -721,7 +740,7 @@
             for (let i = 0; i < state.customConstraintTypes.length; i++)
                 if (state.customConstraintTypes[i] !== null && state.constraints.every(c => c.type !== ~i))
                     state.customConstraintTypes[i] = null;
-            updateVisuals({ storage: true, svg: anyConstraintsSelected, ui: anyConstraintsSelected });
+            updateVisuals({ storage: true, svg: anyConstraintsSelected });
         }
     }
 
@@ -739,7 +758,7 @@
             resetClearButton();
             saveUndo();
             state = makeEmptyState();
-            updateVisuals({ storage: true, svg: true, ui: true, metadata: true });
+            updateVisuals({ storage: true, svg: true, metadata: true });
         }
     });
 
@@ -928,7 +947,7 @@
             saveUndo();
             let oldLength = state.constraints.length;
             state.constraints.push(...selectedConstraints.map(c => JSON.parse(JSON.stringify(state.constraints[c]))));
-            selectConstraintRange(oldLength, state.constraints.length - 1, { storage: true, ui: true, svg: true });
+            selectConstraintRange(oldLength, state.constraints.length - 1, { storage: true, svg: true });
             console.log(state.constraints);
         }
     }
@@ -968,7 +987,7 @@
             selectedConstraints = selectedConstraints.map(c => up ? (c - 1) : (c + 1));
         }
         lastSelectedConstraint = state.constraints.indexOf(prevSel);
-        updateVisuals({ storage: true, ui: true, svg: true });
+        updateVisuals({ storage: true, svg: true });
     }
     setButtonHandler(document.getElementById('constraint-move-up'), () => moveConstraints(true));
     setButtonHandler(document.getElementById('constraint-move-down'), () => moveConstraints(false));
@@ -1001,6 +1020,13 @@
         document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
         document.getElementById('constraint-code-preview').value = cType.preview;
 
+        function updateConstraints(setter)
+        {
+            for (let i = 0; i < state.constraints.length; i++)
+                if (state.constraints[i].type === cTypeId)
+                    setter(state.constraints[i]);
+        }
+
         function generateVariablesTable()
         {
             let variableNames = Object.keys(cType.variables);
@@ -1027,8 +1053,9 @@
                     {
                         saveUndo();
                         delete cType.variables[variableName];
+                        updateConstraints(c => { delete c.values[variableName]; });
                         generateVariablesTable();
-                        updateVisuals({ storage: true, ui: true, svg: true });
+                        updateVisuals({ storage: true, svg: true });
                     });
 
                     // Double-click to rename a property
@@ -1038,22 +1065,27 @@
                         while (true)
                         {
                             let newName = prompt('Enter the new name for this property:', lastInput);
-                            if (newName !== null && newName !== variableName)
-                            {
-                                lastInput = newName;
-                                if (['gw', 'gh', 'allcells', 'true', 'false'].includes(newName))
-                                {
-                                    alert('This property name is reserved. Please choose a different name.');
-                                    continue;
-                                }
+                            if (newName === null || newName === variableName)
+                                break;
 
-                                saveUndo();
-                                cType.variables[newName] = cType.variables[variableName];
-                                delete cType.variables[variableName];
-                                generateVariablesTable();
-                                updateVisuals({ storage: true, ui: true });
-                                document.getElementById(`constraint-code-variable-${newName}-0`).focus();
+                            lastInput = newName;
+                            if (['gw', 'gh', 'allcells', 'true', 'false'].includes(newName))
+                            {
+                                alert('This property name is reserved. Please choose a different name.');
+                                continue;
                             }
+
+                            saveUndo();
+                            cType.variables[newName] = cType.variables[variableName];
+                            delete cType.variables[variableName];
+                            updateConstraints(c =>
+                            {
+                                c.values[newName] = c.values[variableName];
+                                delete c.values[variableName];
+                            });
+                            generateVariablesTable();
+                            updateVisuals({ storage: true, svg: true });
+                            document.getElementById(`constraint-code-variable-${newName}-0`).focus();
                             break;
                         }
                     };
@@ -1080,10 +1112,11 @@
                             editConstraintParameter(cTypeId, `variables-${variableName}-type`, newCTypeId =>
                             {
                                 let newCType = getConstraintType(newCTypeId);
-                                if (sel.value === 'list')
-                                    newCType.variables[variableName] = `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`;
-                                else
-                                    newCType.variables[variableName] = `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
+                                let newType = (sel.value === 'list')
+                                    ? `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`
+                                    : `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
+                                newCType.variables[variableName] = newType;
+                                updateConstraints(c => { c.values[variableName] = coerceValue(c.values[variableName], newType); });
                             });
                         };
                     });
@@ -1104,12 +1137,10 @@
             while (`property${i === 1 ? '' : i}` in cType.variables)
                 i++;
             let varName = `property${i === 1 ? '' : i}`;
-            cType.variables[varName] = 'cell';
-            for (let i = 0; i < state.constraints.length; i++)
-                if (state.constraints[i].type === cTypeId)
-                    state.constraints[i].values[varName] = [0];
+            cType.variables[varName] = 'int';
+            updateConstraints(c => { c.values[varName] = coerceValue(0, 'int'); });
             generateVariablesTable();
-            updateVisuals({ storage: true, ui: true, svg: true });
+            updateVisuals({ storage: true, svg: true });
         });
 
         generateVariablesTable();
@@ -1120,6 +1151,7 @@
         if (editingConstraintType !== cTypeId || editingConstraintTypeParameter !== paramName)
             saveUndo();
 
+        let newCTypeId = cTypeId;
         if (editingConstraintType !== cTypeId)
         {
             // If only some (not all) constraints of the same type are selected, or the constraint type is a public one, create a copy of the constraint type
@@ -1135,18 +1167,17 @@
                     nIx = state.customConstraintTypes.length;
                     state.customConstraintTypes.push(null);
                 }
-                let newCTypeId = ~nIx;
+                newCTypeId = ~nIx;
                 state.customConstraintTypes[nIx] = cTypeCopy;
                 for (let cIx of selectedConstraints)
                     state.constraints[cIx].type = newCTypeId;
-                cTypeId = newCTypeId;
             }
         }
 
-        editingConstraintType = cTypeId;
+        editingConstraintType = newCTypeId;
         editingConstraintTypeParameter = paramName;
-        setter(cTypeId);
-        updateVisuals({ storage: true, svg: true, ui: true });
+        setter(newCTypeId);
+        updateVisuals({ storage: true, svg: true });
     }
 
     // — Expander
@@ -1380,7 +1411,7 @@
         saveUndo();
 
         state.constraints.push(newConstraint);
-        selectConstraintRange(cIx, cIx, { storage: true, svg: true, ui: true });
+        selectConstraintRange(cIx, cIx, { storage: true, svg: true });
 
         let constraintElem = document.getElementById(`constraint-${cIx}`);
         let uiElement = constraintElem.querySelector('input,textarea,select');
