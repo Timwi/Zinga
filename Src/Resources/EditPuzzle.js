@@ -1615,6 +1615,7 @@
     }
     catch { }
 
+    // UI
     updateVisuals({ storage: true, svg: true, metadata: true });
     selectTab('puzzle');
     puzzleContainer.focus();

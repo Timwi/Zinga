@@ -1,34 +1,8 @@
 ﻿window.onload = (function()
 {
-    function remoteLog(msg)
-    {
-        //let req = new XMLHttpRequest();
-        //req.open('POST', '/remote-log', true);
-        //req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-        //req.send(`msg=${encodeURIComponent(msg)}`);
-    }
+    /// — FUNCTIONS
 
-    function handler(fnc)
-    {
-        return function(ev)
-        {
-            fnc(ev);
-            ev.stopPropagation();
-            ev.preventDefault();
-            return false;
-        };
-    }
-
-    function setClass(elem, className, setUnset)
-    {
-        if (setUnset)
-            elem.classList.add(className);
-        else
-            elem.classList.remove(className);
-    }
-
-    let outputBlazorTimings = false;
-    let blazorQueue = [];
+    // Utility
     function dotNet(method, args, callback)
     {
         if (blazorQueue === null)
@@ -53,126 +27,153 @@
         else
             blazorQueue.push([method, args, callback]);
     }
-    Blazor.start({}).then(() =>
+    function fixViewBox()
     {
-        for (let i = 0; i < blazorQueue.length; i++)
+        // Fix the viewBox
+        let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
+
+        // Step 1: move the button row so that it’s below the puzzle
+        let buttons = document.getElementById('bb-buttons');
+        let extraBBox = document.getElementById('bb-puzzle-without-global').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
+        buttons.setAttribute('transform', `translate(0, ${Math.max(9.4, extraBBox.y + extraBBox.height + .25)})`);
+
+        // Step 2: move the global constraints so they’re to the left of the puzzle
+        let globalBox = document.getElementById('constraint-svg-global');
+        globalBox.setAttribute('transform', `translate(${extraBBox.x - 1.5}, 0)`);
+
+        // Step 3: change the viewBox so that it includes everything
+        let fullBBox = document.getElementById('bb-everything').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
+        let left = Math.min(-.4, fullBBox.x - .1);
+        let top = Math.min(-.4, fullBBox.y - .1);
+        let right = Math.max(9.4, fullBBox.x + fullBBox.width + .2);
+        let bottom = Math.max(9.4, fullBBox.y + fullBBox.height + .2);
+        puzzleSvg.setAttribute('viewBox', `${left} ${top} ${right - left} ${bottom - top}`);
+        let selectionFilter = document.getElementById('constraint-invalid-shadow');
+        selectionFilter.setAttribute('x', left);
+        selectionFilter.setAttribute('y', top);
+        selectionFilter.setAttribute('width', right - left);
+        selectionFilter.setAttribute('height', bottom - top);
+    }
+    function handler(fnc)
+    {
+        return function(ev)
         {
-            let bq = blazorQueue[i];
-            if (bq[0] === null)
-                bq[2]();
-            else
-            {
-                let start = new Date();
-                var r = DotNet.invokeMethodAsync('ZingaWasm', bq[0], ...bq[1]).then(result =>
-                {
-                    if (outputBlazorTimings)
-                        console.log(`${bq[0]} took ${new Date() - start} ms.`);
-                    if (bq[2])
-                        r.then(bq[2](result));
-                });
-            }
-        }
-        blazorQueue = null;
-    });
-
-    let puzzleDiv = document.getElementById('puzzle');
-    let puzzleContainer = document.getElementById('puzzle-container');
-    let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
-    let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes);
-    let customConstraintTypes = [];
-    let constraints = puzzleId === 'test' ? [] : JSON.parse(puzzleDiv.dataset.constraints);
-    let givens = Array(81).fill(null);
-    if (puzzleId !== 'test')
-        for (let givenInf of JSON.parse(puzzleDiv.dataset.givens ?? null) ?? [])
-            givens[givenInf[0]] = givenInf[1];
-
-    puzzleContainer.focus();
-
-    let draggingMode = null;
-    puzzleContainer.onmouseup = handler(puzzleContainer.ontouchend = function(ev)
-    {
-        if (ev.type !== 'touchend' || ev.touches.length === 0)
-            draggingMode = null;
-        remoteLog(`${ev.type} puzzleContainer`);
-    });
-
-    function makeCleanState()
-    {
-        return {
-            colors: Array(81).fill(null).map(_ => []),
-            cornerNotation: Array(81).fill(null).map(_ => []),
-            centerNotation: Array(81).fill(null).map(_ => []),
-            enteredDigits: Array(81).fill(null)
+            fnc(ev);
+            ev.stopPropagation();
+            ev.preventDefault();
+            return false;
         };
     }
-    let state = makeCleanState();
-    let undoBuffer = [];
-    let redoBuffer = [];
-
-    let mode = 'normal';
-    let selectedCells = [];
-    let highlightedDigits = [];
-    let showErrors = true;
-    let multiColorMode = false;
-    let sidebarOn = true;
-
-    function remoteLog2(msg)
+    function setButtonHandler(btn, click)
     {
-        remoteLog(`${msg} [${selectedCells.join()}] ${draggingMode ?? "null"}`);
+        btn.onclick = handler(ev => click(ev));
+        btn.onmousedown = handler(function() { });
+    }
+    function setClass(elem, className, setUnset)
+    {
+        if (setUnset)
+            elem.classList.add(className);
+        else
+            elem.classList.remove(className);
     }
 
-    function encodeState(st)
+    // Puzzle
+    function checkSudokuValid()
     {
-        let val = 0n;
+        // Checks only the basic Sudoku rules, not the constraints
 
-        // Encode the Sudoku grid
-        for (let cell = 0; cell < 81; cell++)
+        let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
+        Array.from(document.querySelectorAll('.region-invalid')).forEach(elem => { elem.setAttribute('opacity', 0); });
+        let isValid = true;
+
+        // Check the Sudoku rules (rows, columns and boxes)
+        for (let i = 0; i < 9; i++)
         {
-            // Compact representation of an entered digit or a completely empty cell
-            if (st.enteredDigits[cell] !== null)
-                val = (val * 11n) + BigInt(st.enteredDigits[cell]);
-            else if (st.cornerNotation[cell].length === 0 && st.centerNotation[cell].length === 0)
-                val = (val * 11n);
-            else
-            {
-                // corner notation
-                for (let digit = 1; digit <= 9; digit++)
-                    val = (val * 2n) + (st.cornerNotation[cell].includes(digit) ? 1n : 0n);
-
-                // center notation
-                for (let digit = 1; digit <= 9; digit++)
-                    val = (val * 2n) + (st.centerNotation[cell].includes(digit) ? 1n : 0n);
-
-                val = (val * 11n) + 10n;
-            }
-
-            // Encode colors
-            if (st.colors[cell].length === 0)   // Common case: no color
-                val = (val * 3n);
-            else if (st.colors[cell].length === 1)  // Single color: one of 9
-                val = (val * 9n + BigInt(st.colors[cell][0])) * 3n + 1n;
-            else    // Multiple colors: bitfield
-            {
-                for (let color = 0; color < 9; color++)
-                    val = (val * 2n) + (st.colors[cell].includes(color) ? 1n : 0n);
-                val = val * 3n + 2n;
-            }
+            // Check rows
+            let go = true;
+            for (let colA = 0; colA < 9 && go; colA++)
+                for (let colB = colA + 1; colB < 9 && go; colB++)
+                    if (grid[colA + 9 * i] !== null && grid[colA + 9 * i] === grid[colB + 9 * i])
+                    {
+                        if (showErrors)
+                            document.getElementById(`row-invalid-${i}`).setAttribute('opacity', 1);
+                        isValid = false;
+                        go = false;
+                    }
+            // Check columns
+            go = true;
+            for (let rowA = 0; rowA < 9 && go; rowA++)
+                for (let rowB = rowA + 1; rowB < 9 && go; rowB++)
+                    if (grid[i + 9 * rowA] !== null && grid[i + 9 * rowA] === grid[i + 9 * rowB])
+                    {
+                        if (showErrors)
+                            document.getElementById(`column-invalid-${i}`).setAttribute('opacity', 1);
+                        isValid = false;
+                        go = false;
+                    }
+            // Check boxes
+            go = true;
+            for (let cellA = 0; cellA < 9 && go; cellA++)
+                for (let cellB = cellA + 1; cellB < 9 && go; cellB++)
+                    if (grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] !== null &&
+                        grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] === grid[cellB % 3 + 3 * (i % 3) + 9 * (((cellB / 3) | 0) + 3 * ((i / 3) | 0))])
+                    {
+                        if (showErrors)
+                            document.getElementById(`box-invalid-${i}`).setAttribute('opacity', 1);
+                        isValid = false;
+                        go = false;
+                    }
         }
 
-        // Safe characters to use: 0x21 - 0xD7FF and 0xE000 - 0xFFFD
-        // (0x20 will later be used as a separator)
-        let maxValue = BigInt(0xfffd - 0xe000 + 1 + 0xd7ff - 0x21 + 1);
-        function getChar(v) { return String.fromCharCode(v > 0xd7ff - 0x21 + 1 ? 0xe000 + (v - (0xd7ff - 0x21 + 1)) : 0x21 + v); }
+        // Check that all cells in the Sudoku grid have a digit
+        if (isValid && grid.some(c => c === null))
+            isValid = null;
 
-        let str = '';
-        while (val > 0n)
+        setClass(puzzleDiv, 'solved', false);
+
+        // Check if any constraints are violated
+        if (showErrors || grid.every(d => d !== null))
         {
-            str += getChar(Number(val % maxValue));
-            val = val / maxValue;
+            dotNet('CheckConstraints', [JSON.stringify(grid), JSON.stringify(constraints)], result =>
+            {
+                let violatedConstraintIxs = JSON.parse(result);
+                setClass(puzzleDiv, 'solved', isValid === true && violatedConstraintIxs.length === 0);
+                for (let cIx = 0; cIx < constraints.length; cIx++)
+                {
+                    if (violatedConstraintIxs.includes(cIx) && showErrors)
+                    {
+                        console.log(`Constraint ${cIx} is violated.`);
+                        document.getElementById(`constraint-svg-${cIx}`).setAttribute('filter', 'url(#constraint-invalid-shadow)');
+                    }
+                    else
+                        document.getElementById(`constraint-svg-${cIx}`).removeAttribute('filter');
+                }
+            });
         }
-        return str;
+        else
+            Array.from(document.querySelectorAll('#constraint-svg>g,#constraint-svg-global>g')).forEach(g => { g.removeAttribute('filter'); });
     }
-
+    function clearCells()
+    {
+        if (mode === 'color' && selectedCells.some(c => state.colors[c].length > 0))
+        {
+            saveUndo();
+            for (let cell of selectedCells)
+                state.colors[cell] = [];
+            updateVisuals(true);
+        }
+        else if (mode !== 'color' && selectedCells.some(c => state.enteredDigits[c] !== null || state.centerNotation[c].length > 0 || state.cornerNotation[c].length > 0))
+        {
+            saveUndo();
+            for (let cell of selectedCells)
+            {
+                state.enteredDigits[cell] = null;
+                state.centerNotation[cell] = [];
+                state.cornerNotation[cell] = [];
+            }
+            updateVisuals(true);
+        }
+    }
     function decodeState(str)
     {
         // Safe characters to use: 0x21 - 0xD7FF and 0xE000 - 0xFFFD
@@ -245,129 +246,249 @@
         }
         return st;
     }
-
-    try
+    function encodeState(st)
     {
-        let optB = localStorage.getItem(`zinga-${puzzleId}-opt`);
-        let opt = optB && JSON.parse(optB);
+        let val = 0n;
 
-        showErrors = opt ? !!opt.showErrors : true;
-        multiColorMode = opt ? !!opt.multiColorMode : false;
-        sidebarOn = opt ? !!opt.sidebarOn : true;
+        // Encode the Sudoku grid
+        for (let cell = 0; cell < 81; cell++)
+        {
+            // Compact representation of an entered digit or a completely empty cell
+            if (st.enteredDigits[cell] !== null)
+                val = (val * 11n) + BigInt(st.enteredDigits[cell]);
+            else if (st.cornerNotation[cell].length === 0 && st.centerNotation[cell].length === 0)
+                val = (val * 11n);
+            else
+            {
+                // corner notation
+                for (let digit = 1; digit <= 9; digit++)
+                    val = (val * 2n) + (st.cornerNotation[cell].includes(digit) ? 1n : 0n);
 
-        let str = localStorage.getItem(`zinga-${puzzleId}`);
-        let item = null;
-        if (str !== null)
-            try { item = decodeState(str); }
-            catch { item = null; }
-        if (item && item.cornerNotation && item.centerNotation && item.enteredDigits && item.colors)
-            state = item;
+                // center notation
+                for (let digit = 1; digit <= 9; digit++)
+                    val = (val * 2n) + (st.centerNotation[cell].includes(digit) ? 1n : 0n);
 
-        let undoB = localStorage.getItem(`zinga-${puzzleId}-undo`);
-        let redoB = localStorage.getItem(`zinga-${puzzleId}-redo`);
+                val = (val * 11n) + 10n;
+            }
 
-        undoBuffer = undoB ? undoB.split(' ') : [];
-        redoBuffer = redoB ? redoB.split(' ') : [];
+            // Encode colors
+            if (st.colors[cell].length === 0)   // Common case: no color
+                val = (val * 3n);
+            else if (st.colors[cell].length === 1)  // Single color: one of 9
+                val = (val * 9n + BigInt(st.colors[cell][0])) * 3n + 1n;
+            else    // Multiple colors: bitfield
+            {
+                for (let color = 0; color < 9; color++)
+                    val = (val * 2n) + (st.colors[cell].includes(color) ? 1n : 0n);
+                val = val * 3n + 2n;
+            }
+        }
+
+        // Safe characters to use: 0x21 - 0xD7FF and 0xE000 - 0xFFFD
+        // (0x20 will later be used as a separator)
+        let maxValue = BigInt(0xfffd - 0xe000 + 1 + 0xd7ff - 0x21 + 1);
+        function getChar(v) { return String.fromCharCode(v > 0xd7ff - 0x21 + 1 ? 0xe000 + (v - (0xd7ff - 0x21 + 1)) : 0x21 + v); }
+
+        let str = '';
+        while (val > 0n)
+        {
+            str += getChar(Number(val % maxValue));
+            val = val / maxValue;
+        }
+        return str;
     }
-    catch
+    function enterCenterNotation(digit)
     {
+        if (selectedCells.every(c => getDisplayedSudokuDigit(state, c)))
+            return;
+        saveUndo();
+        let allHaveDigit = selectedCells.filter(c => !getDisplayedSudokuDigit(state, c)).every(c => state.centerNotation[c].includes(digit));
+        selectedCells.forEach(cell =>
+        {
+            if (allHaveDigit)
+                state.centerNotation[cell].splice(state.centerNotation[cell].indexOf(digit), 1);
+            else if (!state.centerNotation[cell].includes(digit))
+            {
+                state.centerNotation[cell].push(digit);
+                state.centerNotation[cell].sort();
+            }
+        });
+        updateVisuals(true);
+    }
+    function enterCornerNotation(digit)
+    {
+        if (selectedCells.every(c => getDisplayedSudokuDigit(state, c)))
+            return;
+        saveUndo();
+        let allHaveDigit = selectedCells.filter(c => !getDisplayedSudokuDigit(state, c)).every(c => state.cornerNotation[c].includes(digit));
+        selectedCells.forEach(cell =>
+        {
+            if (allHaveDigit)
+                state.cornerNotation[cell].splice(state.cornerNotation[cell].indexOf(digit), 1);
+            else if (!state.cornerNotation[cell].includes(digit))
+            {
+                state.cornerNotation[cell].push(digit);
+                state.cornerNotation[cell].sort();
+            }
+        });
+        updateVisuals(true);
+    }
+    function getDisplayedSudokuDigit(st, cell)
+    {
+        return givens[cell] !== null ? givens[cell] : st.enteredDigits[cell];
+    }
+    function makeCleanState()
+    {
+        return {
+            colors: Array(81).fill(null).map(_ => []),
+            cornerNotation: Array(81).fill(null).map(_ => []),
+            centerNotation: Array(81).fill(null).map(_ => []),
+            enteredDigits: Array(81).fill(null)
+        };
+    }
+    function pressDigit(digit, ev)
+    {
+        if (selectedCells.length === 0)
+        {
+            // Highlight digits
+            if (ev && ev.shift)
+            {
+                if (highlightedDigits.includes(digit))
+                    highlightedDigits.splice(highlightedDigits.indexOf(digit), 1);
+                else
+                    highlightedDigits.push(digit);
+            }
+            else
+            {
+                if (highlightedDigits.includes(digit))
+                    highlightedDigits = [];
+                else
+                    highlightedDigits = [digit];
+            }
+            updateVisuals();
+        }
+        else
+        {
+            // Enter a digit in the Sudoku
+            switch (mode)
+            {
+                case 'normal':
+                    saveUndo();
+                    let allHaveDigit = selectedCells.every(c => getDisplayedSudokuDigit(state, c) === digit);
+                    if (allHaveDigit)
+                        selectedCells.forEach(selectedCell => { state.enteredDigits[selectedCell] = null; });
+                    else
+                        selectedCells.forEach(selectedCell => { state.enteredDigits[selectedCell] = digit; });
+                    updateVisuals(true);
+                    break;
+                case 'center':
+                    enterCenterNotation(digit);
+                    break;
+                case 'corner':
+                    enterCornerNotation(digit);
+                    break;
+                case 'color':
+                    setCellColor(digit - 1);
+                    break;
+            }
+        }
+    }
+    function selectCell(cell, mode)
+    {
+        if (mode === 'toggle')
+        {
+            if (selectedCells.length === 1 && selectedCells.includes(cell))
+                selectedCells = [];
+            else
+                selectedCells = [cell];
+        }
+        else if (mode === 'remove')
+        {
+            let ix = selectedCells.indexOf(cell);
+            if (ix !== -1)
+                selectedCells.splice(ix, 1);
+        }
+        else if (mode === 'clear')
+        {
+            selectedCells = [cell];
+            keepMove = false;
+        }
+        else if (mode === 'add' || (mode === 'move' && keepMove))
+        {
+            let ix = selectedCells.indexOf(cell);
+            if (ix !== -1)
+                selectedCells.splice(ix, 1);
+            selectedCells.push(cell);
+            keepMove = false;
+        }
+        else    // mode === 'move' && !keepMove
+        {
+            selectedCells.pop();
+            selectedCells.push(cell);
+        }
+    }
+    function setCellColor(color)
+    {
+        if (selectedCells.length === 0)
+            return;
+        saveUndo();
+        if (selectedCells.every(cell => state.colors[cell].includes(color)))
+        {
+            for (let cell of selectedCells)
+                state.colors[cell].splice(state.colors[cell].indexOf(color), 1);
+        }
+        else
+        {
+            for (let cell of selectedCells)
+                if (multiColorMode)
+                {
+                    if (!state.colors[cell].includes(color))
+                    {
+                        state.colors[cell].push(color);
+                        state.colors[cell].sort();
+                    }
+                }
+                else
+                    state.colors[cell] = [color];
+        }
+        updateVisuals(true);
     }
 
-    if (puzzleId !== 'test')
-        dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
+    // Undo/redo
+    function undo()
+    {
+        if (undoBuffer.length > 0)
+        {
+            redoBuffer.push(encodeState(state));
+            state = decodeState(undoBuffer.pop());
+            updateVisuals(true);
+        }
+    }
+    function redo()
+    {
+        if (redoBuffer.length > 0)
+        {
+            undoBuffer.push(encodeState(state));
+            state = decodeState(redoBuffer.pop());
+            updateVisuals(true);
+        }
+    }
+    function saveUndo()
+    {
+        undoBuffer.push(encodeState(state));
+        redoBuffer = [];
+    }
 
+    // UI
     function resetClearButton()
     {
         document.getElementById(`btn-clear`).classList.remove('warning');
         document.querySelector(`#btn-clear>text`).textContent = 'Clear';
     }
-
-    function getDisplayedSudokuDigit(st, cell)
-    {
-        return givens[cell] !== null ? givens[cell] : st.enteredDigits[cell];
-    }
-
-    // Checks only the basic Sudoku rules, not the constraints
-    function isSudokuValid()
-    {
-        let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
-        Array.from(document.querySelectorAll('.region-invalid')).forEach(elem => { elem.setAttribute('opacity', 0); });
-        let isValid = true;
-
-        // Check the Sudoku rules (rows, columns and boxes)
-        for (let i = 0; i < 9; i++)
-        {
-            // Check rows
-            let go = true;
-            for (let colA = 0; colA < 9 && go; colA++)
-                for (let colB = colA + 1; colB < 9 && go; colB++)
-                    if (grid[colA + 9 * i] !== null && grid[colA + 9 * i] === grid[colB + 9 * i])
-                    {
-                        if (showErrors)
-                            document.getElementById(`row-invalid-${i}`).setAttribute('opacity', 1);
-                        isValid = false;
-                        go = false;
-                    }
-            // Check columns
-            go = true;
-            for (let rowA = 0; rowA < 9 && go; rowA++)
-                for (let rowB = rowA + 1; rowB < 9 && go; rowB++)
-                    if (grid[i + 9 * rowA] !== null && grid[i + 9 * rowA] === grid[i + 9 * rowB])
-                    {
-                        if (showErrors)
-                            document.getElementById(`column-invalid-${i}`).setAttribute('opacity', 1);
-                        isValid = false;
-                        go = false;
-                    }
-            // Check boxes
-            go = true;
-            for (let cellA = 0; cellA < 9 && go; cellA++)
-                for (let cellB = cellA + 1; cellB < 9 && go; cellB++)
-                    if (grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] !== null &&
-                        grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] === grid[cellB % 3 + 3 * (i % 3) + 9 * (((cellB / 3) | 0) + 3 * ((i / 3) | 0))])
-                    {
-                        if (showErrors)
-                            document.getElementById(`box-invalid-${i}`).setAttribute('opacity', 1);
-                        isValid = false;
-                        go = false;
-                    }
-        }
-
-        // Check that all cells in the Sudoku grid have a digit
-        return !isValid ? false : grid.some(c => c === null) ? null : true;
-    }
-
-    function checkSudokuValid()
-    {
-        let valid = isSudokuValid();
-        setClass(puzzleDiv, 'solved', false);
-
-        // Check if any constraints are violated
-        let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
-        if (showErrors || grid.every(d => d !== null))
-        {
-            dotNet('CheckConstraints', [JSON.stringify(grid), JSON.stringify(constraints)], result =>
-            {
-                let violatedConstraintIxs = JSON.parse(result);
-                setClass(puzzleDiv, 'solved', valid === true && violatedConstraintIxs.length === 0);
-                for (let cIx = 0; cIx < constraints.length; cIx++)
-                {
-                    if (violatedConstraintIxs.includes(cIx) && showErrors)
-                    {
-                        console.log(`Constraint ${cIx} is violated.`);
-                        document.getElementById(`constraint-svg-${cIx}`).setAttribute('filter', 'url(#constraint-invalid-shadow)');
-                    }
-                    else
-                        document.getElementById(`constraint-svg-${cIx}`).removeAttribute('filter');
-                }
-            });
-        }
-        else
-            Array.from(document.querySelectorAll('#constraint-svg>g,#constraint-svg-global>g')).forEach(g => { g.removeAttribute('filter'); });
-    }
-
     function updateConstraints()
     {
+        // This function is only used on the test page
+
         if (!document.hidden && puzzleId === 'test')
         {
             if (outputBlazorTimings)
@@ -407,12 +528,6 @@
             }
         }
     }
-    if (puzzleId === 'test')
-    {
-        updateConstraints();    // Make sure this happens before the first call to updateVisuals()
-        document.addEventListener('visibilitychange', updateConstraints);
-    }
-
     function updateVisuals(udpateStorage)
     {
         // Update localStorage (only do this when necessary because encodeState() is relatively slow on Firefox)
@@ -508,147 +623,60 @@
         // Check if there are any conflicts (red glow) and/or the puzzle is solved
         checkSudokuValid();
     }
-    updateVisuals(true);
 
-    function saveUndo()
+    // Debugging
+    function remoteLog(msg)
     {
-        undoBuffer.push(encodeState(state));
-        redoBuffer = [];
+        //let req = new XMLHttpRequest();
+        //req.open('POST', '/remote-log', true);
+        //req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        //req.send(`msg=${encodeURIComponent(msg)}`);
+    }
+    function remoteLog2(msg)
+    {
+        remoteLog(`${msg} [${selectedCells.join()}] ${draggingMode ?? "null"}`);
     }
 
-    function undo()
-    {
-        if (undoBuffer.length > 0)
-        {
-            redoBuffer.push(encodeState(state));
-            state = decodeState(undoBuffer.pop());
-            updateVisuals(true);
-        }
-    }
 
-    function redo()
-    {
-        if (redoBuffer.length > 0)
-        {
-            undoBuffer.push(encodeState(state));
-            state = decodeState(redoBuffer.pop());
-            updateVisuals(true);
-        }
-    }
 
-    function enterCenterNotation(digit)
-    {
-        if (selectedCells.every(c => getDisplayedSudokuDigit(state, c)))
-            return;
-        saveUndo();
-        let allHaveDigit = selectedCells.filter(c => !getDisplayedSudokuDigit(state, c)).every(c => state.centerNotation[c].includes(digit));
-        selectedCells.forEach(cell =>
-        {
-            if (allHaveDigit)
-                state.centerNotation[cell].splice(state.centerNotation[cell].indexOf(digit), 1);
-            else if (!state.centerNotation[cell].includes(digit))
-            {
-                state.centerNotation[cell].push(digit);
-                state.centerNotation[cell].sort();
-            }
-        });
-        updateVisuals(true);
-    }
 
-    function enterCornerNotation(digit)
-    {
-        if (selectedCells.every(c => getDisplayedSudokuDigit(state, c)))
-            return;
-        saveUndo();
-        let allHaveDigit = selectedCells.filter(c => !getDisplayedSudokuDigit(state, c)).every(c => state.cornerNotation[c].includes(digit));
-        selectedCells.forEach(cell =>
-        {
-            if (allHaveDigit)
-                state.cornerNotation[cell].splice(state.cornerNotation[cell].indexOf(digit), 1);
-            else if (!state.cornerNotation[cell].includes(digit))
-            {
-                state.cornerNotation[cell].push(digit);
-                state.cornerNotation[cell].sort();
-            }
-        });
-        updateVisuals(true);
-    }
+    /// — INITIALIZATION
 
-    function setCellColor(color)
-    {
-        if (selectedCells.length === 0)
-            return;
-        saveUndo();
-        if (selectedCells.every(cell => state.colors[cell].includes(color)))
-        {
-            for (let cell of selectedCells)
-                state.colors[cell].splice(state.colors[cell].indexOf(color), 1);
-        }
-        else
-        {
-            for (let cell of selectedCells)
-                if (multiColorMode)
-                {
-                    if (!state.colors[cell].includes(color))
-                    {
-                        state.colors[cell].push(color);
-                        state.colors[cell].sort();
-                    }
-                }
-                else
-                    state.colors[cell] = [color];
-        }
-        updateVisuals(true);
-    }
+    // Blazor
+    let outputBlazorTimings = false;
+    let blazorQueue = [];
 
-    function pressDigit(digit, ev)
-    {
-        if (selectedCells.length === 0)
-        {
-            // Highlight digits
-            if (ev && ev.shift)
-            {
-                if (highlightedDigits.includes(digit))
-                    highlightedDigits.splice(highlightedDigits.indexOf(digit), 1);
-                else
-                    highlightedDigits.push(digit);
-            }
-            else
-            {
-                if (highlightedDigits.includes(digit))
-                    highlightedDigits = [];
-                else
-                    highlightedDigits = [digit];
-            }
-            updateVisuals();
-        }
-        else
-        {
-            // Enter a digit in the Sudoku
-            switch (mode)
-            {
-                case 'normal':
-                    saveUndo();
-                    let allHaveDigit = selectedCells.every(c => getDisplayedSudokuDigit(state, c) === digit);
-                    if (allHaveDigit)
-                        selectedCells.forEach(selectedCell => { state.enteredDigits[selectedCell] = null; });
-                    else
-                        selectedCells.forEach(selectedCell => { state.enteredDigits[selectedCell] = digit; });
-                    updateVisuals(true);
-                    break;
-                case 'center':
-                    enterCenterNotation(digit);
-                    break;
-                case 'corner':
-                    enterCornerNotation(digit);
-                    break;
-                case 'color':
-                    setCellColor(digit - 1);
-                    break;
-            }
-        }
-    }
+    // Variables: UI elements
+    let puzzleDiv = document.getElementById('puzzle');
+    let puzzleContainer = document.getElementById('puzzle-container');
 
+    // Variables: UI other
+    let draggingMode = null;
+    let highlightedDigits = [];
+    let keepMove = false;
+    let mode = 'normal';
+    let multiColorMode = false;
+    let selectedCells = [];
+    let showErrors = true;
+    let sidebarOn = true;
+
+    // Variables: puzzle
+    let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
+    let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes);
+    let customConstraintTypes = [];
+    let constraints = puzzleId === 'test' ? [] : JSON.parse(puzzleDiv.dataset.constraints);
+    let givens = Array(81).fill(null);
+    let state = makeCleanState();
+    let undoBuffer = [];
+    let redoBuffer = [];
+
+    // Events
+    puzzleContainer.onmouseup = handler(puzzleContainer.ontouchend = function(ev)
+    {
+        if (ev.type !== 'touchend' || ev.touches.length === 0)
+            draggingMode = null;
+        remoteLog(`${ev.type} puzzleContainer`);
+    });
     Array.from(puzzleDiv.getElementsByClassName('sudoku-cell')).forEach(cellRect =>
     {
         let cell = parseInt(cellRect.dataset.cell);
@@ -701,46 +729,15 @@
             remoteLog2(`ontouchmove ${cell}`);
         };
     });
-
-    function setButtonHandler(btn, click)
-    {
-        btn.onclick = handler(ev => click(ev));
-        btn.onmousedown = handler(function() { });
-    }
-
     Array(9).fill(null).forEach((_, btn) =>
     {
         setButtonHandler(document.getElementById(`btn-${btn + 1}`), function(ev) { pressDigit(btn + 1, ev); });
     });
-
     ["normal", "corner", "center", "color"].forEach(btn => setButtonHandler(puzzleDiv.querySelector(`#btn-${btn}>rect`), function()
     {
         mode = btn;
         updateVisuals();
     }));
-
-    function clearCells()
-    {
-        if (mode === 'color' && selectedCells.some(c => state.colors[c].length > 0))
-        {
-            saveUndo();
-            for (let cell of selectedCells)
-                state.colors[cell] = [];
-            updateVisuals(true);
-        }
-        else if (mode !== 'color' && selectedCells.some(c => state.enteredDigits[c] !== null || state.centerNotation[c].length > 0 || state.cornerNotation[c].length > 0))
-        {
-            saveUndo();
-            for (let cell of selectedCells)
-            {
-                state.enteredDigits[cell] = null;
-                state.centerNotation[cell] = [];
-                state.cornerNotation[cell] = [];
-            }
-            updateVisuals(true);
-        }
-    }
-
     setButtonHandler(puzzleDiv.querySelector(`#btn-clear>rect`), function()
     {
         let elem = document.getElementById(`btn-clear`);
@@ -758,14 +755,11 @@
             updateVisuals(true);
         }
     });
-
     setButtonHandler(puzzleDiv.querySelector(`#btn-undo>rect`), undo);
     setButtonHandler(puzzleDiv.querySelector(`#btn-redo>rect`), redo);
-
     setButtonHandler(puzzleDiv.querySelector(`#btn-sidebar>rect`), function() { sidebarOn = !sidebarOn; updateVisuals(true); });
     document.getElementById(`opt-show-errors`).onchange = function() { showErrors = !showErrors; updateVisuals(true); };
     document.getElementById(`opt-multi-color`).onchange = function() { multiColorMode = !multiColorMode; updateVisuals(true); };
-
     setButtonHandler(document.getElementById('opt-edit'), () =>
     {
         if (puzzleId !== 'test')
@@ -805,7 +799,6 @@
         }
         window.open(`${window.location.protocol}//${window.location.host}/edit`);
     });
-
     setButtonHandler(document.getElementById('opt-screenshot'), () =>
     {
         let img = new Image();
@@ -839,43 +832,6 @@
             .replace(/(?=<\/style>)/, Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.rules)), [])
                 .filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n")));
     });
-
-    function selectCell(cell, mode)
-    {
-        if (mode === 'toggle')
-        {
-            if (selectedCells.length === 1 && selectedCells.includes(cell))
-                selectedCells = [];
-            else
-                selectedCells = [cell];
-        }
-        else if (mode === 'remove')
-        {
-            let ix = selectedCells.indexOf(cell);
-            if (ix !== -1)
-                selectedCells.splice(ix, 1);
-        }
-        else if (mode === 'clear')
-        {
-            selectedCells = [cell];
-            keepMove = false;
-        }
-        else if (mode === 'add' || (mode === 'move' && keepMove))
-        {
-            let ix = selectedCells.indexOf(cell);
-            if (ix !== -1)
-                selectedCells.splice(ix, 1);
-            selectedCells.push(cell);
-            keepMove = false;
-        }
-        else    // mode === 'move' && !keepMove
-        {
-            selectedCells.pop();
-            selectedCells.push(cell);
-        }
-    }
-
-    let keepMove = false;
     puzzleContainer.addEventListener("keydown", ev =>
     {
         let str = ev.code;
@@ -1055,7 +1011,6 @@
             return false;
         }
     });
-
     puzzleContainer.onmousedown = function(ev)
     {
         if (!ev.shiftKey && !ev.ctrlKey)
@@ -1068,36 +1023,6 @@
         else
             remoteLog2(`onmousedown puzzleContainer (canceled)`);
     };
-
-    function fixViewBox()
-    {
-        // Fix the viewBox
-        let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
-
-        // Step 1: move the button row so that it’s below the puzzle
-        let buttons = document.getElementById('bb-buttons');
-        let extraBBox = document.getElementById('bb-puzzle-without-global').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
-        buttons.setAttribute('transform', `translate(0, ${Math.max(9.4, extraBBox.y + extraBBox.height + .25)})`);
-
-        // Step 2: move the global constraints so they’re to the left of the puzzle
-        let globalBox = document.getElementById('constraint-svg-global');
-        globalBox.setAttribute('transform', `translate(${extraBBox.x - 1.5}, 0)`);
-
-        // Step 3: change the viewBox so that it includes everything
-        let fullBBox = document.getElementById('bb-everything').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
-        let left = Math.min(-.4, fullBBox.x - .1);
-        let top = Math.min(-.4, fullBBox.y - .1);
-        let right = Math.max(9.4, fullBBox.x + fullBBox.width + .2);
-        let bottom = Math.max(9.4, fullBBox.y + fullBBox.height + .2);
-        puzzleSvg.setAttribute('viewBox', `${left} ${top} ${right - left} ${bottom - top}`);
-        let selectionFilter = document.getElementById('constraint-invalid-shadow');
-        selectionFilter.setAttribute('x', left);
-        selectionFilter.setAttribute('y', top);
-        selectionFilter.setAttribute('width', right - left);
-        selectionFilter.setAttribute('height', bottom - top);
-    }
-    fixViewBox();
-
     window.addEventListener('resize', function()
     {
         let rulesDiv = document.getElementById('rules-text');
@@ -1117,6 +1042,77 @@
         }
         rulesDiv.style.fontSize = `${min}pt`;
     });
-
     window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
+
+
+    /// — RUN
+
+    // Blazor
+    Blazor.start({}).then(() =>
+    {
+        for (let i = 0; i < blazorQueue.length; i++)
+        {
+            let bq = blazorQueue[i];
+            if (bq[0] === null)
+                bq[2]();
+            else
+            {
+                let start = new Date();
+                var r = DotNet.invokeMethodAsync('ZingaWasm', bq[0], ...bq[1]).then(result =>
+                {
+                    if (outputBlazorTimings)
+                        console.log(`${bq[0]} took ${new Date() - start} ms.`);
+                    if (bq[2])
+                        r.then(bq[2](result));
+                });
+            }
+        }
+        blazorQueue = null;
+    });
+
+    // Retrieve state from localStorage
+    try
+    {
+        let optB = localStorage.getItem(`zinga-${puzzleId}-opt`);
+        let opt = optB && JSON.parse(optB);
+
+        showErrors = opt ? !!opt.showErrors : true;
+        multiColorMode = opt ? !!opt.multiColorMode : false;
+        sidebarOn = opt ? !!opt.sidebarOn : true;
+
+        let str = localStorage.getItem(`zinga-${puzzleId}`);
+        let item = null;
+        if (str !== null)
+            try { item = decodeState(str); }
+            catch { item = null; }
+        if (item && item.cornerNotation && item.centerNotation && item.enteredDigits && item.colors)
+            state = item;
+
+        let undoB = localStorage.getItem(`zinga-${puzzleId}-undo`);
+        let redoB = localStorage.getItem(`zinga-${puzzleId}-redo`);
+
+        undoBuffer = undoB ? undoB.split(' ') : [];
+        redoBuffer = redoB ? redoB.split(' ') : [];
+    }
+    catch { }
+
+    // Puzzle
+    if (puzzleId !== 'test')
+        for (let givenInf of JSON.parse(puzzleDiv.dataset.givens ?? null) ?? [])
+            givens[givenInf[0]] = givenInf[1];
+
+    // UI
+    if (puzzleId === 'test')
+    {
+        updateConstraints();    // Make sure this happens before the first call to updateVisuals()
+        document.addEventListener('visibilitychange', updateConstraints);
+    }
+    else
+    {
+        dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
+    }
+
+    updateVisuals(true);
+    puzzleContainer.focus();
+    fixViewBox();
 });
