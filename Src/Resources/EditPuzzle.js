@@ -116,19 +116,17 @@
         let specialVariable = getSpecialVariable(cType.kind);
         let newConstraint = { type: (sc[0] | 0), values: {} };
         for (let variableName of Object.keys(cType.variables))
+            newConstraint.values[variableName] = coerceValue(variableName === 'cells' ? selectedCells : null, cType.variables[variableName]);
+
+        if (specialVariable[0] !== null)
         {
-            if (variableName === specialVariable[0])
+            let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
+            if (!enforceResult.valid)
             {
-                let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
-                if (!enforceResult.valid)
-                {
-                    alert(enforceResult.message);
-                    return;
-                }
-                newConstraint.values[specialVariable[0]] = enforceResult.value;
+                alert(enforceResult.message);
+                return;
             }
-            else
-                newConstraint.values[variableName] = coerceValue(null, cType.variables[variableName]);
+            newConstraint.values[specialVariable[0]] = enforceResult.value;
         }
 
         saveUndo();
@@ -399,7 +397,7 @@
         document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
         document.getElementById('constraint-code-preview').value = cType.preview;
 
-        function updateConstraints(setter)
+        function constraintUpdate(setter)
         {
             for (let i = 0; i < state.constraints.length; i++)
                 if (state.constraints[i].type === cTypeId)
@@ -432,7 +430,7 @@
                     {
                         saveUndo();
                         delete cType.variables[variableName];
-                        updateConstraints(c => { delete c.values[variableName]; });
+                        constraintUpdate(c => { delete c.values[variableName]; });
                         generateVariablesTable();
                         updateVisuals({ storage: true, svg: true });
                     });
@@ -457,7 +455,7 @@
                             saveUndo();
                             cType.variables[newName] = cType.variables[variableName];
                             delete cType.variables[variableName];
-                            updateConstraints(c =>
+                            constraintUpdate(c =>
                             {
                                 c.values[newName] = c.values[variableName];
                                 delete c.values[variableName];
@@ -495,7 +493,7 @@
                                     ? `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`
                                     : `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
                                 newCType.variables[variableName] = newType;
-                                updateConstraints(c => { c.values[variableName] = coerceValue(c.values[variableName], newType); });
+                                constraintUpdate(c => { c.values[variableName] = coerceValue(c.values[variableName], newType); });
                             });
                         };
                     });
@@ -517,7 +515,7 @@
                 i++;
             let varName = `property${i === 1 ? '' : i}`;
             cType.variables[varName] = 'int';
-            updateConstraints(c => { c.values[varName] = coerceValue(0, 'int'); });
+            constraintUpdate(c => { c.values[varName] = coerceValue(0, 'int'); });
             generateVariablesTable();
             updateVisuals({ storage: true, svg: true });
         });
@@ -674,10 +672,10 @@
     }
     function selectTab(tab)
     {
-        Array.from(document.querySelectorAll('.sidebar>.tabs>.tab')).forEach(t => t.classList.remove('active'));
-        document.querySelector(`.sidebar>.tabs>.tab-${tab}`).classList.add('active');
+        Array.from(document.querySelectorAll('#sidebar>.tabs>.tab')).forEach(t => t.classList.remove('active'));
+        document.querySelector(`#sidebar>.tabs>.tab-${tab}`).classList.add('active');
 
-        Array.from(document.querySelectorAll('.sidebar>.tabc')).forEach(t => t.classList.remove('active'));
+        Array.from(document.querySelectorAll('#sidebar>.tabc')).forEach(t => t.classList.remove('active'));
         document.querySelector(`#tab-${tab}`).classList.add('active');
 
         sidebarDiv.focus();
@@ -710,11 +708,6 @@
         //  storage (bool)    — updates localStorage with the current state and the undo/redo history
         //  svg (bool)          — updates constraint SVG in the grid (this involves Blazor)
         //  metadata (bool) — updates the title / author / rules textboxes
-
-        let wasFocused = null;
-        try { wasFocused = document.activeElement.id; }
-        catch { }
-        console.log(`was focused: ${wasFocused}`);
 
         // Update localStorage
         if (localStorage && opt && opt.storage)
@@ -1136,9 +1129,9 @@
             document.getElementById('puzzle-rules-input').value = state.rules;
         }
 
-        if (wasFocused)
+        if (lastFocusedElement)
         {
-            let elem = document.getElementById(wasFocused);
+            let elem = document.getElementById(lastFocusedElement);
             if (elem)
                 elem.focus();
         }
@@ -1164,9 +1157,9 @@
     let blazorQueue = [];
 
     // Variables: UI elements
-    let puzzleDiv = document.querySelector('div.puzzle');
-    let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
-    let sidebarDiv = document.querySelector('div.sidebar');
+    let puzzleDiv = document.getElementById('puzzle');
+    let puzzleContainer = document.getElementById('puzzle-container');
+    let sidebarDiv = document.getElementById('sidebar');
     let constraintList = document.getElementById('constraint-list');
     let constraintCodeBox = document.getElementById('constraint-code-section');
     let constraintCodeExpander = constraintCodeBox.querySelector('.expand');
@@ -1181,6 +1174,7 @@
     let editingConstraintTypeParameter = null;
     let lastCellLineDir = null;
     let lastCellLineCell = null;
+    let lastFocusedElement = null;
 
     // Variables: state, editing, constraints
     let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes || null) || {};
@@ -1208,8 +1202,9 @@
             draggingMode = null;
         remoteLog(`${ev.type} puzzleContainer`);
     });
+    document.body.addEventListener('focusin', function(ev) { if (ev.target.id) lastFocusedElement = ev.target.id; });
 
-    Array.from(puzzleDiv.getElementsByClassName('sudoku-cell')).forEach(cellRect =>
+    Array.from(puzzleContainer.getElementsByClassName('sudoku-cell')).forEach(cellRect =>
     {
         let cell = parseInt(cellRect.dataset.cell);
         cellRect.onclick = handler(function() { remoteLog2(`onclick ${cell}`); });
@@ -1260,7 +1255,7 @@
             remoteLog2(`ontouchmove ${cell}`);
         };
     });
-    Array.from(document.querySelectorAll('.sidebar>.tabs>.tab')).forEach(tab => setButtonHandler(tab, function() { selectTab(tab.dataset.tab); }));
+    Array.from(document.querySelectorAll('#sidebar>.tabs>.tab')).forEach(tab => setButtonHandler(tab, function() { selectTab(tab.dataset.tab); }));
     Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given); }); });
     Array.from(document.querySelectorAll('.multi-select')).forEach(btn =>
     {
@@ -1291,7 +1286,7 @@
         }
     });
 
-    setButtonHandler(puzzleDiv.querySelector(`#btn-clear>rect`), function()
+    setButtonHandler(puzzleContainer.querySelector(`#btn-clear>rect`), function()
     {
         let elem = document.getElementById(`btn-clear`);
         if (!elem.classList.contains('warning'))
@@ -1308,8 +1303,8 @@
             updateVisuals({ storage: true, svg: true, metadata: true });
         }
     });
-    setButtonHandler(puzzleDiv.querySelector(`#btn-undo>rect`), undo);
-    setButtonHandler(puzzleDiv.querySelector(`#btn-redo>rect`), redo);
+    setButtonHandler(puzzleContainer.querySelector(`#btn-undo>rect`), undo);
+    setButtonHandler(puzzleContainer.querySelector(`#btn-redo>rect`), redo);
     setButtonHandler(document.getElementById('puzzle-test'), () => { window.open(`${window.location.protocol}//${window.location.host}/test`); });
     setButtonHandler(document.getElementById('puzzle-save'), () =>
     {

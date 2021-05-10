@@ -126,7 +126,7 @@ namespace Zinga
                     new DIV { id = "topbar" }._(
                         new DIV { class_ = "title" }._(puzzle?.Title),
                         new DIV { class_ = "author" }._("by ", puzzle?.Author)),
-                    new DIV { class_ = "puzzle" }
+                    new DIV { id = "puzzle" }
                         .Data("puzzleid", puzzle?.UrlName ?? "test")
                         .Data("givens", puzzle?.GivensJson)
                         .Data("title", puzzle?.Title)
@@ -135,7 +135,7 @@ namespace Zinga
                         .Data("constrainttypes", constraintTypesJson)
                         .Data("constraints", constraintsJson)
                         ._(
-                            new DIV { class_ = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
+                            new DIV { id = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
                                 <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
                                     <style></style>
                                     <defs>
@@ -240,8 +240,8 @@ namespace Zinga
                                         </g>
                                     </g>
                                 </svg>")),
-                            new DIV { class_ = "sidebar" }._(
-                                new DIV { class_ = "sidebar-content" }._(
+                            new DIV { id = "sidebar" }._(
+                                new DIV { id = "sidebar-content" }._(
                                     new DIV { class_ = "rules" }._(new DIV { id = "rules-text" }._(
                                         puzzle?.Rules.NullOr(r => Regex.Split(r, @"\r?\n").Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => new P(s)))
                                             ?? (object) "Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.")),

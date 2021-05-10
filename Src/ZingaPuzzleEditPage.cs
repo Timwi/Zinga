@@ -104,8 +104,8 @@ namespace Zinga
                     new DIV { id = "topbar" }._(
                         new DIV { class_ = "title" }._(puzzle.Title),
                         puzzle.Author == null ? null : new DIV { class_ = "author" }._("by ", puzzle.Author)),
-                    new DIV { class_ = "puzzle" }.Data("constrainttypes", constraintTypesJson)._(
-                        new DIV { class_ = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
+                    new DIV { id = "puzzle" }.Data("constrainttypes", constraintTypesJson)._(
+                        new DIV { id = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
                             <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 11.2' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
                                 <style></style>
                                 <defs>
@@ -166,7 +166,7 @@ namespace Zinga
                                     </g>
                                 </g>
                             </svg>")),
-                        new DIV { class_ = "sidebar", tabindex = 0, accesskey = "." }._(
+                        new DIV { id = "sidebar", tabindex = 0, accesskey = "." }._(
                             new DIV { class_ = "tabs" }._(
                                 new DIV { class_ = "tab tab-puzzle", accesskey = "p", tabindex = -1 }.Data("tab", "puzzle")._("Puzzle".Accel('P')),
                                 new DIV { class_ = "tab tab-constraints", accesskey = "c", tabindex = -1 }.Data("tab", "constraints")._("Constraints".Accel('C'))),
@@ -226,7 +226,8 @@ namespace Zinga
                                             new LI("Press Shift with a letter to search for more constraints.")),
                                         new HR(),
                                         new P("Shortcuts for common constraint:"),
-                                        new TABLE(constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))))))))))));
+                                        new TABLE(constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name)))))))),
+                        new DIV { class_ = "focus-catcher", tabindex = 0 }))));
         }
     }
 }

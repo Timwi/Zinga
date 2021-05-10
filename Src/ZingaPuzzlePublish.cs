@@ -72,23 +72,28 @@ namespace Zinga
                             env = env.DeclareVariable(varName, type);
                         }
                         // Make sure all the Suco code compiles
-                        if (!SucoParser.IsValidCode(cType["logic"].GetString(), env, SucoContext.Constraint, SucoType.Boolean, out string error))
+                        static string nullIfEmpty(string str) => string.IsNullOrWhiteSpace(str) ? null : str;
+                        var logicCode = nullIfEmpty(cType["logic"]?.GetString());
+                        var svgCode = nullIfEmpty(cType["svg"]?.GetString());
+                        var svgDefsCode = nullIfEmpty(cType["svgdefs"]?.GetString());
+
+                        if (!SucoParser.IsValidCode(logicCode, env, SucoContext.Constraint, SucoType.Boolean, out string error))
                             return HttpResponse.PlainText($"The Suco code for the constraint logic in “{cType["name"].GetString()}” doesn’t compile: {error}.", HttpStatusCode._400_BadRequest);
-                        if (cType["svg"] != null && !SucoParser.IsValidCode(cType["svg"].GetString(), env, SucoContext.Svg, SucoType.String, out error))
+                        if (svgCode != null && !SucoParser.IsValidCode(svgCode, env, SucoContext.Svg, SucoType.String, out error))
                             return HttpResponse.PlainText($"The Suco code for generating SVG code in “{cType["name"].GetString()}” doesn’t compile: {error}.", HttpStatusCode._400_BadRequest);
-                        if (cType["svgdefs"] != null && !SucoParser.IsValidCode(cType["svgdefs"].GetString(), env, SucoContext.Svg, SucoType.String.List(), out error))
+                        if (svgDefsCode != null && !SucoParser.IsValidCode(svgDefsCode, env, SucoContext.Svg, SucoType.String.List(), out error))
                             return HttpResponse.PlainText($"The Suco code for generating SVG definitions in “{cType["name"].GetString()}” doesn’t compile: {error}.", HttpStatusCode._400_BadRequest);
 
                         var newConstraintType = new DbConstraint
                         {
                             Kind = kind,
-                            LogicSuco = cType["logic"].GetString(),
+                            LogicSuco = logicCode,
                             Name = cType["name"].GetString(),
                             PreviewSvg = cType["preview"]?.GetString(),
                             Public = false,
                             Shortcut = null,
-                            SvgDefsSuco = cType["svgdefs"]?.GetString(),
-                            SvgSuco = cType["svg"]?.GetString(),
+                            SvgDefsSuco = svgDefsCode,
+                            SvgSuco = svgCode,
                             VariablesJson = cType["variables"].ToString()
                         };
                         var already = db.Constraints.FirstOrDefault(c => c.Kind == newConstraintType.Kind && c.LogicSuco == newConstraintType.LogicSuco &&

@@ -75,8 +75,8 @@
         blazorQueue = null;
     });
 
-    let puzzleDiv = document.querySelector('div.puzzle');
-    let puzzleContainer = puzzleDiv.querySelector('.puzzle-container');
+    let puzzleDiv = document.getElementById('puzzle');
+    let puzzleContainer = document.getElementById('puzzle-container');
     let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
     let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes);
     let customConstraintTypes = [];
@@ -1101,8 +1101,8 @@
     window.addEventListener('resize', function()
     {
         let rulesDiv = document.getElementById('rules-text');
-        let sidebar = puzzleDiv.querySelector('.sidebar');
-        let sidebarContent = puzzleDiv.querySelector('.sidebar-content');
+        let sidebar = document.getElementById('sidebar');
+        let sidebarContent = document.getElementById('sidebar-content');
         let min = 8;
         let max = 18;
 
