@@ -32,6 +32,7 @@ namespace Zinga
                 new UrlMapping(path: "/publish", handler: PuzzlePublish),
                 new UrlMapping(path: "/_framework", handler: new FileSystemHandler(Settings.FrameworkDir).Handle),
                 new UrlMapping(path: "/edit/_framework", handler: new FileSystemHandler(Settings.FrameworkDir).Handle),
+                new UrlMapping(path: "/constraint-search", handler: ConstraintSearch),
                 new UrlMapping(path: null, handler: PuzzlePage));
         }
 

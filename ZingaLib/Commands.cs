@@ -37,10 +37,9 @@ namespace Zinga.Lib
             var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
             var constraints = JsonList.Parse(constraintsJson);
             var resultSvgDefs = new HashSet<string>();
-            var resultSvg = new StringBuilder();
-            var resultGlobalSvg = new StringBuilder();
+            var resultSvgs = new JsonList();
+            var resultGlobalSvgs = new JsonList();
             JsonValue editingResult = null;
-            double globalY = 0;
 
             for (var cIx = 0; cIx < constraints.Count; cIx++)
             {
@@ -100,14 +99,17 @@ namespace Zinga.Lib
                 // Make sure to add the <g> tag even if no SVG code was generated because the JS code relies on it being there
                 if (type["kind"].GetString() == "Global")
                 {
-                    resultGlobalSvg.Append($"<g id='constraint-svg-{cIx}' transform='translate(0, {globalY})'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{svgCode}</g>");
-                    globalY += 1.5;
+                    resultSvgs.Add(null);
+                    resultGlobalSvgs.Add($"<rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{svgCode}");
                 }
                 else
-                    resultSvg.Append($"<g id='constraint-svg-{cIx}'>{svgCode}</g>");
+                {
+                    resultSvgs.Add(svgCode);
+                    resultGlobalSvgs.Add(null);
+                }
             }
 
-            return new JsonList { resultSvgDefs.JoinString(), resultSvg.ToString(), resultGlobalSvg.ToString(), editingResult }.ToString();
+            return new JsonDict { ["svgDefs"] = resultSvgDefs.JoinString(), ["svgs"] = resultSvgs, ["globalSvgs"] = resultGlobalSvgs, ["editingResult"] = editingResult }.ToString();
         }
 
         public static (SucoExpression expr, JsonDict variables)[] _constraintLogic;

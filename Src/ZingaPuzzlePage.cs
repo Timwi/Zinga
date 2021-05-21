@@ -83,28 +83,8 @@ namespace Zinga
 
             var decodedValues = constraints?.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].VariablesJson)).ToArray();
 
-            var constraintsJson = constraints?.Select(c => new JsonDict
-            {
-                ["type"] = c.ConstraintID,
-                ["values"] = new JsonRaw(c.ValuesJson)
-            }).ToJsonList().ToString();
-            var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp =>
-            {
-                var dic = new JsonDict
-                {
-                    ["kind"] = kvp.Value.Kind.ToString(),
-                    ["logic"] = kvp.Value.LogicSuco,
-                    ["name"] = kvp.Value.Name,
-                    ["preview"] = kvp.Value.PreviewSvg,
-                    ["public"] = kvp.Value.Public,
-                    ["svgdefs"] = kvp.Value.SvgDefsSuco,
-                    ["svg"] = kvp.Value.SvgSuco,
-                    ["variables"] = new JsonRaw(kvp.Value.VariablesJson)
-                };
-                if (kvp.Value.Shortcut != null)
-                    dic["shortcut"] = kvp.Value.Shortcut;
-                return dic;
-            }).ToString();
+            var constraintsJson = constraints?.Select(c => c.ToJson()).ToJsonList().ToString();
+            var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToJson()).ToString();
 
             return HttpResponse.Html(new HTML(
                 new HEAD(

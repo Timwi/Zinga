@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
-using RT.Json;
-using RT.Serialization;
 using RT.Servers;
 using RT.TagSoup;
 using RT.Util;
@@ -79,6 +76,7 @@ namespace Zinga
                     htmlBlocks.Add(new PRE { class_ = "parse-tree" }._(span(parseTree)));
                 }
                 catch (SucoParseException pe) { htmlBlocks.Add(parseExceptionBox(pe)); }
+                catch (SucoCompileException ce) { htmlBlocks.Add(compileExceptionBox(ce)); }
             }
 
             return HttpResponse.Html(new HTML(

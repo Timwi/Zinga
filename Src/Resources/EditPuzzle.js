@@ -102,36 +102,39 @@
                         list.push(xx + 9 * yy);
         return list;
     }
+    function keyName(ev)
+    {
+        let str = ev.code;
+        if (ev.shiftKey)
+            str = `Shift+${str}`;
+        if (ev.altKey)
+            str = `Alt+${str}`;
+        if (ev.ctrlKey)
+            str = `Ctrl+${str}`;
+        return str;
+    }
 
     // State, editing, constraints
     function addConstraintWithShortcut(letter)
     {
-        // Find constraint with the right shortcut key
+        // Find constraint type with the right shortcut key
         let sc = Object.keys(constraintTypes).filter(id => constraintTypes[id].shortcut === letter);
         if (sc.length === 0)
             return;
-
         let cIx = state.constraints.length;
-        let cType = constraintTypes[sc[0]];
-        let specialVariable = getSpecialVariable(cType.kind);
-        let newConstraint = { type: (sc[0] | 0), values: {} };
-        for (let variableName of Object.keys(cType.variables))
-            newConstraint.values[variableName] = coerceValue(variableName === 'cells' ? selectedCells : null, cType.variables[variableName]);
+        let cTypeId = sc[0];
+        let cType = constraintTypes[cTypeId];
 
-        if (specialVariable[0] !== null)
+        let enf = createDefaultConstraint(cType, cTypeId, selectedCells);
+        if (!enf.valid)
         {
-            let enforceResult = enforceConstraintKind(cType.kind, selectedCells);
-            if (!enforceResult.valid)
-            {
-                alert(enforceResult.message);
-                return;
-            }
-            newConstraint.values[specialVariable[0]] = enforceResult.value;
+            alert(enf.message);
+            return;
         }
 
         saveUndo();
 
-        state.constraints.push(newConstraint);
+        state.constraints.push(enf.constraint);
         selectConstraintRange(cIx, cIx, { storage: true, svg: true });
 
         let constraintElem = document.getElementById(`constraint-${cIx}`);
@@ -140,7 +143,7 @@
         {
             selectTab('constraints');
             setClass(constraintElem, 'expanded', true);
-            newConstraint.expanded = true;
+            enf.constraint.expanded = true;
             uiElement.focus();
             if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
                 uiElement.select();
@@ -181,6 +184,27 @@
             case 'decimal': return +value;
         }
         return null;
+    }
+    function createDefaultConstraint(cType, cTypeId, cells)
+    {
+        // Return value is either:
+        // { valid: false, message: 'error message' }
+        // { valid: true, constraint: new constraint }
+
+        let newConstraint = { type: cTypeId, values: {} };
+        for (let variableName of Object.keys(cType.variables))
+            newConstraint.values[variableName] = coerceValue(variableName === 'cells' ? cells : null, cType.variables[variableName]);
+
+        let specialVariable = getSpecialVariable(cType.kind);
+        if (specialVariable[0] !== null)
+        {
+            let enforceResult = enforceConstraintKind(cType.kind, cells);
+            if (!enforceResult.valid)
+                return enforceResult;
+            newConstraint.values[specialVariable[0]] = enforceResult.value;
+        }
+
+        return { valid: true, constraint: newConstraint };
     }
     function duplicateConstraints()
     {
@@ -665,10 +689,135 @@
             }
         };
     }
+    function pressEscape()
+    {
+        if (document.getElementById('constraint-search').classList.contains('shown'))
+        {
+            document.getElementById('constraint-search').classList.remove('shown');
+            puzzleContainer.focus();
+        }
+        else
+        {
+            selectedCells = [];
+            selectedConstraints = [];
+            editingConstraintType = null;
+            updateVisuals();
+        }
+    }
     function resetClearButton()
     {
         document.getElementById(`btn-clear`).classList.remove('warning');
         document.querySelector(`#btn-clear>text`).textContent = 'Delete';
+    }
+    function runConstraintSearch(keywords)
+    {
+        let req = new XMLHttpRequest();
+        req.open('POST', '/constraint-search', true);
+        req.responseType = 'json';
+        req.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+        req.onerror = () => { console.log(req, arguments); };
+        req.onload = () =>
+        {
+            if (req.status !== 200)
+                console.log(req, arguments);
+            else if (req.response && req.response.status === 'ok' && Array.isArray(req.response.order))
+            {
+                function insertConstraint(constr, cType)
+                {
+                    saveUndo();
+                    let cIx = state.constraints.length;
+                    state.constraints.push(constr);
+                    constraintTypes[constr.type] = cType;
+                    document.getElementById('constraint-search').classList.remove('shown');
+                    puzzleContainer.focus();
+
+                    selectedConstraints = [cIx];
+                    lastSelectedConstraint = cIx;
+                    editingConstraintType = null;
+                    selectedCells = [];
+
+                    updateVisuals({ storage: true, svg: true });
+                }
+
+                document.getElementById('constraint-results-box').innerHTML = req.response.order.map(cTypeId => `
+                    <div class='item' data-ix='${cTypeId}'>
+                        <svg viewBox='0 0 10 10'><circle cx='5' cy='5' r='3' stroke-width='.5' stroke='black' fill='#8df' /></svg>
+                        <div class='name'></div><div class='akas'></div><div class='descr'></div><div class='error'></div>
+                    </div>
+                `).join('');
+
+                let constrInfos = Array.from(document.getElementById('constraint-results-box').querySelectorAll('.item')).map(div =>
+                {
+                    let cTypeId = div.dataset.ix | 0;
+                    let cType = req.response.results[cTypeId];
+
+                    // Create constraint object
+                    let enf = createDefaultConstraint(cType, cTypeId, selectedCells);
+                    let constr = enf.valid ? enf.constraint : null;
+                    if (!enf.valid)
+                        div.querySelector('.error').innerText = enf.message;
+
+                    // Set HTML text etc.
+                    div.querySelector('.name').innerText = cType.name;
+                    if (cType.akas)
+                        div.querySelector('.akas').innerText = `a.k.a.: ${cType.akas.join(', ')}`;
+                    div.querySelector('.descr').innerText = cType.description;
+
+                    // Events
+                    div.ondblclick = function() { insertConstraint(constr, cType); };
+
+                    return { constraint: constr, svg: div.querySelector('svg'), cTypeId: cTypeId };
+                });
+
+                let constrInfosFiltered = constrInfos.filter(inf => inf.constraint !== null);
+
+                let blankGrid = `
+                    <rect x='0' y='0' width='9' height='9' fill='white' stroke='black' stroke-width='.05' />
+                    <path d='M3 0v9M6 0v9M0 3h9M0 6h9' fill='none' stroke='black' stroke-width='.05' />
+                    <path d='M1 0v9M2 0v9M4 0v9M5 0v9M7 0v9M8 0v9M0 1h9M0 2h9M0 4h9M0 5h9M0 7h9M0 8h9' fill='none' stroke='black' stroke-width='.01' />
+                `;
+                let minX = Math.min(...selectedCells.map(sc => sc % 9));
+                let maxX = Math.max(...selectedCells.map(sc => sc % 9)) + 1;
+                let minY = Math.min(...selectedCells.map(sc => (sc / 9) | 0));
+                let maxY = Math.max(...selectedCells.map(sc => (sc / 9) | 0)) + 1;
+                dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), "[]", JSON.stringify(constrInfosFiltered.map(inf => inf.constraint)), null, null], resultsRaw =>
+                {
+                    let results = JSON.parse(resultsRaw);
+                    for (let i = 0; i < results.svgs.length; i++)
+                    {
+                        let cTypeId = constrInfosFiltered[i].cTypeId;
+                        let svg = i === 0 && results.svgDefs !== '' ? `<defs id='constraint-search-result-defs'>${results.svgDefs}</defs>` : '';
+                        svg += results.svgs[i] !== null ? blankGrid : '';
+                        svg += `<g id='constraint-search-result-svg-${cTypeId}'>${(results.svgs[i] ?? '') + (results.globalSvgs[i] ?? '')}</g>`;
+                        constrInfosFiltered[i].svg.innerHTML = svg;
+                        let bBox = document.getElementById(`constraint-search-result-svg-${cTypeId}`).getBBox();
+
+                        if (minX < bBox.x)
+                        {
+                            bBox.width += (bBox.x - minX);
+                            bBox.x = minX;
+                        }
+                        if (maxX > bBox.x + bBox.width)
+                            bBox.width += maxX - (bBox.x + bBox.width);
+
+                        if (minY < bBox.y)
+                        {
+                            bBox.height += (bBox.y - minY);
+                            bBox.y = minY;
+                        }
+                        if (maxY > bBox.y + bBox.height)
+                            bBox.height += maxY - (bBox.y + bBox.height);
+
+                        let tall = bBox.height > bBox.width;
+                        let x = tall ? bBox.x + bBox.width / 2 - bBox.height / 2 : bBox.x;
+                        let y = tall ? bBox.y : bBox.y + bBox.height / 2 - bBox.width / 2;
+                        let size = Math.max(bBox.width, bBox.height);
+                        constrInfosFiltered[i].svg.setAttribute('viewBox', `${x - .1} ${y - .1} ${size + .2} ${size + .2}`);
+                    }
+                });
+            }
+        };
+        req.send(`msg=${encodeURIComponent(keywords)}`);
     }
     function selectTab(tab)
     {
@@ -734,19 +883,18 @@
         {
             // Re-render all constraint SVGs
             constraintSelectionUpdated = true;
-            dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints), editingConstraintType, editingConstraintTypeParameter], results =>
+            dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints), editingConstraintType, editingConstraintTypeParameter], resultsRaw =>
             {
-                let list = JSON.parse(results);
-                document.getElementById('constraint-defs').innerHTML = list[0];
-                document.getElementById('constraint-svg').innerHTML = list[1];
-                document.getElementById('constraint-svg-global').innerHTML = list[2];
-                let editingResult = list[3];
+                let results = JSON.parse(resultsRaw);
+                document.getElementById('constraint-defs').innerHTML = results.svgDefs;
+                document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g id='constraint-svg-${cIx}'>${svg}</g>`).join('');
+                document.getElementById('constraint-svg-global').innerHTML = results.globalSvgs.map((svg, cIx) => [svg, cIx]).filter(inf => inf[0] !== null).map((inf, y) => `<g id='constraint-svg-${inf[1]}' transform='translate(0, ${y * 1.5})'>${inf[0]}</g>`).join('');
 
                 if (editingConstraintTypeParameter !== null)
                 {
                     let reportingBox = document.getElementById(`reporting-${editingConstraintTypeParameter}`);
                     if (reportingBox !== null)
-                        reportingBox.innerText = JSON.stringify(editingResult);
+                        reportingBox.innerText = JSON.stringify(results.editingResult);
                 }
                 updateConstraintSelection();
                 fixViewBox();
@@ -1187,10 +1335,7 @@
     {
         if (!ev.shiftKey && !ev.ctrlKey)
         {
-            selectedCells = [];
-            selectedConstraints = [];
-            editingConstraintType = null;
-            updateVisuals();
+            pressEscape();
             remoteLog2(`onmousedown puzzleContainer`);
         }
         else
@@ -1334,6 +1479,7 @@
     setButtonHandler(document.getElementById('constraint-dup'), duplicateConstraints);
     setButtonHandler(document.getElementById('constraint-move-up'), () => moveConstraints(true));
     setButtonHandler(document.getElementById('constraint-move-down'), () => moveConstraints(false));
+    setButtonHandler(document.getElementById('constraint-search-cancel'), () => { document.getElementById('constraint-search').classList.remove('shown'); puzzleContainer.focus(); });
     setButtonHandler(constraintCodeExpander, function() { setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); });
     setButtonHandler(constraintCodeBox.querySelector('.label'), function() { });
 
@@ -1358,21 +1504,14 @@
         populateConstraintEditBox(cTypeId);
     });
 
-    puzzleContainer.addEventListener("keyup", ev =>
+    puzzleContainer.addEventListener('keyup', ev =>
     {
         if (ev.key === 'Control')
             selectedCells = [...new Set(selectedCells)];
     });
-    puzzleContainer.addEventListener("keydown", ev =>
+    puzzleContainer.addEventListener('keydown', ev =>
     {
-        let str = ev.code;
-        if (ev.shiftKey)
-            str = `Shift+${str}`;
-        if (ev.altKey)
-            str = `Alt+${str}`;
-        if (ev.ctrlKey)
-            str = `Ctrl+${str}`;
-
+        let str = keyName(ev);
         let anyFunction = true;
 
         function ArrowMovement(dx, dy, mode)
@@ -1438,6 +1577,40 @@
                     addConstraintWithShortcut(str.substr(str.length - 1).toLowerCase());
                 break;
 
+            case 'Shift+KeyA':
+            case 'Shift+KeyB':
+            case 'Shift+KeyC':
+            case 'Shift+KeyD':
+            case 'Shift+KeyE':
+            case 'Shift+KeyF':
+            case 'Shift+KeyG':
+            case 'Shift+KeyH':
+            case 'Shift+KeyI':
+            case 'Shift+KeyJ':
+            case 'Shift+KeyK':
+            case 'Shift+KeyL':
+            case 'Shift+KeyM':
+            case 'Shift+KeyN':
+            case 'Shift+KeyO':
+            case 'Shift+KeyP':
+            case 'Shift+KeyQ':
+            case 'Shift+KeyR':
+            case 'Shift+KeyS':
+            case 'Shift+KeyT':
+            case 'Shift+KeyU':
+            case 'Shift+KeyV':
+            case 'Shift+KeyW':
+            case 'Shift+KeyX':
+            case 'Shift+KeyY':
+            case 'Shift+KeyZ':
+                document.getElementById('constraint-search').classList.add('shown');
+                let si = document.getElementById('constraint-search-input');
+                si.value = str.substr(str.length - 1);
+                si.setSelectionRange(1, 1);
+                si.focus();
+                runConstraintSearch(si.value);
+                break;
+
             // Navigation
             case 'ArrowUp': ArrowMovement(0, -1, 'clear'); break;
             case 'ArrowDown': ArrowMovement(0, 1, 'clear'); break;
@@ -1464,7 +1637,7 @@
             case 'Ctrl+Shift+ArrowLeft': selectCellLine('w'); break;
             case 'Ctrl+Shift+ArrowRight': selectCellLine('e'); break;
 
-            case 'Escape': selectedCells = []; selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
+            case 'Escape': pressEscape(); break;
             case 'Ctrl+KeyA': selectedCells = Array(81).fill(null).map((_, c) => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
 
             // Undo/redo
@@ -1496,19 +1669,12 @@
             return false;
         }
     });
-    sidebarDiv.addEventListener("keydown", ev =>
+    sidebarDiv.addEventListener('keydown', ev =>
     {
         if (ev.target !== sidebarDiv)
             return true;
 
-        let str = ev.code;
-        if (ev.shiftKey)
-            str = `Shift+${str}`;
-        if (ev.altKey)
-            str = `Alt+${str}`;
-        if (ev.ctrlKey)
-            str = `Ctrl+${str}`;
-
+        let str = keyName(ev);
         let anyFunction = true;
 
         switch (str)
@@ -1540,7 +1706,7 @@
             case 'ArrowRight': selectedConstraints.forEach(cIx => { state.constraints[cIx].expanded = true; }); updateVisuals({ storage: true }); break;
             case 'ArrowLeft': selectedConstraints.forEach(cIx => { state.constraints[cIx].expanded = false; }); updateVisuals({ storage: true }); break;
 
-            case 'Escape': selectedCells = []; selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
+            case 'Escape': pressEscape(); break;
             case 'Ctrl+KeyA': selectedCells = []; selectedConstraints = state.constraints.map((_, c) => c); editingConstraintType = null; updateVisuals(); break;
 
             // Undo/redo
@@ -1567,6 +1733,29 @@
             return false;
         }
     });
+    document.getElementById('constraint-search-input').addEventListener('keydown', ev =>
+    {
+        let str = keyName(ev);
+        let anyFunction = true;
+
+        switch (str)
+        {
+            case 'Escape': pressEscape(); break;
+
+            default:
+                anyFunction = false;
+                //console.log(str, ev.code);
+                break;
+        }
+
+        if (anyFunction)
+        {
+            ev.stopPropagation();
+            ev.preventDefault();
+            return false;
+        }
+    });
+    document.getElementById('constraint-search-input').addEventListener('keyup', () => { runConstraintSearch(document.getElementById('constraint-search-input').value); });
 
 
     /// — RUN

@@ -44,23 +44,7 @@ namespace Zinga
                     renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
             }).JoinString();
 
-            var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp =>
-            {
-                var dic = new JsonDict
-                {
-                    ["public"] = kvp.Value.Public,
-                    ["name"] = kvp.Value.Name,
-                    ["kind"] = kvp.Value.Kind.ToString(),
-                    ["logic"] = kvp.Value.LogicSuco?.Replace("\r", ""),
-                    ["svgdefs"] = kvp.Value.SvgDefsSuco?.Replace("\r", ""),
-                    ["svg"] = kvp.Value.SvgSuco?.Replace("\r", ""),
-                    ["preview"] = kvp.Value.PreviewSvg,
-                    ["variables"] = new JsonRaw(kvp.Value.VariablesJson)
-                };
-                if (kvp.Value.Shortcut != null)
-                    dic["shortcut"] = kvp.Value.Shortcut;
-                return dic;
-            }).ToString();
+            var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToJson()).ToString();
 
             const bool autoCss = true;
             return HttpResponse.Html(new HTML(
@@ -227,7 +211,12 @@ namespace Zinga
                                         new HR(),
                                         new P("Shortcuts for common constraint:"),
                                         new TABLE(constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name)))))))),
-                        new DIV { class_ = "focus-catcher", tabindex = 0 }))));
+                        new DIV { class_ = "focus-catcher", tabindex = 0 }),
+
+                    new DIV { id = "constraint-search" }._(
+                            new DIV { id = "constraint-search-box" }._(new INPUT { id = "constraint-search-input", type = itype.text }),
+                            new DIV { id = "constraint-results-box" },
+                            new DIV { id = "constraint-button-row" }._(new BUTTON { type = btype.button, id = "constraint-search-ok" }._("OK"), new BUTTON { type = btype.button, id = "constraint-search-cancel" }._("Cancel"))))));
         }
     }
 }

@@ -4,7 +4,7 @@
 
 body {
     font-family: Bitter;
-    background: hsl(220, 50%, 95%);
+    background: hsl(225, 50%, 95%);
     margin: 0;
     overflow: hidden;
 }
@@ -21,7 +21,7 @@ input, textarea, button, select {
 }
 
     input:focus, textarea:focus, select:focus {
-        background-color: hsl(220, 90%, 95%);
+        background-color: hsl(225, 90%, 95%);
         outline: none;
     }
 
@@ -38,6 +38,21 @@ textarea {
     height: 3cm;
 }
 
+button {
+    border: 2px solid black;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+    button:hover {
+        background-color: hsl(212, 90%, 90%);
+    }
+
+    button:focus {
+        background-color: hsl(225, 90%, 90%);
+        outline: none;
+    }
+
 th, td {
     vertical-align: top;
 }
@@ -47,7 +62,7 @@ th, td {
 }
 
 #topbar {
-    background: hsl(220, 70%, 80%);
+    background: hsl(225, 70%, 80%);
     position: absolute;
     left: 0;
     top: 0;
@@ -301,7 +316,7 @@ svg.puzzle-svg {
 }
 
     #puzzle:not(.solved) #puzzle-container:focus, #sidebar:focus {
-        background: hsl(220, 50%, 90%);
+        background: hsl(225, 50%, 90%);
     }
 
 #puzzle.sidebar-off #sidebar {
@@ -331,27 +346,6 @@ svg.puzzle-svg .multi-select {
         opacity: 1;
     }
 
-#sidebar button {
-    background: white;
-    border: 2px solid black;
-    border-radius: 8px;
-    position: relative;
-    cursor: pointer;
-}
-
-    #sidebar button:hover {
-        background-color: hsl(212, 90%, 90%);
-    }
-
-    #sidebar button:focus {
-        background-color: hsl(225, 90%, 90%);
-        outline: none;
-    }
-
-#sidebar input[type="text"], #sidebar textarea, #sidebar select {
-    width: 100%;
-}
-
 #sidebar .mini-btn {
     display: inline-block;
     background: white;
@@ -379,7 +373,7 @@ svg.puzzle-svg .multi-select {
 #sidebar .tabs .tab {
     display: inline-block;
     background: white;
-    border-right: 2px solid hsl(220, 50%, 80%);
+    border-right: 2px solid hsl(225, 50%, 80%);
     border-top-left-radius:  10px;
     border-top-right-radius: 10px;
     padding: .075cm .4cm;
@@ -396,7 +390,7 @@ svg.puzzle-svg .multi-select {
     }
 
 #sidebar .tabc {
-    background: hsl(220, 90%, 85%);
+    background: hsl(225, 90%, 85%);
     padding: .2cm .2cm 0 .2cm;
     display: none;
     position: absolute;
@@ -411,21 +405,21 @@ svg.puzzle-svg .multi-select {
     }
 
     #sidebar .tabc section {
-        background: hsl(220, 50%, 95%);
+        background: hsl(225, 50%, 95%);
         padding: .1cm;
         margin-bottom: .2cm;
         overflow: auto;
     }
 
         #sidebar .tabc section > .label {
-            background: hsl(220, 70%, 50%);
+            background: hsl(225, 70%, 50%);
             color: white;
             font-weight: bold;
             padding: .1cm .2cm;
         }
 
         #sidebar .tabc section > div > .label {
-            background: hsl(220, 70%, 85%);
+            background: hsl(225, 70%, 85%);
             font-weight: bold;
             font-size: 12pt;
             padding: .1cm .2cm;
@@ -566,7 +560,7 @@ svg.puzzle-svg .multi-select {
                 background: white;
             }
             #sidebar .constraint .variables .variable .value {
-                background: hsl(220, 80%, 95%);
+                background: hsl(225, 80%, 95%);
             }
 
         #sidebar .constraint .variables ol {
@@ -658,7 +652,7 @@ svg.puzzle-svg .multi-select {
 
 #sidebar #constraint-code-variables {
     font-size: 11pt;
-    background: hsl(220, 80%, 90%);
+    background: hsl(225, 80%, 90%);
     width: 100%;
 }
     #sidebar #constraint-code-variables select {
@@ -682,7 +676,7 @@ svg.puzzle-svg .multi-select {
         }
 
     #sidebar #constraint-code-variables tr.fixed th, #sidebar #constraint-code-variables tr.fixed td {
-        background: hsl(220, 100%, 80%);
+        background: hsl(225, 100%, 80%);
     }
 
 #sidebar #constraint-add-section {
@@ -705,7 +699,7 @@ svg.puzzle-svg .multi-select {
         }
             #sidebar #constraint-add-section .main th {
                 text-align: center;
-                background: hsl(220, 80%, 80%);
+                background: hsl(225, 80%, 80%);
                 padding: .05cm .25cm;
             }
             #sidebar #constraint-add-section .main td {
@@ -714,6 +708,92 @@ svg.puzzle-svg .multi-select {
             }
         #sidebar #constraint-add-section .main hr {
             border: none;
-            border-bottom: 1px solid hsl(220, 40%, 60%);
+            border-bottom: 1px solid hsl(225, 40%, 60%);
         }
 
+#constraint-search {
+    position: absolute;
+    left: 5vw;
+    top: 5vh;
+    right: 5vw;
+    bottom: 5vh;
+    background: hsl(225, 80%, 93%);
+    display: none;
+    grid: min-content 1fr min-content / 1fr;
+    box-shadow: 0 0 25vw black;
+}
+
+    #constraint-search.shown {
+        display: grid;
+    }
+
+    #constraint-search-box {
+        padding: .3cm .3cm;
+        font-size: 24pt;
+        background: hsl(225, 80%, 70%);
+    }
+
+    #constraint-button-row {
+        padding: .3cm .5cm;
+        text-align: right;
+        font-size: 24pt;
+        background: hsl(225, 80%, 70%);
+    }
+
+        #constraint-button-row button {
+            margin-left: .2cm;
+            padding: 0 .5cm;
+        }
+
+    #constraint-results-box {
+        box-shadow: inset 0 0 .1cm rgba(0, 0, 0, .3);
+        overflow: auto;
+        display: flex;
+        flex-wrap: wrap;
+        padding: .1cm;
+        align-content: start;
+    }
+
+        #constraint-results-box .item {
+            margin: .1cm;
+            width: 5.8cm;
+            text-align: center;
+            border: 2px solid transparent;
+            cursor: pointer;
+            height: auto;
+            min-height: 0;
+            box-sizing: content-box;
+        }
+            #constraint-results-box .item:hover {
+                border-color: hsl(225, 90%, 40%);
+                background-color: hsl(225, 90%, 85%);
+            }
+
+            #constraint-results-box .item > svg {
+                width: 5.6cm;
+                margin-top: .1cm;
+            }
+
+            #constraint-results-box .item > .name {
+                font-size: 18pt;
+                font-weight: bold;
+                text-overflow: ellipsis;
+                overflow: hidden;
+                white-space: nowrap;
+            }
+
+            #constraint-results-box .item > .akas {
+                font-size: 12pt;
+                font-weight: bold;
+            }
+
+            #constraint-results-box .item > .descr {
+                font-size: 10pt;
+                margin: .1cm 0;
+            }
+
+            #constraint-results-box .item > .error {
+                color: #800;
+                font-size: 10pt;
+                font-style: italic;
+            }

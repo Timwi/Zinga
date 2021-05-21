@@ -29,5 +29,11 @@ namespace Zinga.Database
             }
             return _valuesCache;
         }
+
+        public JsonDict ToJson() => new()
+        {
+            ["type"] = ConstraintID,
+            ["values"] = new JsonRaw(ValuesJson)
+        };
     }
 }
