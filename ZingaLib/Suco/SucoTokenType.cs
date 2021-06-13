@@ -2,6 +2,7 @@
 {
     public enum SucoTokenType
     {
+        Invalid,
         Eof,
         Identifier,
         Integer,

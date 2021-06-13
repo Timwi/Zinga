@@ -54,7 +54,7 @@ namespace Zinga.Suco
 
                 var tok = getToken();
                 if (tok.Type != SucoTokenType.Identifier)
-                    throw new SucoParseException("Expected type name or ‘[’ (for an enum type).", tok.StartIndex);
+                    throw new SucoParseException("Expected type name or ‘[’ (for an enum type).", tok);
                 _ix = tok.EndIndex;
 
                 switch (tok.StringValue)
@@ -66,15 +66,15 @@ namespace Zinga.Suco
                     case "string": return SucoType.String;
 
                     case "list":
-                        if (!token("(", out int oldIx))
-                            throw new SucoParseException("Expected ‘(’, followed by list element type, followed by ‘)’.", _ix, tok);
+                        if (!token("(", out var tok1))
+                            throw new SucoParseException("Expected ‘(’, followed by list element type, followed by ‘)’.", tok1, tok);
                         var innerType = ParseType();
-                        if (!token(")"))
-                            throw new SucoParseException("Expected ‘)’.", _ix, oldIx);
+                        if (!token(")", out var tok2))
+                            throw new SucoParseException("Expected ‘)’.", tok2, tok1);
                         return innerType.List();
 
                     default:
-                        throw new SucoParseException($"Unknown type name: “{tok.StringValue}”.", _ix);
+                        throw new SucoParseException($"Unknown type name: “{tok.StringValue}”.", tok);
                 }
             }
 
@@ -85,14 +85,14 @@ namespace Zinga.Suco
                 {
                     var tok = getToken();
                     if (tok.Type != SucoTokenType.Identifier)
-                        throw new SucoParseException("Expected enum member name.", tok.StartIndex);
+                        throw new SucoParseException("Expected enum member name.", tok);
                     _ix = tok.EndIndex;
                     names.Add(tok.StringValue);
 
                     if (token("]"))
                         return new SucoEnumType(names.ToArray());
                     if (!token(","))
-                        throw new SucoParseException("Expected ‘]’ (to finish the enum type) or ‘,’ (to specify further enum names).", _ix);
+                        throw new SucoParseException("Expected ‘]’ (to finish the enum type) or ‘,’ (to specify further enum names).", getToken());
                 }
             }
         }

@@ -15,7 +15,6 @@ namespace Zinga.Suco
             EndIndex = endIndex;
         }
 
-        public static implicit operator SucoParseExceptionHighlight(int index) => new(index, null);
         public static implicit operator SucoParseExceptionHighlight(SucoNode node) => new(node.StartIndex, node.EndIndex);
         public static implicit operator SucoParseExceptionHighlight(SucoToken token) => new(token.StartIndex, token.EndIndex);
     }

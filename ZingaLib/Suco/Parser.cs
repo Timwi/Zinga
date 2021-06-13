@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 using System.Text;
 
 namespace Zinga.Suco
@@ -19,10 +18,9 @@ namespace Zinga.Suco
         /// <summary>
         ///     Determines whether the specified <paramref name="expected"/> token exists at the specified location, and if
         ///     so, advances <see cref="_ix"/> to after it; otherwise, <see cref="_ix"/> is not modified.</summary>
-        protected bool token(string expected, out int oldIx)
+        protected bool token(string expected, out SucoToken token)
         {
-            var token = getToken();
-            oldIx = token.StartIndex;
+            token = getToken();
             if (_source.Substring(token.StartIndex, token.EndIndex - token.StartIndex) != expected)
                 return false;
             _ix = token.EndIndex;
@@ -86,7 +84,7 @@ namespace Zinga.Suco
                 else if (int.TryParse(str, out var intResult))
                     return new SucoToken(SucoTokenType.Integer, intResult, startIndex, j);
                 else
-                    throw new SucoParseException($"“{str}” is not a valid numerical literal.", i);
+                    throw new SucoParseException($"“{str}” is not a valid numerical literal.", new SucoToken(0, i, j));
             }
 
             foreach (var token in _tokens)
@@ -98,7 +96,7 @@ namespace Zinga.Suco
         public void EnforceEof()
         {
             if (getToken().Type != SucoTokenType.Eof)
-                throw new SucoParseException("Invalid expression.", _ix);
+                throw new SucoParseException("Unexpected expression.", getToken());
         }
     }
 }

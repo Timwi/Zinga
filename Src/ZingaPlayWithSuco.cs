@@ -49,7 +49,9 @@ namespace Zinga
                         new DIV { class_ = "code" }._(new PRE(pieces)));
                 }
 
-                object parseExceptionBox(SucoParseException exc) => exceptionBox(exc, (exc.Highlights?.OrderBy(h => h.StartIndex).Select(h => (start: h.StartIndex, end: h.EndIndex)).ToArray() ?? Enumerable.Empty<(int start, int? end)>()).Concat((start: exc.Index, end: null)).ToArray());
+                object parseExceptionBox(SucoParseException exc) =>
+                    exceptionBox(exc, (exc.Highlights?.OrderBy(h => h.StartIndex).Select(h => (start: h.StartIndex, end: h.EndIndex)).ToArray() ?? Enumerable.Empty<(int start, int? end)>())
+                        .Concat((start: exc.StartIndex, end: exc.EndIndex)).ToArray());
                 object compileExceptionBox(SucoCompileException exc) => exceptionBox(exc, new[] { (start: exc.StartIndex, end: exc.EndIndex.Nullable()) });
 
                 // Parse tree

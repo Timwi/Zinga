@@ -47,7 +47,7 @@ namespace Zinga.Suco
                 parser.EnforceEof();
                 ret = ret.DeduceTypes(env, context);
                 if (expectedResultType != null && !ret.Type.ImplicitlyConvertibleTo(expectedResultType))
-                    throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", parser._ix);
+                    throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", ret.StartIndex, ret.EndIndex);
                 return expectedResultType == null ? ret : ret.ImplicitlyConvertTo(expectedResultType);
             }
             catch (SucoParseException pe1)
@@ -60,10 +60,10 @@ namespace Zinga.Suco
                     parser.EnforceEof();
                     ret = ret.DeduceTypes(env, context);
                     if (expectedResultType != null && !ret.Type.ImplicitlyConvertibleTo(expectedResultType))
-                        throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", parser._ix);
+                        throw new SucoParseException($"The expression is of type “{ret.Type}”, which is not implicitly convertible to the required type, “{expectedResultType}”.", ret.StartIndex, ret.EndIndex);
                     return expectedResultType == null ? ret : ret.ImplicitlyConvertTo(expectedResultType);
                 }
-                catch (SucoParseException pe2) when (pe2.Index <= pe1.Index)
+                catch (SucoParseException pe2) when (pe2.StartIndex <= pe1.StartIndex)
                 {
                 }
                 throw;
@@ -77,7 +77,7 @@ namespace Zinga.Suco
             {
                 var truePart = parseExpression();
                 if (!token(":"))
-                    throw new SucoParseException("Unterminated conditional operator: “:” expected.", _ix, left, q, truePart);
+                    throw new SucoParseException("Unterminated conditional operator: “:” expected.", getToken(), left, q, truePart);
                 var falsePart = parseExpression();
                 return new SucoConditionalExpression(left.StartIndex, falsePart.EndIndex, left, truePart, falsePart);
             }
@@ -199,25 +199,26 @@ namespace Zinga.Suco
             var left = parseExpressionPrimary();
             while (true)
             {
-                if (token(".", out var oldIx))
+                if (token(".", out var tok))
                 {
                     // Member access
                     var token = getToken();
                     if (token.Type != SucoTokenType.Identifier)
-                        throw new SucoParseException("Identifier expected after “.”.", _ix, oldIx);
+                        throw new SucoParseException("Identifier expected after “.”.", token, tok);
                     left = new SucoMemberAccessExpression(left.StartIndex, token.EndIndex, left, token.StringValue);
                     _ix = token.EndIndex;
                 }
-                else if (token("(", out oldIx))
+                else if (token("(", out tok))
                 {
                     // Call with argument list
-                    if (token(")", out var closeParenIx))
+                    if (token(")"))
                         left = new SucoCallExpression(left.StartIndex, _ix, left, new SucoExpression[0]);
                     else
                     {
                         var arguments = parseExpressionList();
                         if (!token(")"))
-                            throw new SucoParseException("List of arguments: expecting “)” (to end the list) or “,” (to continue the list).", _ix, new SucoParseExceptionHighlight[] { oldIx }.Concat(arguments.Select(arg => (SucoParseExceptionHighlight) arg)).ToArray());
+                            throw new SucoParseException("List of arguments: expecting “)” (to end the list) or “,” (to continue the list).", getToken(),
+                                new SucoParseExceptionHighlight[] { tok }.Concat(arguments.Select(arg => (SucoParseExceptionHighlight) arg)).ToArray());
                         left = new SucoCallExpression(left.StartIndex, _ix, left, arguments.ToArray());
                     }
                 }
@@ -238,40 +239,40 @@ namespace Zinga.Suco
 
         private SucoExpression parseExpressionPrimary()
         {
-            if (token("{", out var startIx))
-                return parseListComprehension(startIx, consumeCloseCurly: true);
+            if (token("{", out var tok))
+                return parseListComprehension(tok.StartIndex, consumeCloseCurly: true);
 
-            if (token("[", out startIx))
+            if (token("[", out tok))
             {
                 var exprs = parseExpressionList();
                 if (!token("]"))
-                    throw new SucoParseException("Unmatched “[”: array must be terminated with “]”.", _ix, startIx);
-                return new SucoArrayExpression(startIx, _ix, exprs);
+                    throw new SucoParseException("Unmatched “[”: array must be terminated with “]”.", getToken(), tok);
+                return new SucoArrayExpression(tok.StartIndex, _ix, exprs);
             }
 
-            if (token("(", out startIx))
+            if (token("(", out tok))
             {
                 var inner = parseExpression();
                 if (!token(")"))
-                    throw new SucoParseException("Unmatched “(”: missing “)”.", _ix, startIx);
+                    throw new SucoParseException("Unmatched “(”: missing “)”.", getToken(), tok);
                 return inner;
             }
 
-            if (token("\"", out startIx))
+            if (token("\"", out tok))
             {
                 if (Context == SucoContext.Constraint)
-                    throw new SucoParseException("String literals cannot be used in Sudoku constraints.", startIx);
+                    throw new SucoParseException("String literals cannot be used in Sudoku constraints.", tok);
 
                 var pieces = new List<SucoStringLiteralPiece>();
                 var curStringPiece = new StringBuilder();
                 while (true)
                 {
                     if (_ix >= _source.Length)
-                        throw new SucoParseException("Unterminated string literal.", startIx);
+                        throw new SucoParseException("Unterminated string literal.", tok);
                     if (_source[_ix] == '\\')
                     {
                         if (_ix + 1 >= _source.Length)
-                            throw new SucoParseException("Unterminated string literal.", startIx);
+                            throw new SucoParseException("Unterminated string literal.", tok);
                         curStringPiece.Append(_source[_ix + 1]);
                         _ix += 2;
                         continue;
@@ -281,7 +282,7 @@ namespace Zinga.Suco
                         if (curStringPiece.Length > 0)
                             pieces.Add(curStringPiece.ToString());
                         _ix++;
-                        return new SucoStringLiteralExpression(startIx, _ix, pieces.ToArray());
+                        return new SucoStringLiteralExpression(tok.StartIndex, _ix, pieces.ToArray());
                     }
                     else if (_source[_ix] == '{')
                     {
@@ -291,7 +292,7 @@ namespace Zinga.Suco
                         _ix++;
                         var interpolatedExpression = parseExpression();
                         if (!token("}"))
-                            throw new SucoParseException("Unterminated interpolated expression inside string.", _ix);
+                            throw new SucoParseException("Unterminated interpolated expression inside string.", getToken());
                         pieces.Add(interpolatedExpression);
                     }
                     else
@@ -302,20 +303,20 @@ namespace Zinga.Suco
                 }
             }
 
-            var tok = getToken();
+            tok = getToken();
             if (tok.Type == SucoTokenType.Identifier && tok.StringValue == "let")
             {
                 _ix = tok.EndIndex;
                 var tk = getToken();
                 if (tk.Type != SucoTokenType.Identifier)
-                    throw new SucoParseException("Expected identifier after “let”.", tk.StartIndex, tok);
+                    throw new SucoParseException("Expected identifier after “let”.", tk, tok);
                 var variableName = tk.StringValue;
                 _ix = tk.EndIndex;
                 if (!token("="))
-                    throw new SucoParseException("Expected “=” after “let” identifier.", _ix, tok);
+                    throw new SucoParseException("Expected “=” after “let” identifier.", getToken(), tok);
                 var valueExpr = parseExpression();
                 if (!token(";"))
-                    throw new SucoParseException("Expected “;” after “let” value expression.", _ix, tok);
+                    throw new SucoParseException("Expected “;” after “let” value expression.", getToken(), tok);
                 var innerExpr = parseExpression();
                 return new SucoLetExpression(tok.StartIndex, _ix, variableName, valueExpr, innerExpr);
             }
@@ -345,7 +346,10 @@ namespace Zinga.Suco
                 return new SucoIdentifierExpression(tok.StartIndex, tok.EndIndex, tok.StringValue);
             }
 
-            throw new SucoParseException($"Unexpected code: “{_source.Substring(tok.StartIndex, tok.EndIndex - tok.StartIndex)}”.", tok.StartIndex);
+            if (tok.Type == SucoTokenType.Eof)
+                throw new SucoParseException($"Unexpected end of code.", tok);
+            else
+                throw new SucoParseException($"Unexpected code: “{_source.Substring(tok.StartIndex, tok.EndIndex - tok.StartIndex)}”.", tok);
         }
 
         private static readonly string[] _flags = new[] { "$", "+", "1" };
@@ -359,65 +363,66 @@ namespace Zinga.Suco
 
             nextClause:
             var clauseStartIx = _ix;
-            var flags = new Dictionary<string, int>();
+            var flags = new Dictionary<string, SucoToken>();
             nextFlag:
             foreach (var flag in _flags)
-                if (token(flag, out var ix))
+                if (token(flag, out var flagToken))
                 {
                     if (flags.ContainsKey(flag))
-                        throw new SucoParseException($"Duplicate flag: “{flag}”.", _ix, flags[flag]);
-                    flags[flag] = ix;
+                        throw new SucoParseException($"Duplicate flag: “{flag}”.", flagToken, flags[flag]);
+                    flags[flag] = flagToken;
                     goto nextFlag;
                 }
             var variableName = getToken();
             if (variableName.Type != SucoTokenType.Identifier)
-                throw new SucoParseException($"Expected variable name{_flags.Except(flags.Keys).ToArray().Select(s => $" or “{s}”").JoinString()}.", variableName.StartIndex);
+                throw new SucoParseException($"Expected variable name{_flags.Except(flags.Keys).ToArray().Select(s => $" or “{s}”").JoinString()}.", variableName);
             _ix = variableName.EndIndex;
 
             var conditions = new List<SucoListCondition>();
             SucoExpression fromExpression = null;
             void commitClause(int endIndex)
             {
-                if (!flags.ContainsKey("1") && clauses.Any(c => c.HasSingleton))
-                    throw new SucoParseException("A clause with a “1” flag cannot be followed by a clause without one.", clauseStartIx, endIndex);
+                SucoListClause clause;
+                if (!flags.ContainsKey("1") && (clause = clauses.LastOrDefault(c => c.HasSingleton)) != null)
+                    throw new SucoParseException("A clause with a “1” flag cannot be followed by a clause without one.", clauseStartIx, endIndex, clause);
                 if (flags.ContainsKey("$") && fromExpression != null)
                     throw new SucoParseException("A clause with a “$” flag cannot also have a “from” condition.", clauseStartIx, endIndex);
                 clauses.Add(new SucoListClause(clauseStartIx, endIndex, variableName.StringValue, flags.ContainsKey("$"), flags.ContainsKey("+"), flags.ContainsKey("1"), fromExpression, conditions));
             }
 
             nextCondition:
-            if (token(":", out var oldIx))
+            if (token(":", out var tok))
             {
-                commitClause(oldIx);
+                commitClause(tok.EndIndex);
                 selector = parseExpression();
                 goto done;
             }
-            else if (token(",", out oldIx))
+            else if (token(",", out tok))
             {
-                commitClause(oldIx);
+                commitClause(tok.EndIndex);
                 goto nextClause;
             }
-            else if (token("(", out oldIx))
+            else if (token("(", out tok))
             {
                 var innerExpr = parseExpression();
                 if (!token(")"))
-                    throw new SucoParseException("Unmatched “(”: condition must end in “)”.", _ix, oldIx);
-                conditions.Add(new SucoListExpressionCondition(oldIx, _ix, innerExpr));
+                    throw new SucoParseException("Unmatched “(”: condition must end in “)”.", getToken(), tok);
+                conditions.Add(new SucoListExpressionCondition(tok.StartIndex, _ix, innerExpr));
                 goto nextCondition;
             }
 
             foreach (var shc in new[] { "~", "<", ">", "^", "v", "←", "→", "↑", "↓" })
-                if (token(shc, out oldIx))
+                if (token(shc, out tok))
                 {
-                    conditions.Add(new SucoListShortcutCondition(oldIx, _ix, shc));
+                    conditions.Add(new SucoListShortcutCondition(tok.StartIndex, tok.EndIndex, shc));
                     goto nextCondition;
                 }
 
-            var tok = getToken();
+            tok = getToken();
             if (tok.Type == SucoTokenType.Identifier && tok.StringValue == "from")
             {
                 if (fromExpression != null)
-                    throw new SucoParseException("Duplicate “from” condition.", _ix, fromExpression);
+                    throw new SucoParseException("Duplicate “from” condition.", tok, fromExpression);
 
                 _ix = tok.EndIndex;
                 var tokVarName = getToken();
@@ -428,11 +433,11 @@ namespace Zinga.Suco
                 }
                 else
                 {
-                    if (!token("(", out oldIx))
-                        throw new SucoParseException("“from” must be followed by either a variable name, or a parenthesized expression.", _ix);
+                    if (!token("("))
+                        throw new SucoParseException("“from” must be followed by either a variable name, or a parenthesized expression.", getToken(), tok);
                     fromExpression = parseExpression();
                     if (!token(")"))
-                        throw new SucoParseException("Unmatched “(”: “from” expression must end in “)”.", _ix, oldIx);
+                        throw new SucoParseException("Unmatched “(”: “from” expression must end in “)”.", getToken(), tok);
                 }
                 goto nextCondition;
             }

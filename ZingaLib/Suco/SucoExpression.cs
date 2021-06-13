@@ -19,9 +19,9 @@ namespace Zinga.Suco
             {
                 case SucoContext.Constraint:
                     if (result.Type is SucoDecimalType)
-                        throw new SucoTempCompileException("You cannot use decimal numbers in a puzzle constraint.");
+                        throw new SucoCompileException("You cannot use decimal numbers in a puzzle constraint.", StartIndex, EndIndex);
                     if (result.Type is SucoStringType)
-                        throw new SucoTempCompileException("You cannot use strings in a puzzle constraint.");
+                        throw new SucoCompileException("You cannot use strings in a puzzle constraint.", StartIndex, EndIndex);
                     break;
 
                 case SucoContext.Svg:

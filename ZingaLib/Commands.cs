@@ -73,7 +73,7 @@ namespace Zinga.Lib
                     catch (SucoParseException spe)
                     {
                         if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == parameter)
-                            editingResult = new JsonDict { ["ix"] = spe.Index, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message };
+                            editingResult = new JsonDict { ["start"] = spe.StartIndex, ["end"] = spe.EndIndex, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message };
                     }
                 }
 
@@ -92,7 +92,7 @@ namespace Zinga.Lib
                     }
                     catch (SucoParseException spe)
                     {
-                        editingResult = new JsonDict { ["ix"] = spe.Index, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message };
+                        editingResult = new JsonDict { ["start"] = spe.StartIndex, ["end"] = spe.EndIndex, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message };
                     }
                 }
 
@@ -109,7 +109,13 @@ namespace Zinga.Lib
                 }
             }
 
-            return new JsonDict { ["svgDefs"] = resultSvgDefs.JoinString(), ["svgs"] = resultSvgs, ["globalSvgs"] = resultGlobalSvgs, ["editingResult"] = editingResult }.ToString();
+            return new JsonDict
+            {
+                ["svgDefs"] = resultSvgDefs.JoinString(),
+                ["svgs"] = resultSvgs,
+                ["globalSvgs"] = resultGlobalSvgs,
+                ["editingResult"] = editingResult
+            }.ToString();
         }
 
         public static (SucoExpression expr, JsonDict variables)[] _constraintLogic;
@@ -180,7 +186,7 @@ namespace Zinga.Lib
             {
                 var html = new StringBuilder();
                 var ix = 0;
-                foreach (var item in (e.Highlights ?? Enumerable.Empty<SucoParseExceptionHighlight>()).Concat(new SucoParseExceptionHighlight[] { e.Index }))
+                foreach (var item in (e.Highlights ?? Enumerable.Empty<SucoParseExceptionHighlight>()).Concat(new SucoParseExceptionHighlight[] { new SucoToken(0, e.StartIndex, e.EndIndex) }))
                 {
                     html.Append(suco.Substring(ix, item.StartIndex - ix).HtmlEscape());
                     html.Append(item.EndIndex == null
@@ -190,7 +196,7 @@ namespace Zinga.Lib
                 }
                 html.Append(suco.Substring(ix).HtmlEscape());
 
-                return new JsonDict { ["status"] = "error", ["type"] = "parse", ["message"] = e.Message, ["ix"] = e.Index, ["highlights"] = ClassifyJson.Serialize(e.Highlights), ["html"] = html.ToString() }.ToString();
+                return new JsonDict { ["status"] = "error", ["type"] = "parse", ["message"] = e.Message, ["start"] = e.StartIndex, ["end"] = e.EndIndex, ["highlights"] = ClassifyJson.Serialize(e.Highlights), ["html"] = html.ToString() }.ToString();
             }
             catch (SucoCompileException e)
             {

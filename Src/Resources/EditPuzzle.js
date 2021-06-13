@@ -850,13 +850,6 @@
                 editConstraintParameter(cTypeId, id, cTypeId => setter(cTypeId, elem.value));
         });
     }
-    function setShowHideEvent(id)
-    {
-        let elem = document.getElementById(`constraint-code-${id}`);
-        let rep = document.getElementById(`reporting-${id}`);
-        elem.onfocus = function() { rep.style.display = 'block'; };
-        elem.onblur = function() { rep.style.display = 'none'; };
-    }
     function updateVisuals(opt)
     {
         // options:
@@ -899,8 +892,18 @@
                 if (editingConstraintTypeParameter !== null)
                 {
                     let reportingBox = document.getElementById(`reporting-${editingConstraintTypeParameter}`);
-                    if (reportingBox !== null)
-                        reportingBox.innerText = document.getElementById(`constraint-code-${editingConstraintTypeParameter}`).value.length ? JSON.stringify(results.editingResult) : '';
+                    let editingBox = document.getElementById(`constraint-code-${editingConstraintTypeParameter}`);
+                    if (editingBox.value.trim().length === 0 || results.editingResult === null)
+                        reportingBox.classList.remove('has-error');
+                    else 
+                    {
+                        reportingBox.innerHTML = `<span class='error'></span>
+                            <a class='show' href='#' data-start='${results.editingResult.start}' data-end='${results.editingResult.end}'>show</a>
+                            ${'highlights' in results.editingResult ? results.editingResult.highlights.map(hl => ` <a class='show' href='#' data-start='${hl.start}' data-end='${hl.end}'>show</a>`).join('') : ''}`;
+                        reportingBox.querySelector('span.error').innerText = results.editingResult.msg;
+                        Array.from(reportingBox.querySelectorAll('a.show')).forEach(a => { setButtonHandler(a, function() { editingBox.setSelectionRange(a.dataset.start | 0, a.dataset.end | 0); }); });
+                        reportingBox.classList.add('has-error');
+                    }
                 }
                 updateConstraintSelection();
                 fixViewBox();
@@ -1508,10 +1511,6 @@
             cType.variables[inf[0]] = inf[1];
         populateConstraintEditBox(cTypeId);
     });
-
-    setShowHideEvent('logic');
-    setShowHideEvent('svg');
-    setShowHideEvent('svgdefs');
 
     puzzleContainer.addEventListener('keyup', ev =>
     {

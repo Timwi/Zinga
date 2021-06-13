@@ -194,11 +194,11 @@ namespace Zinga
                                         new DIV { class_ = "label" }._("Properties", new BUTTON { id = "constraint-code-addvar", class_ = "mini-btn add", title = "Add a new property" }),
                                         new DIV(new TABLE { id = "constraint-code-variables" }),
                                         new DIV { class_ = "label" }._("Logic (Suco)"),
-                                        new DIV(new TEXTAREA { id = "constraint-code-logic" }, new DIV { id = "reporting-logic" }),
+                                        new DIV(new TEXTAREA { id = "constraint-code-logic" }, new DIV { id = "reporting-logic", class_ = "reporting" }),
                                         new DIV { class_ = "label" }._("Code to generate SVG (Suco)"),
-                                        new DIV(new TEXTAREA { id = "constraint-code-svg" }, new DIV { id = "reporting-svg" }),
+                                        new DIV(new TEXTAREA { id = "constraint-code-svg" }, new DIV { id = "reporting-svg", class_ = "reporting" }),
                                         new DIV { class_ = "label" }._("Code to generate SVG definitions (Suco)"),
-                                        new DIV(new TEXTAREA { id = "constraint-code-svgdefs" }, new DIV { id = "reporting-svgdefs" }))),
+                                        new DIV(new TEXTAREA { id = "constraint-code-svgdefs" }, new DIV { id = "reporting-svgdefs", class_ = "reporting" }))),
                                 new SECTION { id = "constraint-add-section" }._(
                                     new DIV { class_ = "label" }._("Add a constraint"),
                                     new DIV { class_ = "main" }._(

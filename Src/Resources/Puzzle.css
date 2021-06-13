@@ -425,6 +425,23 @@ svg.puzzle-svg .multi-select {
             padding: .1cm .2cm;
         }
 
+#sidebar textarea + .reporting {
+    display: none;
+}
+
+#sidebar textarea + .reporting.has-error {
+    display: block;
+    border: 2px solid black;
+    border-radius: .2cm;
+    background: #fee;
+    padding: .2cm .3cm .15cm .8cm;
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M1 9 5 1 9 9z" fill="%23fa8" stroke="black" stroke-width=".5" /></svg>');
+    background-repeat: no-repeat;
+    background-position: .15cm 50%;
+    background-size: .6cm .6cm;
+    font-size: 10pt;
+}
+
 #sidebar .expand {
     position: absolute;
     width: .5cm;
