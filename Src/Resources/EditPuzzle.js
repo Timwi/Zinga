@@ -122,7 +122,7 @@
         if (sc.length === 0)
             return;
         let cIx = state.constraints.length;
-        let cTypeId = sc[0];
+        let cTypeId = sc[0] | 0;
         let cType = constraintTypes[cTypeId];
 
         let enf = createDefaultConstraint(cType, cTypeId, selectedCells);
@@ -740,7 +740,7 @@
 
                 document.getElementById('constraint-results-box').innerHTML = req.response.order.map(cTypeId => `
                     <div class='item' data-ix='${cTypeId}'>
-                        <svg viewBox='0 0 10 10'><circle cx='5' cy='5' r='3' stroke-width='.5' stroke='black' fill='#8df' /></svg>
+                        <svg viewBox='0 0 10 10' text-anchor='middle' font-family='Bitter'><circle cx='5' cy='5' r='3' stroke-width='.5' stroke='black' fill='#8df' /></svg>
                         <div class='name'></div><div class='akas'></div><div class='descr'></div><div class='error'></div>
                     </div>
                 `).join('');
@@ -850,6 +850,13 @@
                 editConstraintParameter(cTypeId, id, cTypeId => setter(cTypeId, elem.value));
         });
     }
+    function setShowHideEvent(id)
+    {
+        let elem = document.getElementById(`constraint-code-${id}`);
+        let rep = document.getElementById(`reporting-${id}`);
+        elem.onfocus = function() { rep.style.display = 'block'; };
+        elem.onblur = function() { rep.style.display = 'none'; };
+    }
     function updateVisuals(opt)
     {
         // options:
@@ -893,7 +900,7 @@
                 {
                     let reportingBox = document.getElementById(`reporting-${editingConstraintTypeParameter}`);
                     if (reportingBox !== null)
-                        reportingBox.innerText = JSON.stringify(results.editingResult);
+                        reportingBox.innerText = document.getElementById(`constraint-code-${editingConstraintTypeParameter}`).value.length ? JSON.stringify(results.editingResult) : '';
                 }
                 updateConstraintSelection();
                 fixViewBox();
@@ -1501,6 +1508,10 @@
             cType.variables[inf[0]] = inf[1];
         populateConstraintEditBox(cTypeId);
     });
+
+    setShowHideEvent('logic');
+    setShowHideEvent('svg');
+    setShowHideEvent('svgdefs');
 
     puzzleContainer.addEventListener('keyup', ev =>
     {

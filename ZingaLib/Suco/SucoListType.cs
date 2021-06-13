@@ -25,6 +25,7 @@ namespace Zinga.Suco
         {
             // Lists of cells
             ("sum", SucoCellType) => SucoType.Integer,
+            ("product", SucoCellType) => SucoType.Integer,
             ("min", SucoCellType) => SucoType.Integer,
             ("max", SucoCellType) => SucoType.Integer,
             ("unique", SucoCellType) => SucoType.Boolean,
@@ -37,6 +38,8 @@ namespace Zinga.Suco
                 (new[] { SucoType.Integer }, SucoType.Boolean),
                 (new[] { SucoType.Integer.List() }, SucoType.Boolean)),
             ("same", SucoIntegerType) => SucoType.Boolean,
+            ("sum", SucoIntegerType) => SucoType.Integer,
+            ("product", SucoIntegerType) => SucoType.Integer,
 
             // Lists of booleans
             ("all", SucoBooleanType) => SucoType.Boolean,
@@ -55,7 +58,8 @@ namespace Zinga.Suco
         public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid) => (memberName, ElementType) switch
         {
             // Lists of cells
-            ("sum", SucoCellType) => ((IEnumerable<Cell>) operand)?.Aggregate((int?) 0, (prev, next) => prev == null || grid[next.Index] == null ? null : prev.Value + grid[next.Index].Value),
+            ("sum", SucoCellType) => ((IEnumerable<Cell>) operand)?.Aggregate((int?) 0, (prev, next) => prev == null || next == null || grid[next.Index] == null ? null : prev.Value + grid[next.Index].Value),
+            ("product", SucoCellType) => ((IEnumerable<Cell>) operand)?.Aggregate((int?) 1, (prev, next) => prev == null || next == null || grid[next.Index] == null ? null : prev.Value * grid[next.Index].Value),
             ("min", SucoCellType) => minMax((IEnumerable<Cell>) operand, grid, min: true),
             ("max", SucoCellType) => minMax((IEnumerable<Cell>) operand, grid, min: false),
             ("unique", SucoCellType) => operand == null ? null : checkUnique(((IEnumerable<Cell>) operand).Select(c => grid[c.Index])),
@@ -65,17 +69,17 @@ namespace Zinga.Suco
             ("contains", SucoIntegerType) => operand == null ? null : contains(((IEnumerable<int?>) operand).ToArray()),
             ("same", SucoIntegerType) => operand == null ? null : same(((IEnumerable<int?>) operand)),
             ("count", SucoIntegerType) => count<int?>(operand),
+            ("sum", SucoIntegerType) => ((IEnumerable<int?>) operand)?.Aggregate((int?) 0, (prev, next) => prev == null || next == null ? null : prev.Value + next.Value),
+            ("product", SucoIntegerType) => ((IEnumerable<int?>) operand)?.Aggregate((int?) 1, (prev, next) => prev == null || next == null ? null : prev.Value * next.Value),
 
             // Lists of booleans
-            ("all", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == false ? false : prev == null || next == null ? null : true),
-            ("any", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) false, (prev, next) => prev == true || (bool?) next == true ? true : prev == null || next == null ? null : false),
-            ("none", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || (bool?) next == true ? false : prev == null || next == null ? null : true),
+            ("all", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || next == false ? false : prev == null || next == null ? null : true),
+            ("any", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) false, (prev, next) => prev == true || next == true ? true : prev == null || next == null ? null : false),
+            ("none", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || next == true ? false : prev == null || next == null ? null : true),
             ("count", SucoBooleanType) => count<bool?>(operand),
 
             // Lists of lists of integers
-            ("unique", SucoListType { ElementType: SucoIntegerType }) =>
-                operand == null || ((IEnumerable<object>) operand).Any(l => l == null || ((IEnumerable<object>) l).Contains(null)) ? null :
-                checkUnique(((IEnumerable<object>) operand)?.Select(obj => ((IEnumerable<object>) obj)?.Select(i => (int?) i).ToArray()).ToArray()),
+            ("unique", SucoListType { ElementType: SucoIntegerType }) => checkUnique(((IEnumerable<object>) operand)?.Select(obj => ((IEnumerable<int?>) obj)?.ToArray()).ToArray()),
 
             // All lists
             ("count", _) => count<object>(operand),
@@ -198,17 +202,14 @@ namespace Zinga.Suco
             var anyNull = false;
             for (var i = 0; i < lists.Length; i++)
             {
-                if (lists[i] == null)
+                if (lists[i] == null || lists[i].Contains(null))
                 {
                     anyNull = true;
                     continue;
                 }
-                if (lists[i].Contains(null))
-                    anyNull = true;
-                else
-                    for (var j = i + 1; j < lists.Length; j++)
-                        if (lists[j] != null && lists[i].SequenceEqual(lists[j]))
-                            return false;
+                for (var j = i + 1; j < lists.Length; j++)
+                    if (lists[j] != null && lists[i].SequenceEqual(lists[j]))
+                        return false;
             }
             return anyNull ? null : true;
         }

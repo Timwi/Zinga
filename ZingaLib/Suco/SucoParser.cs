@@ -405,11 +405,13 @@ namespace Zinga.Suco
                 conditions.Add(new SucoListExpressionCondition(oldIx, _ix, innerExpr));
                 goto nextCondition;
             }
-            else if (token("~", out oldIx)) { conditions.Add(new SucoListShortcutCondition(oldIx, _ix, "~")); goto nextCondition; }
-            else if (token("<", out oldIx) || token("←", out oldIx)) { conditions.Add(new SucoListShortcutCondition(oldIx, _ix, "←")); goto nextCondition; }
-            else if (token(">", out oldIx) || token("→", out oldIx)) { conditions.Add(new SucoListShortcutCondition(oldIx, _ix, "→")); goto nextCondition; }
-            else if (token("^", out oldIx) || token("↑", out oldIx)) { conditions.Add(new SucoListShortcutCondition(oldIx, _ix, "↑")); goto nextCondition; }
-            else if (token("v", out oldIx) || token("↓", out oldIx)) { conditions.Add(new SucoListShortcutCondition(oldIx, _ix, "↓")); goto nextCondition; }
+
+            foreach (var shc in new[] { "~", "<", ">", "^", "v", "←", "→", "↑", "↓" })
+                if (token(shc, out oldIx))
+                {
+                    conditions.Add(new SucoListShortcutCondition(oldIx, _ix, shc));
+                    goto nextCondition;
+                }
 
             var tok = getToken();
             if (tok.Type == SucoTokenType.Identifier && tok.StringValue == "from")

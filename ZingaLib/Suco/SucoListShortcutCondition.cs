@@ -26,13 +26,17 @@ namespace Zinga.Suco
                 case "~":
                     break;
 
+                case "^":
+                case ">":
+                case "v":
+                case "<":
+                case "↑":
+                case "→":
+                case "↓":
+                case "←":
                 case "diagonal":
                 case "adjacent":
                 case "orthogonal":
-                case "^^":
-                case ">>":
-                case "vv":
-                case "<<":
                 case "above":
                 case "right":
                 case "below":
@@ -74,10 +78,14 @@ namespace Zinga.Suco
             "diagonal" => cellOp(env, (c1, c2) => Math.Abs(c1.X - c2.X) == Math.Abs(c1.Y - c2.Y)),
             "adjacent" => cellOp(env, (c1, c2) => Math.Abs(c1.X - c2.X) <= 1 && Math.Abs(c1.Y - c2.Y) <= 1),
             "orthogonal" => cellOp(env, (c1, c2) => (c1.X == c2.X && Math.Abs(c1.Y - c2.Y) == 1) || (c1.Y == c2.Y && Math.Abs(c1.X - c2.X) == 1)),
-            "^^" => cellOp(env, (c1, c2) => c2.Y == c1.Y - 1 && c2.X == c1.X),
-            ">>" => cellOp(env, (c1, c2) => c2.X == c1.X + 1 && c2.Y == c1.Y),
-            "vv" => cellOp(env, (c1, c2) => c2.Y == c1.Y + 1 && c2.X == c1.X),
-            "<<" => cellOp(env, (c1, c2) => c2.X == c1.X - 1 && c2.Y == c1.Y),
+            "^" => cellOp(env, (c1, c2) => c2.Y == c1.Y - 1 && c2.X == c1.X),
+            ">" => cellOp(env, (c1, c2) => c2.X == c1.X + 1 && c2.Y == c1.Y),
+            "v" => cellOp(env, (c1, c2) => c2.Y == c1.Y + 1 && c2.X == c1.X),
+            "<" => cellOp(env, (c1, c2) => c2.X == c1.X - 1 && c2.Y == c1.Y),
+            "↑" => cellOp(env, (c1, c2) => c2.Y == c1.Y - 1 && c2.X == c1.X),
+            "→" => cellOp(env, (c1, c2) => c2.X == c1.X + 1 && c2.Y == c1.Y),
+            "↓" => cellOp(env, (c1, c2) => c2.Y == c1.Y + 1 && c2.X == c1.X),
+            "←" => cellOp(env, (c1, c2) => c2.X == c1.X - 1 && c2.Y == c1.Y),
             "above" => cellOp(env, (c1, c2) => c2.Y < c1.Y && c2.X == c1.X),
             "right" => cellOp(env, (c1, c2) => c2.X > c1.X && c2.Y == c1.Y),
             "below" => cellOp(env, (c1, c2) => c2.Y > c1.Y && c2.X == c1.X),

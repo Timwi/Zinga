@@ -515,12 +515,12 @@
 
                 dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)]);
 
-                dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints), null, null], svgs =>
+                dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints), null, null], resultsRaw =>
                 {
-                    let list = JSON.parse(svgs);
-                    document.getElementById('constraint-defs').innerHTML = list[0];
-                    document.getElementById('constraint-svg').innerHTML = list[1];
-                    document.getElementById('constraint-svg-global').innerHTML = list[2];
+                    let results = JSON.parse(resultsRaw);
+                    document.getElementById('constraint-defs').innerHTML = results.svgDefs;
+                    document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g id='constraint-svg-${cIx}'>${svg}</g>`).join('');
+                    document.getElementById('constraint-svg-global').innerHTML = results.globalSvgs.map((svg, cIx) => [svg, cIx]).filter(inf => inf[0] !== null).map((inf, y) => `<g id='constraint-svg-${inf[1]}' transform='translate(0, ${y * 1.5})'>${inf[0]}</g>`).join('');
                     updateVisuals();
                     fixViewBox();
                     window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
