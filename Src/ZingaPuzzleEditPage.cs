@@ -198,9 +198,7 @@ namespace Zinga
                                         new DIV { class_ = "label" }._("Code to generate SVG (Suco)"),
                                         new DIV(new TEXTAREA { id = "constraint-code-svg" }, new DIV { id = "reporting-svg" }),
                                         new DIV { class_ = "label" }._("Code to generate SVG definitions (Suco)"),
-                                        new DIV(new TEXTAREA { id = "constraint-code-svgdefs" }, new DIV { id = "reporting-svgdefs" }),
-                                        new DIV { class_ = "label" }._("Preview SVG"),
-                                        new DIV(new TEXTAREA { id = "constraint-code-preview" }))),
+                                        new DIV(new TEXTAREA { id = "constraint-code-svgdefs" }, new DIV { id = "reporting-svgdefs" }))),
                                 new SECTION { id = "constraint-add-section" }._(
                                     new DIV { class_ = "label" }._("Add a constraint"),
                                     new DIV { class_ = "main" }._(

@@ -419,7 +419,6 @@
         document.getElementById('constraint-code-logic').value = cType.logic;
         document.getElementById('constraint-code-svg').value = cType.svg;
         document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
-        document.getElementById('constraint-code-preview').value = cType.preview;
 
         function constraintUpdate(setter)
         {
@@ -1493,7 +1492,6 @@
     setConstraintCodeEditingEvent('logic', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).logic, (cTypeId, v) => { getConstraintType(cTypeId).logic = v; });
     setConstraintCodeEditingEvent('svg', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).svg, (cTypeId, v) => { getConstraintType(cTypeId).svg = v; });
     setConstraintCodeEditingEvent('svgdefs', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).svgdefs, (cTypeId, v) => { getConstraintType(cTypeId).svgdefs = v; });
-    setConstraintCodeEditingEvent('preview', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).preview, (cTypeId, v) => { getConstraintType(cTypeId).preview = v; });
     setConstraintCodeEditingEvent('kind', (el, ev) => { el.onchange = ev; }, cTypeId => getConstraintType(cTypeId).kind, (cTypeId, v) =>
     {
         let cType = getConstraintType(cTypeId);

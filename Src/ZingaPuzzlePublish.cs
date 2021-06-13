@@ -89,7 +89,6 @@ namespace Zinga
                             Kind = kind,
                             LogicSuco = logicCode,
                             Name = cType["name"].GetString(),
-                            PreviewSvg = cType["preview"]?.GetString(),
                             Public = false,
                             Shortcut = null,
                             SvgDefsSuco = svgDefsCode,
@@ -97,7 +96,7 @@ namespace Zinga
                             VariablesJson = cType["variables"].ToString()
                         };
                         var already = db.Constraints.FirstOrDefault(c => c.Kind == newConstraintType.Kind && c.LogicSuco == newConstraintType.LogicSuco &&
-                            c.Name == newConstraintType.Name && c.PreviewSvg == newConstraintType.PreviewSvg && c.SvgDefsSuco == newConstraintType.SvgDefsSuco &&
+                            c.Name == newConstraintType.Name && c.SvgDefsSuco == newConstraintType.SvgDefsSuco &&
                             c.SvgSuco == newConstraintType.SvgSuco && c.VariablesJson == newConstraintType.VariablesJson);
                         if (already != null)
                             dbConstraintTypes[typeId] = already;

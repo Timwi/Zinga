@@ -24,7 +24,6 @@ namespace Zinga.Database
         public string LogicSuco { get; set; }
         public string SvgDefsSuco { get; set; }
         public string SvgSuco { get; set; }
-        public string PreviewSvg { get; set; }
         public string Shortcut { get; set; }
 
         public string[] Akas
@@ -68,8 +67,6 @@ namespace Zinga.Database
             };
             if (Shortcut != null)
                 dic["shortcut"] = Shortcut;
-            if (PreviewSvg != null)
-                dic["preview"] = PreviewSvg;
             if (AkasJson != null)
                 dic["akas"] = new JsonRaw(AkasJson);
             return dic;
