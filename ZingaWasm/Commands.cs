@@ -8,8 +8,8 @@ namespace Zinga.Wasm
         public static string CompileSuco(string suco, string variableTypesJson) => Lib.Commands.CompileSuco(suco, variableTypesJson);
 
         [JSInvokable]
-        public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson, int? editingConstraintTypeId, string editingConstraintTypeParameter) =>
-            Lib.Commands.RenderConstraintSvgs(constraintTypesJson, customConstraintTypesJson, constraintsJson, editingConstraintTypeId, editingConstraintTypeParameter);
+        public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson) =>
+            Lib.Commands.RenderConstraintSvgs(constraintTypesJson, customConstraintTypesJson, constraintsJson);
 
         [JSInvokable]
         public static string GenerateOutline(string regionsJson) => Lib.Commands.GenerateOutline(regionsJson);

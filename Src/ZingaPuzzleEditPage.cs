@@ -101,6 +101,7 @@ namespace Zinga
                                         <feColorMatrix in='SourceGraphic' type='matrix' values='.52 0 0 0 0 0 .67 0 0 0 0 0 .97 0 0 0 0 0 5 0' result='constraint-selection-shadow-4' />
                                         <feComposite in='constraint-selection-shadow-4' in2='constraint-selection-shadow-3' />
                                     </filter>
+                                    <marker id='selection-arrow-marker' orient='auto' overflow='visible'><path fill='hsl(220, 80%, 80%)' d='M-1-2.4 5 0-1 2.4z'/></marker>
                                 </defs>
                                 <defs id='constraint-defs'></defs>
                                 <g id='bb-everything'>
@@ -135,7 +136,8 @@ namespace Zinga
                                             <rect x='0' y='0' width='9' height='9' stroke='black' stroke-width='.05' fill='none' />
 
                                             <g id='constraint-svg'></g>
-                                            <g id='temp-svg'></g>
+                                            <g id='outline-svg'></g>
+                                            <g id='selection-arrows-svg' fill='none' stroke='hsl(220, 80%, 80%)' stroke-width='.03' marker-end='url(#selection-arrow-marker)'></g>
 
                                             {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='n' data-offset='{col}' d='m {col + .3} 9.3 .2 -.2 .2 .2z' fill='black' />").JoinString()}
                                             {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='e' data-offset='{row}' d='m -.3 {row + .3} .2 .2 -.2 .2z' fill='black' />").JoinString()}

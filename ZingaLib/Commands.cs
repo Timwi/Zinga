@@ -28,18 +28,18 @@ namespace Zinga.Lib
             return _parsedSuco[key];
         }
 
-        public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson, int? editingConstraintTypeId, string editingConstraintTypeParameter)
+        public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
         {
 #if DEBUG
-            Console.WriteLine($@"Zinga.Lib.Commands.RenderConstraintSvgs(""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"", {(editingConstraintTypeId == null ? "null" : editingConstraintTypeId.ToString())}, {(editingConstraintTypeParameter == null ? "null" : $@"""{editingConstraintTypeParameter.CLiteralEscape()}""")});");
+            Console.WriteLine($@"Zinga.Lib.Commands.RenderConstraintSvgs(""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
 #endif
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
             var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
             var constraints = JsonList.Parse(constraintsJson);
             var resultSvgDefs = new HashSet<string>();
-            var resultSvgs = new JsonList();
-            var resultGlobalSvgs = new JsonList();
-            JsonValue editingResult = null;
+            var resultSvgs = new JsonList(Enumerable.Repeat<JsonValue>(null, constraints.Count));
+            var resultGlobalSvgs = new JsonList(Enumerable.Repeat<JsonValue>(null, constraints.Count));
+            var resultErrors = new JsonList(Enumerable.Range(0, constraints.Count).Select(_ => new JsonDict()));
 
             for (var cIx = 0; cIx < constraints.Count; cIx++)
             {
@@ -51,12 +51,11 @@ namespace Zinga.Lib
 
                 void process(string parameter, SucoType expectedReturnType, Action<object> callback)
                 {
-                    if (type[parameter] == null)
+                    if (type[parameter] == null || string.IsNullOrWhiteSpace(type[parameter].GetString()))
                         return;
                     try
                     {
-                        var (expr, env, interpreted) = parseSuco(type[parameter].GetString(), type["variables"].GetDict(), SucoContext.Svg, expectedReturnType);
-                        var cache = interpreted;
+                        var (expr, env, cache) = parseSuco(type[parameter].GetString(), type["variables"].GetDict(), SucoContext.Svg, expectedReturnType);
                         var cacheKey = constraint["values"].ToString();
                         if (!cache.ContainsKey(cacheKey))
                         {
@@ -67,45 +66,55 @@ namespace Zinga.Lib
                     }
                     catch (SucoCompileException sce)
                     {
-                        if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == parameter)
-                            editingResult = new JsonDict { ["start"] = sce.StartIndex, ["end"] = sce.EndIndex, ["msg"] = sce.Message };
+                        resultErrors[cIx].Add(parameter, new JsonDict { ["start"] = sce.StartIndex, ["end"] = sce.EndIndex, ["msg"] = sce.Message });
                     }
                     catch (SucoParseException spe)
                     {
-                        if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == parameter)
-                            editingResult = new JsonDict { ["start"] = spe.StartIndex, ["end"] = spe.EndIndex, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message };
+                        resultErrors[cIx].Add(parameter, new JsonDict { ["start"] = spe.StartIndex, ["end"] = spe.EndIndex, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message });
                     }
                 }
 
-                process("svgdefs", SucoType.String.List(), str => { resultSvgDefs.AddRange(((IEnumerable<object>) str).Cast<string>()); });
-                process("svg", SucoType.String, str => { svgCode = (string) str; });
-
-                if (typeId == editingConstraintTypeId && editingConstraintTypeParameter == "logic" && type["logic"] != null)
+                process("svgdefs", SucoType.String.List(), sucoResult =>
                 {
-                    try
+                    foreach (var result in ((IEnumerable<object>) sucoResult).Cast<string>())
                     {
-                        var (expr, env, interpreted) = parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoType.Boolean);
+                        var svgError = checkSvg(result);
+                        if (svgError == null)
+                            resultSvgDefs.Add(result);
+                        else
+                            resultErrors[cIx].Add("svgdefs", svgError.ToJson());
                     }
-                    catch (SucoCompileException sce)
+                });
+                process("svg", SucoType.String, sucoResult =>
+                {
+                    svgCode = (string) sucoResult;
+                    var svgError = checkSvg(svgCode);
+                    if (svgError != null)
                     {
-                        editingResult = new JsonDict { ["start"] = sce.StartIndex, ["end"] = sce.EndIndex, ["msg"] = sce.Message };
+                        resultErrors[cIx].Add("svg", svgError.ToJson());
+                        svgCode = null;
                     }
-                    catch (SucoParseException spe)
-                    {
-                        editingResult = new JsonDict { ["start"] = spe.StartIndex, ["end"] = spe.EndIndex, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message };
-                    }
+                });
+
+                try
+                {
+                    parseSuco(type["logic"].GetString(), type["variables"].GetDict(), SucoContext.Constraint, SucoType.Boolean);
+                }
+                catch (SucoCompileException sce)
+                {
+                    resultErrors[cIx].Add("logic", new JsonDict { ["start"] = sce.StartIndex, ["end"] = sce.EndIndex, ["msg"] = sce.Message });
+                }
+                catch (SucoParseException spe)
+                {
+                    resultErrors[cIx].Add("logic", new JsonDict { ["start"] = spe.StartIndex, ["end"] = spe.EndIndex, ["highlights"] = new JsonList(spe.Highlights.Select(h => new JsonDict { ["start"] = h.StartIndex, ["end"] = h.EndIndex })), ["msg"] = spe.Message });
                 }
 
-                // Make sure to add the <g> tag even if no SVG code was generated because the JS code relies on it being there
-                if (type["kind"].GetString() == "Global")
+                if (svgCode != null)
                 {
-                    resultSvgs.Add(null);
-                    resultGlobalSvgs.Add($"<rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{svgCode}");
-                }
-                else
-                {
-                    resultSvgs.Add(svgCode);
-                    resultGlobalSvgs.Add(null);
+                    if (type["kind"].GetString() == "Global")
+                        resultGlobalSvgs[cIx] = $"<rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{svgCode}";
+                    else
+                        resultSvgs[cIx] = svgCode;
                 }
             }
 
@@ -114,8 +123,207 @@ namespace Zinga.Lib
                 ["svgDefs"] = resultSvgDefs.JoinString(),
                 ["svgs"] = resultSvgs,
                 ["globalSvgs"] = resultGlobalSvgs,
-                ["editingResult"] = editingResult
+                ["errors"] = resultErrors
             }.ToString();
+        }
+
+        enum SvgCheckerState
+        {
+            Text,
+            Escape,
+            TagName,
+            AttributeName,
+            AttributeValue
+        }
+
+        sealed class SvgError
+        {
+            public string Message;
+            public int Index;
+            public JsonValue ToJson() => new JsonDict { ["msg"] = Message, ["ix"] = Index };
+        }
+
+        private static SvgError checkSvg(string svg)
+        {
+            char? s(int ix) => ix < svg.Length ? svg[ix] : null;
+
+            var state = SvgCheckerState.Text;
+            var tags = new Stack<string>();
+
+            // Shared
+            var isStart = false;
+            // Escapes
+            var hasHash = false;
+            var hasHexa = false;
+            var wasAttr = false;
+            // Attribute values
+            var hasApo = false;
+            var hasDq = false;
+            // Tag names
+            var tagNameStartIx = 0;
+
+            for (var i = 0; i < svg.Length; i++)
+            {
+                switch (state)
+                {
+                    case SvgCheckerState.Text:
+                        switch (svg[i])
+                        {
+                            case '&':
+                                state = SvgCheckerState.Escape;
+                                isStart = true;
+                                wasAttr = false;
+                                if (hasHash = s(i + 1) == '#')
+                                    i++;
+                                if (hasHexa = hasHash && s(i + 1) == 'x')
+                                    i++;
+                                break;
+
+                            case '<':
+                                if (s(i + 1) == '/')
+                                {
+                                    i += 2;
+                                    if (tags.Count == 0)
+                                        return new SvgError { Index = i, Message = "Unmatched end tag." };
+                                    var expectedName = tags.Pop();
+                                    if (i + expectedName.Length >= svg.Length || !svg.Substring(i, expectedName.Length + 1).Equals(expectedName + ">", StringComparison.InvariantCultureIgnoreCase))
+                                        return new SvgError { Index = i, Message = $"Unmatched end tag: expected ‘</{expectedName}>’." };
+                                    i += expectedName.Length;
+                                }
+                                else
+                                {
+                                    if (i + 7 < svg.Length && svg.Substring(i + 1, 6).Equals("script", StringComparison.InvariantCultureIgnoreCase))
+                                        return new SvgError { Index = i, Message = "Tag name cannot start with “script”." };
+                                    state = SvgCheckerState.TagName;
+                                    tagNameStartIx = i + 1;
+                                }
+                                break;
+
+                            case '>':
+                                return new SvgError { Index = i, Message = "Stray ‘>’ character outside of a tag." };
+                        }
+                        break;
+
+                    case SvgCheckerState.Escape:
+                        switch ((svg[i], isStart, hasHash, hasHexa))
+                        {
+                            case (';', true, _, _):
+                                return new SvgError { Index = i, Message = "Empty escape sequence." };
+                            case (';', false, _, _):
+                                state = wasAttr ? SvgCheckerState.AttributeValue : SvgCheckerState.Text;
+                                break;
+                            case (((< '0') or (> '9')) and ((< 'a') or (> 'f')) and ((< 'A') or (> 'F')), _, true, true):
+                                return new SvgError { Index = i, Message = "Hexadecimal digit 0–9/a–f/A–F or ‘;’ expected." };
+                            case ((< '0') or (> '9'), _, true, false):
+                                return new SvgError { Index = i, Message = "Digit 0–9 or ‘;’ expected." };
+                            case (_, true, false, false):
+                                if (!char.IsLetter(svg[i]))
+                                    return new SvgError { Index = i, Message = "Letter or ‘;’ expected." };
+                                break;
+                            case (_, false, false, false):
+                                if (svg[i] != '_' && !char.IsLetterOrDigit(svg[i]))
+                                    return new SvgError { Index = i, Message = "Letter, digit, ‘_’ or ‘;’ expected." };
+                                break;
+                            default:
+                                isStart = false;
+                                break;
+                        }
+                        break;
+
+                    case SvgCheckerState.TagName:
+                        if (isStart && !char.IsLetter(svg, i))
+                            return new SvgError { Index = i, Message = "Start of tag name must be a letter." };
+                        else if (char.IsWhiteSpace(svg, i))
+                        {
+                            tags.Push(svg.Substring(tagNameStartIx, i - tagNameStartIx));
+                            state = SvgCheckerState.AttributeName;
+                            isStart = true;
+                            while (i < svg.Length && char.IsWhiteSpace(svg, i))
+                                i++;
+                            if (i + 2 < svg.Length && svg.Substring(i, 2).Equals("on", StringComparison.InvariantCultureIgnoreCase))
+                                return new SvgError { Index = i, Message = "Attribute name cannot start with “on”." };
+                            i--;
+                        }
+                        else if (svg[i] == '>')
+                        {
+                            tags.Push(svg.Substring(tagNameStartIx, i - tagNameStartIx));
+                            state = SvgCheckerState.Text;
+                        }
+                        else if (!char.IsLetterOrDigit(svg, i) && svg[i] != '-' && svg[i] != '_' && svg[i] != ':')
+                            return new SvgError { Index = i, Message = "Tag names can only contain letters, digits, ‘-’, ‘_’, or ‘:’." };
+                        else
+                            isStart = false;
+                        break;
+
+                    case SvgCheckerState.AttributeName:
+                        if (isStart && svg[i] == '>')
+                            state = SvgCheckerState.Text;
+                        else if (isStart && svg[i] == '/' && s(i + 1) == '>')
+                        {
+                            tags.Pop();
+                            state = SvgCheckerState.Text;
+                            i++;
+                        }
+                        else if (isStart && !char.IsLetter(svg, i))
+                            return new SvgError { Index = i, Message = "Start of attribute name must be a letter." };
+                        else if (char.IsWhiteSpace(svg, i) || svg[i] == '=')
+                        {
+                            while (i < svg.Length && char.IsWhiteSpace(svg, i))
+                                i++;
+                            if (i == svg.Length || svg[i] != '=')
+                                return new SvgError { Index = i, Message = "Attribute requires ‘=’ after attribute name." };
+                            i++;
+                            while (i < svg.Length && char.IsWhiteSpace(svg, i))
+                                i++;
+                            if (i == svg.Length)
+                                return new SvgError { Index = i, Message = "Attribute requires value after ‘=’." };
+                            state = SvgCheckerState.AttributeValue;
+                            hasApo = svg[i] == '\'';
+                            hasDq = svg[i] == '"';
+                            if (!hasApo && !hasDq)
+                                i--;
+                        }
+                        else if (!char.IsLetterOrDigit(svg, i) && svg[i] != '-' && svg[i] != '_' && svg[i] != ':')
+                            return new SvgError { Index = i, Message = "Attribute names can only contain letters, digits, ‘-’, ‘_’, or ‘:’." };
+                        else
+                            isStart = false;
+                        break;
+
+                    case SvgCheckerState.AttributeValue:
+                        if ((!hasDq && !hasApo && char.IsWhiteSpace(svg, i)) || (hasDq && svg[i] == '"') || (hasApo && svg[i] == '\''))
+                        {
+                            state = SvgCheckerState.AttributeName;
+                            isStart = true;
+                            while (i + 1 < svg.Length && char.IsWhiteSpace(svg, i + 1))
+                                i++;
+                        }
+                        else if (!hasDq && !hasApo && svg[i] == '>')
+                            state = SvgCheckerState.Text;
+                        else if (svg[i] == '&')
+                        {
+                            state = SvgCheckerState.Escape;
+                            wasAttr = true;
+                        }
+                        else
+                            isStart = false;
+                        break;
+                }
+            }
+            if (state != SvgCheckerState.Text)
+                return new SvgError
+                {
+                    Index = svg.Length,
+                    Message = $@"SVG code abruptly ends in the middle of {state switch
+                    {
+                        SvgCheckerState.AttributeName => "an attribute name",
+                        SvgCheckerState.AttributeValue => "an attribute value",
+                        SvgCheckerState.Escape => "an escape sequence",
+                        _ => "a tag name"
+                    }}."
+                };
+            if (tags.Count > 0)
+                return new SvgError { Index = svg.Length, Message = $"Unclosed ‘{tags.Peek()}’ tag." };
+            return null;
         }
 
         public static (SucoExpression expr, JsonDict variables)[] _constraintLogic;

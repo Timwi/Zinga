@@ -90,6 +90,17 @@
         return [null, null];
     }
     function inRange(x) { return x >= 0 && x < 9; }
+    function keyName(ev)
+    {
+        let str = ev.code;
+        if (ev.shiftKey)
+            str = `Shift+${str}`;
+        if (ev.altKey)
+            str = `Alt+${str}`;
+        if (ev.ctrlKey)
+            str = `Ctrl+${str}`;
+        return str;
+    }
     function orthogonal(cell)
     {
         let list = [];
@@ -102,16 +113,15 @@
                         list.push(xx + 9 * yy);
         return list;
     }
-    function keyName(ev)
+    function removeAttributeSafe(elem, attr)
     {
-        let str = ev.code;
-        if (ev.shiftKey)
-            str = `Shift+${str}`;
-        if (ev.altKey)
-            str = `Alt+${str}`;
-        if (ev.ctrlKey)
-            str = `Ctrl+${str}`;
-        return str;
+        if (elem !== null)
+            elem.removeAttribute(attr);
+    }
+    function setAttributeSafe(elem, attr, value)
+    {
+        if (elem !== null)
+            elem.setAttribute(attr, value);
     }
 
     // State, editing, constraints
@@ -334,7 +344,7 @@
             case 'TwoCells':
                 if (!Array.isArray(value) || value.length !== 2 || !orthogonal(value[0]).includes(value[1]))
                     return { valid: false, message: 'This constraint requires two cells that are orthogonally adjacent to one another.' };
-                return { valid: true, value: [Math.min(...value), Math.max(...value)] };
+                return { valid: true, value: value };
 
             case 'FourCells':
                 if (typeof value === 'number' && value % 9 >= 0 && value % 9 < 9 - 1 && ((value / 9) | 0) >= 0 && ((value / 9) | 0) < 9 - 1)
@@ -567,6 +577,8 @@
         {
             redoBuffer.push(state);
             state = undoBuffer.pop();
+            selectedConstraints = selectedConstraints.filter(sc => sc >= 0 && sc < state.constraints.length);
+            lastSelectedConstraint = 0;
             updateVisuals({ storage: true, svg: true, metadata: true });
         }
     }
@@ -576,6 +588,8 @@
         {
             undoBuffer.push(state);
             state = redoBuffer.pop();
+            selectedConstraints = selectedConstraints.filter(sc => sc >= 0 && sc < state.constraints.length);
+            lastSelectedConstraint = 0;
             updateVisuals({ storage: true, svg: true, metadata: true });
         }
     }
@@ -779,7 +793,7 @@
                 let maxX = Math.max(...selectedCells.map(sc => sc % 9)) + 1;
                 let minY = Math.min(...selectedCells.map(sc => (sc / 9) | 0));
                 let maxY = Math.max(...selectedCells.map(sc => (sc / 9) | 0)) + 1;
-                dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), "[]", JSON.stringify(constrInfosFiltered.map(inf => inf.constraint)), null, null], resultsRaw =>
+                dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), "[]", JSON.stringify(constrInfosFiltered.map(inf => inf.constraint))], resultsRaw =>
                 {
                     let results = JSON.parse(resultsRaw);
                     for (let i = 0; i < results.svgs.length; i++)
@@ -787,7 +801,7 @@
                         let cTypeId = constrInfosFiltered[i].cTypeId;
                         let svg = i === 0 && results.svgDefs !== '' ? `<defs id='constraint-search-result-defs'>${results.svgDefs}</defs>` : '';
                         svg += results.svgs[i] !== null ? blankGrid : '';
-                        svg += `<g id='constraint-search-result-svg-${cTypeId}'>${(results.svgs[i] ?? '') + (results.globalSvgs[i] ?? '')}</g>`;
+                        svg += `<g id='constraint-search-result-svg-${cTypeId}'>${results.svgs[i] ?? results.globalSvgs[i] ?? ''}</g>`;
                         constrInfosFiltered[i].svg.innerHTML = svg;
                         let bBox = document.getElementById(`constraint-search-result-svg-${cTypeId}`).getBBox();
 
@@ -871,9 +885,36 @@
             for (let cIx = 0; cIx < state.constraints.length; cIx++)
             {
                 if (selectedConstraints.includes(cIx))
-                    document.getElementById(`constraint-svg-${cIx}`).setAttribute('filter', 'url(#constraint-selection-shadow)');
+                    setAttributeSafe(document.getElementById(`constraint-svg-${cIx}`), 'filter', 'url(#constraint-selection-shadow)');
                 else
-                    document.getElementById(`constraint-svg-${cIx}`).removeAttribute('filter');
+                    removeAttributeSafe(document.getElementById(`constraint-svg-${cIx}`), 'filter');
+            }
+        }
+
+        function updateConstraintErrors(constraintDiv, cIx)
+        {
+            if (constraintErrors[cIx] && Object.keys(constraintErrors[cIx]).length)
+            {
+                constraintDiv.classList.add('warning');
+                constraintDiv.querySelector('.name').setAttribute('title', Object.keys(constraintErrors[cIx]).map(key => constraintErrors[cIx][key].msg).join(' // '));
+                if (state.constraints[cIx].type === editingConstraintType)
+                    for (let prm of ['svg', 'svgdefs', 'logic'])
+                    {
+                        let reportingBox = document.getElementById(`reporting-${prm}`);
+                        let editingBox = document.getElementById(`constraint-code-${prm}`);
+                        if (editingBox.value.trim().length === 0 || !(prm in constraintErrors[cIx]))
+                            reportingBox.classList.remove('has-error');
+                        else 
+                        {
+                            let err = constraintErrors[cIx][prm];
+                            reportingBox.innerHTML = `<span class='error'></span>
+                                    <a class='show' href='#' data-start='${err.start}' data-end='${err.end}'>show</a>
+                                    ${'highlights' in err ? err.highlights.map(hl => ` <a class='show' href='#' data-start='${hl.start}' data-end='${hl.end}'>show</a>`).join('') : ''}`;
+                            reportingBox.querySelector('span.error').innerText = err.msg;
+                            Array.from(reportingBox.querySelectorAll('a.show')).forEach(a => { setButtonHandler(a, function() { editingBox.setSelectionRange(a.dataset.start | 0, a.dataset.end | 0); }); });
+                            reportingBox.classList.add('has-error');
+                        }
+                    }
             }
         }
 
@@ -882,30 +923,15 @@
         {
             // Re-render all constraint SVGs
             constraintSelectionUpdated = true;
-            dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints), editingConstraintType, editingConstraintTypeParameter], resultsRaw =>
+            dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)], resultsRaw =>
             {
                 let results = JSON.parse(resultsRaw);
                 document.getElementById('constraint-defs').innerHTML = results.svgDefs;
                 document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g id='constraint-svg-${cIx}'>${svg}</g>`).join('');
                 document.getElementById('constraint-svg-global').innerHTML = results.globalSvgs.map((svg, cIx) => [svg, cIx]).filter(inf => inf[0] !== null).map((inf, y) => `<g id='constraint-svg-${inf[1]}' transform='translate(0, ${y * 1.5})'>${inf[0]}</g>`).join('');
-
-                if (editingConstraintTypeParameter !== null)
-                {
-                    let reportingBox = document.getElementById(`reporting-${editingConstraintTypeParameter}`);
-                    let editingBox = document.getElementById(`constraint-code-${editingConstraintTypeParameter}`);
-                    if (editingBox.value.trim().length === 0 || results.editingResult === null)
-                        reportingBox.classList.remove('has-error');
-                    else 
-                    {
-                        reportingBox.innerHTML = `<span class='error'></span>
-                            <a class='show' href='#' data-start='${results.editingResult.start}' data-end='${results.editingResult.end}'>show</a>
-                            ${'highlights' in results.editingResult ? results.editingResult.highlights.map(hl => ` <a class='show' href='#' data-start='${hl.start}' data-end='${hl.end}'>show</a>`).join('') : ''}`;
-                        reportingBox.querySelector('span.error').innerText = results.editingResult.msg;
-                        Array.from(reportingBox.querySelectorAll('a.show')).forEach(a => { setButtonHandler(a, function() { editingBox.setSelectionRange(a.dataset.start | 0, a.dataset.end | 0); }); });
-                        reportingBox.classList.add('has-error');
-                    }
-                }
+                constraintErrors = results.errors;
                 updateConstraintSelection();
+                Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv => { updateConstraintErrors(constraintDiv, constraintDiv.dataset.index | 0); });
                 fixViewBox();
             });
         }
@@ -1069,15 +1095,16 @@
             let cType = getConstraintType(constraint.type);
 
             let specialVariable = getSpecialVariable(cType.kind);
-            if (specialVariable[0] !== null)
+            let enforceResult;
+            if (specialVariable[0] !== null && !(enforceResult = enforceConstraintKind(cType.kind, constraint.values[specialVariable[0]])).valid)
             {
-                let enforceResult = enforceConstraintKind(cType.kind, constraint.values[specialVariable[0]]);
-                if (!enforceResult.valid)
-                {
-                    constraintDiv.classList.add('warning');
-                    constraintDiv.querySelector('.name').setAttribute('title', `${enforceResult.message} Either change the “${specialVariable[0]}” property accordingly, or (if the constraint works correctly as it is) change its Kind to “Custom”.`);
-                }
+                constraintDiv.classList.add('warning');
+                constraintDiv.querySelector('.name').setAttribute('title', `${enforceResult.message} Either change the “${specialVariable[0]}” property accordingly, or (if the constraint works correctly as it is) change its Kind to “Custom”.`);
             }
+
+            // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
+            if (!constraintSelectionUpdated)
+                updateConstraintErrors(constraintDiv, cIx);
 
             for (let v of Object.keys(cType.variables))
                 setVariableEvents(
@@ -1221,15 +1248,15 @@
             {
                 btn.onmouseover = function()
                 {
-                    dotNet('GenerateOutline', [btn.dataset.regions], svg => { document.getElementById('temp-svg').innerHTML = svg; });
+                    dotNet('GenerateOutline', [btn.dataset.regions], svg => { document.getElementById('outline-svg').innerHTML = svg; });
                 };
                 btn.onmouseout = function()
                 {
-                    document.getElementById('temp-svg').innerHTML = '';
+                    document.getElementById('outline-svg').innerHTML = '';
                 };
                 setButtonHandler(btn, () =>
                 {
-                    document.getElementById('temp-svg').innerHTML = '';
+                    document.getElementById('outline-svg').innerHTML = '';
                     let regions = JSON.parse(btn.dataset.regions);
                     setter(regions);
                     selectedCells = [];
@@ -1248,6 +1275,39 @@
             // Givens
             document.getElementById(`sudoku-text-${cell}`).textContent = state.givens[cell] !== null ? state.givens[cell] : '';
         }
+
+        //// Selection arrows
+        //let selectionArrowsSvg = '';
+        //let angles = [
+        //    [225, 270, 315],
+        //    [180, null, 0],
+        //    [135,90,45]
+        //];
+        //for (let selIx = 0; selIx < selectedCells.length - 1; selIx++)
+        //{
+        //    let x1 = selectedCells[selIx] % 9;
+        //    let y1 = (selectedCells[selIx] / 9) | 0;
+        //    let x2 = selectedCells[selIx + 1] % 9;
+        //    let y2 = (selectedCells[selIx + 1] / 9) | 0;
+        //    let mx = (x1 + x2) / 2 + .5;
+        //    let my = (y1 + y2) / 2 + .5;
+        //    let angleDeg = angles[y2 - y1 + 1][x2 - x1 + 1];
+        //    selectionArrowsSvg += `<path d='M-.1 0h.2' transform='translate(${mx}, ${my}) rotate(${angleDeg})' />`;
+        //}
+        //document.getElementById('selection-arrows-svg').innerHTML = selectionArrowsSvg;
+
+        // Selection arrows
+        let selectionArrowsSvg = '';
+        for (let selIx = 0; selIx < selectedCells.length - 1; selIx++)
+        {
+            let x1 = selectedCells[selIx] % 9;
+            let y1 = (selectedCells[selIx] / 9) | 0;
+            let x2 = selectedCells[selIx + 1] % 9;
+            let y2 = (selectedCells[selIx + 1] / 9) | 0;
+            let angle = Math.atan2(y2 - y1, x2 - x1);
+            selectionArrowsSvg += `<path d='M${x1 + .4 * Math.cos(angle)} ${y1 + .4 * Math.sin(angle)} ${x2 - .4 * Math.cos(angle)} ${y2 - .4 * Math.sin(angle)}' transform='translate(${.5 + .1 * Math.cos(angle + Math.PI / 2)}, ${.5 + .1 * Math.sin(angle + Math.PI / 2)})' />`;
+        }
+        document.getElementById('selection-arrows-svg').innerHTML = selectionArrowsSvg;
 
         function fixViewBox()
         {
@@ -1338,6 +1398,7 @@
     let state = makeEmptyState();
     let undoBuffer = [];
     let redoBuffer = [];
+    let constraintErrors = [];
 
     // Events
     puzzleContainer.onmousedown = function(ev)
@@ -1515,7 +1576,10 @@
     puzzleContainer.addEventListener('keyup', ev =>
     {
         if (ev.key === 'Control')
+        {
             selectedCells = [...new Set(selectedCells)];
+            document.getElementById('selection-arrows-svg').style.opacity = 0;
+        }
     });
     puzzleContainer.addEventListener('keydown', ev =>
     {
@@ -1645,8 +1709,13 @@
             case 'Ctrl+Shift+ArrowLeft': selectCellLine('w'); break;
             case 'Ctrl+Shift+ArrowRight': selectCellLine('e'); break;
 
-            case 'Escape': pressEscape(); break;
             case 'Ctrl+KeyA': selectedCells = Array(81).fill(null).map((_, c) => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
+            case 'Escape': pressEscape(); break;
+
+            case 'Ctrl+ControlLeft':
+            case 'Ctrl+ControlRight':
+                document.getElementById('selection-arrows-svg').style.opacity = 1;
+                break;
 
             // Undo/redo
             case 'Backspace':
