@@ -515,7 +515,7 @@
 
                 dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)]);
 
-                dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints), null, null], resultsRaw =>
+                dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], resultsRaw =>
                 {
                     let results = JSON.parse(resultsRaw);
                     document.getElementById('constraint-defs').innerHTML = results.svgDefs;

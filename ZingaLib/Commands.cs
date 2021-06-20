@@ -140,7 +140,7 @@ namespace Zinga.Lib
         {
             public string Message;
             public int Index;
-            public JsonValue ToJson() => new JsonDict { ["msg"] = Message, ["ix"] = Index };
+            public JsonValue ToJson() => new JsonDict { ["msg"] = Message, ["ix"] = Index, ["type"] = "svg" };
         }
 
         private static SvgError checkSvg(string svg)

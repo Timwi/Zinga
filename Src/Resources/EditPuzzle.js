@@ -554,6 +554,7 @@
         });
 
         generateVariablesTable();
+        updateConstraintErrorReports();
     }
     function setGiven(digit)
     {
@@ -864,6 +865,34 @@
                 editConstraintParameter(cTypeId, id, cTypeId => setter(cTypeId, elem.value));
         });
     }
+    function updateConstraintErrorReports()
+    {
+        for (let prm of ['svg', 'svgdefs', 'logic'])
+        {
+            let reportingBox = document.getElementById(`reporting-${prm}`);
+            let editingBox = document.getElementById(`constraint-code-${prm}`);
+            let errorConstraints = selectedConstraints.filter(c => c >= 0 && c < constraintErrors.length && prm in constraintErrors[c]);
+            if (editingBox.value.trim().length === 0 || errorConstraints.length === 0)
+                reportingBox.classList.remove('has-error');
+            else 
+            {
+                let err = constraintErrors[errorConstraints[0]][prm];
+                reportingBox.innerHTML = `<span class='error'></span>
+                    ${err.start && err.end ? `<a class='show' href='#' data-start='${err.start}' data-end='${err.end}'>show</a>` : ''}
+                    ${'highlights' in err ? err.highlights.map(hl => ` <a class='show' href='#' data-start='${hl.start}' data-end='${hl.end}'>show</a>`).join('') : ''}`;
+                reportingBox.querySelector('span.error').innerText = err.msg;
+                Array.from(reportingBox.querySelectorAll('a.show')).forEach(a =>
+                {
+                    setButtonHandler(a, function()
+                    {
+                        if (a.dataset.start && a.dataset.end)
+                            editingBox.setSelectionRange(a.dataset.start | 0, a.dataset.end | 0);
+                    });
+                });
+                reportingBox.classList.add('has-error');
+            }
+        }
+    }
     function updateVisuals(opt)
     {
         // options:
@@ -897,24 +926,6 @@
             {
                 constraintDiv.classList.add('warning');
                 constraintDiv.querySelector('.name').setAttribute('title', Object.keys(constraintErrors[cIx]).map(key => constraintErrors[cIx][key].msg).join(' // '));
-                if (state.constraints[cIx].type === editingConstraintType)
-                    for (let prm of ['svg', 'svgdefs', 'logic'])
-                    {
-                        let reportingBox = document.getElementById(`reporting-${prm}`);
-                        let editingBox = document.getElementById(`constraint-code-${prm}`);
-                        if (editingBox.value.trim().length === 0 || !(prm in constraintErrors[cIx]))
-                            reportingBox.classList.remove('has-error');
-                        else 
-                        {
-                            let err = constraintErrors[cIx][prm];
-                            reportingBox.innerHTML = `<span class='error'></span>
-                                    <a class='show' href='#' data-start='${err.start}' data-end='${err.end}'>show</a>
-                                    ${'highlights' in err ? err.highlights.map(hl => ` <a class='show' href='#' data-start='${hl.start}' data-end='${hl.end}'>show</a>`).join('') : ''}`;
-                            reportingBox.querySelector('span.error').innerText = err.msg;
-                            Array.from(reportingBox.querySelectorAll('a.show')).forEach(a => { setButtonHandler(a, function() { editingBox.setSelectionRange(a.dataset.start | 0, a.dataset.end | 0); }); });
-                            reportingBox.classList.add('has-error');
-                        }
-                    }
             }
         }
 
@@ -932,6 +943,7 @@
                 constraintErrors = results.errors;
                 updateConstraintSelection();
                 Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv => { updateConstraintErrors(constraintDiv, constraintDiv.dataset.index | 0); });
+                updateConstraintErrorReports();
                 fixViewBox();
             });
         }
@@ -1104,7 +1116,8 @@
 
             // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
             if (!constraintSelectionUpdated)
-                updateConstraintErrors(constraintDiv, cIx);
+                updateConstraintErrors(constraintDiv, cIx); // Updates the warning symbols in the constraints list
+            updateConstraintErrorReports(); // Updates the error boxes inside the “Edit constraint code” box
 
             for (let v of Object.keys(cType.variables))
                 setVariableEvents(
