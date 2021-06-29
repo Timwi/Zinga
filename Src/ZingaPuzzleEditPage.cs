@@ -167,6 +167,10 @@ namespace Zinga
                                     new DIV { class_ = "label" }._("Rules"),
                                     new DIV(new TEXTAREA { id = "puzzle-rules-input", accesskey = "/" }._(puzzle.Rules))),
                                 new SECTION(
+                                    new DIV { class_ = "label" }._("Links",
+                                        new BUTTON { id = "add-link", class_ = "mini-btn add", title = "Add a link (for example, to Logic Masters Germany)" }),
+                                    new TABLE { id = "links" }),
+                                new SECTION(
                                     new DIV { class_ = "label" }._("Givens"),
                                     new DIV { id = "givens" }._(
                                         Enumerable.Range(1, 9).Select(n => new BUTTON { type = btype.button, id = $"given-{n}", class_ = "btn given-btn" }.Data("given", n)._(new SPAN(n))),

@@ -27,11 +27,18 @@ namespace Zinga
             try
             {
                 var puzzle = new Puzzle();
+                puzzle.UrlName = MD5.ComputeUrlName(jsonRaw);
+
+                using var tr = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = System.Transactions.IsolationLevel.Serializable });
+                using var db = new Db();
+
+                if (db.Puzzles.Any(p => p.UrlName == puzzle.UrlName))
+                    return HttpResponse.PlainText(puzzle.UrlName);
 
                 puzzle.Title = json["title"].GetString();
                 puzzle.Author = json["author"].GetString();
                 puzzle.Rules = json["rules"].GetString();
-                puzzle.UrlName = MD5.ComputeUrlName(jsonRaw);
+                puzzle.Links = json["links"] == null ? null : json["links"].GetList().Select(lnk => new Link { Text = lnk["text"].GetString(), Url = lnk["url"].GetString() }).ToArray();
 
                 var givens = json["givens"].GetList().Select((v, ix) => (v, ix)).Where(tup => tup.v != null).Select(tup => (cell: tup.ix, value: tup.v.GetInt())).ToArray();
                 if (givens.Any(given => given.cell < 0 || given.cell >= 81))
@@ -40,12 +47,6 @@ namespace Zinga
 
                 var constraints = json["constraints"].GetList();
                 var customConstraintTypes = json["customConstraintTypes"].GetList();
-
-                using var tr = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = System.Transactions.IsolationLevel.Serializable });
-                using var db = new Db();
-
-                if (db.Puzzles.Any(p => p.UrlName == puzzle.UrlName))
-                    return HttpResponse.PlainText(puzzle.UrlName);
 
                 var dbConstraintTypes = constraints.Select(c => c["type"].GetInt()).Where(c => c >= 0).Distinct().ToArray()
                     .Apply(cIds => db.Constraints.Where(c => cIds.Contains(c.ConstraintID))).AsEnumerable().ToDictionary(c => c.ConstraintID);

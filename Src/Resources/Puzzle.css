@@ -29,9 +29,9 @@ input, textarea, button, select {
         outline: 2px solid #46f;
     }
 
-input[type='text'], textarea, select {
-    width: 100%;
-}
+    input[type='text'], textarea, select {
+        width: 100%;
+    }
 
 textarea {
     resize: vertical;
@@ -301,15 +301,15 @@ svg.puzzle-svg {
         font-size: 18pt;
     }
 
-    #sidebar .options .opt-minor {
-        margin-bottom: .5cm;
-        text-align: right;
-        font-size: 12pt;
-    }
+        #sidebar .options .opt-minor {
+            margin-bottom: .5cm;
+            text-align: right;
+            font-size: 12pt;
+        }
 
-    #sidebar .options button {
-        margin-left: .1cm;
-    }
+        #sidebar .options button {
+            margin-left: .1cm;
+        }
 
 #puzzle-container, #sidebar {
     outline: none;
@@ -342,6 +342,7 @@ svg.puzzle-svg .multi-select {
     stroke-width: .145;
     stroke: none;
 }
+
     svg.puzzle-svg .multi-select:hover {
         opacity: 1;
     }
@@ -357,6 +358,7 @@ svg.puzzle-svg .multi-select {
     vertical-align: bottom;
     cursor: pointer;
 }
+
     #sidebar .mini-btn:focus {
         border: 2px solid #46f;
         outline: none;
@@ -370,24 +372,27 @@ svg.puzzle-svg .multi-select {
     top: 0;
     height: 1cm;
 }
-#sidebar .tabs .tab {
-    display: inline-block;
-    background: white;
-    border-right: 2px solid hsl(225, 50%, 80%);
-    border-top-left-radius:  10px;
-    border-top-right-radius: 10px;
-    padding: .075cm .4cm;
-    margin: .2cm .25cm 0 0;
-    font-size: 18pt;
-}
-    #sidebar .tabs .tab:hover {
-        background: hsl(212, 90%, 90%);
-        cursor: pointer;
+
+    #sidebar .tabs .tab {
+        display: inline-block;
+        background: white;
+        border-right: 2px solid hsl(225, 50%, 80%);
+        border-top-left-radius: 10px;
+        border-top-right-radius: 10px;
+        padding: .075cm .4cm;
+        margin: .2cm .25cm 0 0;
+        font-size: 18pt;
     }
-    #sidebar .tabs .tab.active {
-        background: hsl(212, 80%, 50%);
-        color: white;
-    }
+
+        #sidebar .tabs .tab:hover {
+            background: hsl(212, 90%, 90%);
+            cursor: pointer;
+        }
+
+        #sidebar .tabs .tab.active {
+            background: hsl(212, 80%, 50%);
+            color: white;
+        }
 
 #sidebar .tabc {
     background: hsl(225, 90%, 85%);
@@ -400,6 +405,7 @@ svg.puzzle-svg .multi-select {
     bottom: 0;
     overflow: auto;
 }
+
     #sidebar .tabc.active {
         display: block;
     }
@@ -429,18 +435,18 @@ svg.puzzle-svg .multi-select {
     display: none;
 }
 
-#sidebar textarea + .reporting.has-error {
-    display: block;
-    border: 2px solid black;
-    border-radius: .2cm;
-    background: #fee;
-    padding: .2cm .3cm .15cm .8cm;
-    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M1 9 5 1 9 9z" fill="%23fa8" stroke="black" stroke-width=".5" /></svg>');
-    background-repeat: no-repeat;
-    background-position: .15cm 50%;
-    background-size: .6cm .6cm;
-    font-size: 10pt;
-}
+    #sidebar textarea + .reporting.has-error {
+        display: block;
+        border: 2px solid black;
+        border-radius: .2cm;
+        background: #fee;
+        padding: .2cm .3cm .15cm .8cm;
+        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M1 9 5 1 9 9z" fill="%23fa8" stroke="black" stroke-width=".5" /></svg>');
+        background-repeat: no-repeat;
+        background-position: .15cm 50%;
+        background-size: .6cm .6cm;
+        font-size: 10pt;
+    }
 
 #sidebar .expand {
     position: absolute;
@@ -451,9 +457,10 @@ svg.puzzle-svg .multi-select {
     background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M3 2 6 5 3 8z" opacity=".3" /></svg>');
     border: none;
 }
-    #sidebar .expanded > * > .expand {
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M7 4 4 7 1 4z" opacity=".3" /></svg>');
-    }
+
+#sidebar .expanded > * > .expand {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M7 4 4 7 1 4z" opacity=".3" /></svg>');
+}
 
 /* PUZZLE tab */
 #sidebar #puzzle-title-input {
@@ -482,16 +489,20 @@ svg.puzzle-svg .multi-select {
     font-size: 18pt;
     padding: .3cm 0 .2cm 0;
 }
+
     #sidebar .save-section button {
         padding: .1cm .4cm;
         margin: 0 .1cm;
     }
+
     #sidebar .save-section div {
         display: none;
     }
+
     #sidebar .save-section.saving button {
         display: none;
     }
+
     #sidebar .save-section.saving div {
         display: block;
     }
@@ -508,21 +519,21 @@ svg.puzzle-svg .multi-select {
     float: right;
 }
 
-    #sidebar #constraints-section .mini-btn#constraint-select-similar {
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9"><path fill="%232662d9" d="M1 5h7v1.5H1zM1 1h7v1.5H1zM1 3h7v1.5H1z"/><path fill="%23fff" stroke="%23000" stroke-width=".25" d="M3.5 1.5l-.012 5.584 1.16-1.13 1.051 2.54L6.89 8 5.839 5.46l1.619-.02z"/></svg>');
-    }
+#sidebar #constraints-section .mini-btn#constraint-select-similar {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 9 9"><path fill="%232662d9" d="M1 5h7v1.5H1zM1 1h7v1.5H1zM1 3h7v1.5H1z"/><path fill="%23fff" stroke="%23000" stroke-width=".25" d="M3.5 1.5l-.012 5.584 1.16-1.13 1.051 2.54L6.89 8 5.839 5.46l1.619-.02z"/></svg>');
+}
 
-    #sidebar #constraints-section .mini-btn#constraint-dup {
-       background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 49.886719 5 A 15 15 0 0 0 35 20 A 15 15 0 0 0 36.191406 25.855469 L 6.0234375 56.023438 A 5.625 5.625 0 0 0 6.0234375 63.976562 A 5.625 5.625 0 0 0 13.976562 63.976562 L 44.144531 33.808594 A 15 15 0 0 0 50 35 A 15 15 0 0 0 65 20 A 15 15 0 0 0 50 5 A 15 15 0 0 0 49.886719 5 z M 79.886719 35 A 15 15 0 0 0 65 50 A 15 15 0 0 0 66.191406 55.855469 L 36.023438 86.023438 A 5.625 5.625 0 0 0 36.023438 93.976562 A 5.625 5.625 0 0 0 43.976562 93.976562 L 74.144531 63.808594 A 15 15 0 0 0 80 65 A 15 15 0 0 0 95 50 A 15 15 0 0 0 80 35 A 15 15 0 0 0 79.886719 35 z" fill="%233274e7" /></svg>');
-    }
+#sidebar #constraints-section .mini-btn#constraint-dup {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 49.886719 5 A 15 15 0 0 0 35 20 A 15 15 0 0 0 36.191406 25.855469 L 6.0234375 56.023438 A 5.625 5.625 0 0 0 6.0234375 63.976562 A 5.625 5.625 0 0 0 13.976562 63.976562 L 44.144531 33.808594 A 15 15 0 0 0 50 35 A 15 15 0 0 0 65 20 A 15 15 0 0 0 50 5 A 15 15 0 0 0 49.886719 5 z M 79.886719 35 A 15 15 0 0 0 65 50 A 15 15 0 0 0 66.191406 55.855469 L 36.023438 86.023438 A 5.625 5.625 0 0 0 36.023438 93.976562 A 5.625 5.625 0 0 0 43.976562 93.976562 L 74.144531 63.808594 A 15 15 0 0 0 80 65 A 15 15 0 0 0 95 50 A 15 15 0 0 0 80 35 A 15 15 0 0 0 79.886719 35 z" fill="%233274e7" /></svg>');
+}
 
-    #sidebar #constraints-section .mini-btn#constraint-move-up {
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M5 1 8 5h-2v4h-2v-4h-2z" fill="%233274e7" /></svg>');
-    }
+#sidebar #constraints-section .mini-btn#constraint-move-up {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M5 1 8 5h-2v4h-2v-4h-2z" fill="%233274e7" /></svg>');
+}
 
-    #sidebar #constraints-section .mini-btn#constraint-move-down {
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M5 9 8 5h-2v-4h-2v4h-2z" fill="%233274e7" /></svg>');
-    }
+#sidebar #constraints-section .mini-btn#constraint-move-down {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M5 9 8 5h-2v-4h-2v4h-2z" fill="%233274e7" /></svg>');
+}
 
 #sidebar .constraint {
     font-size: 12pt;
@@ -534,58 +545,66 @@ svg.puzzle-svg .multi-select {
         cursor: pointer;
     }
 
-        #sidebar .constraint.custom > .name {
-            font-style: italic;
+    #sidebar .constraint.custom > .name {
+        font-style: italic;
+    }
+
+    #sidebar .constraint.warning > .name > span {
+        padding-left: .5cm;
+        position: relative;
+    }
+
+        #sidebar .constraint.warning > .name > span::before {
+            position: absolute;
+            content: '';
+            width: .5cm;
+            height: .5cm;
+            left: 0;
+            top: 0;
+            display: block;
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" stroke="black" stroke-width=".5"><path d="M5 1 9 9 1 9z" fill="yellow" /><path d="M5 3v3.5M5 7.3v.4" fill="none" stroke-width=".8" /></svg>');
         }
-
-            #sidebar .constraint.warning > .name > span {
-                padding-left: .5cm;
-                position: relative;
-            }
-
-            #sidebar .constraint.warning > .name > span::before {
-                position: absolute;
-                content: '';
-                width: .5cm;
-                height: .5cm;
-                left: 0;
-                top: 0;
-                display: block;
-                background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10" stroke="black" stroke-width=".5"><path d="M5 1 9 9 1 9z" fill="yellow" /><path d="M5 3v3.5M5 7.3v.4" fill="none" stroke-width=".8" /></svg>');
-            }
 
     #sidebar .constraint:not(:last-child) {
         border-bottom: 1px solid black;
     }
-        #sidebar .constraint .variables {
-            display: none;
-            color: black;
-            margin-top: .1cm;
-        }
-            #sidebar .constraint.expanded .variables {
-                display: table;
-            }
-        #sidebar .constraint .variables .variable {
-            display: table-row;
-        }
-            #sidebar .constraint .variables .variable > div {
-                display: table-cell;
-                padding: .05cm .3cm;
-            }
-            #sidebar .constraint .variables .variable .name {
-                font-weight: bold;
-                background: white;
-            }
-            #sidebar .constraint .variables .variable .value {
-                background: hsl(225, 80%, 95%);
-            }
 
-        #sidebar .constraint .variables ol {
-            padding-left: .5cm;
+    #sidebar .constraint .variables {
+        display: none;
+        color: black;
+        margin-top: .1cm;
+    }
+
+    #sidebar .constraint.expanded .variables {
+        display: table;
+    }
+
+    #sidebar .constraint .variables .variable {
+        display: table-row;
+    }
+
+        #sidebar .constraint .variables .variable > div {
+            display: table-cell;
+            padding: .05cm .3cm;
         }
+
+        #sidebar .constraint .variables .variable .name {
+            font-weight: bold;
+            background: white;
+        }
+
+        #sidebar .constraint .variables .variable .value {
+            background: hsl(225, 80%, 95%);
+        }
+
+    #sidebar .constraint .variables ol {
+        padding-left: .5cm;
+    }
+
         #sidebar .constraint .variables ol li.extra {
             opacity: .2;
         }
+
             #sidebar .constraint .variables ol li.extra:hover {
                 opacity: 1;
             }
@@ -593,6 +612,7 @@ svg.puzzle-svg .multi-select {
     #sidebar .constraint .mini-btn.show {
         background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 40 5 L 10.09375 35 L 40 65 L 40 44.708984 C 73.379622 44.022868 83.374266 48.868838 65.09375 90 L 80.09375 90 C 98.976958 33.350377 93.159505 23.925067 40 24.757812 L 40 5 z" fill="%23507fcb" /></svg>');
     }
+
     #sidebar .constraint .mini-btn.set {
         background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M 95,60.09375 65,90 35,60.09375 H 55.291016 C 55.977132,26.714128 51.131162,16.719484 9.9999996,35 V 20 C 66.649623,1.1167916 76.074933,6.9342446 75.242188,60.09375 Z" fill="%232fa639" /></svg>');
         text-align: left;
@@ -601,27 +621,35 @@ svg.puzzle-svg .multi-select {
         font-size: 9pt;
         padding: 5px 0 0 1px;
     }
+
     #sidebar .constraint .mini-btn.merge {
         position: absolute;
         top: .075cm;
         right: 0;
         background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M5 5h3.5v3.5h-3.5z" fill="none" stroke="black" stroke-width=".5" /><path d="M1 2 2 1 5 4 6 3 7 7 3 6 4 5z" fill="%232fa739" /></svg>');
     }
+
     #sidebar .constraint .int-list input {
         width: 1.1cm;
         margin-right: .1cm;
     }
 
-    #sidebar .mini-btn.add {
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M4 2h2v2h2v2h-2v2h-2v-2h-2v-2h2z" fill="%2339A332" /></svg>');
-    }
+#sidebar .mini-btn.add {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M4 2h2v2h2v2h-2v2h-2v-2h-2v-2h2z" fill="%2339A332" /></svg>');
+    float: right;
+}
 
-    #sidebar .mini-btn.remove {
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M2 4h6v2h-6z" fill="%23A33232" /></svg>');
-    }
+#sidebar .mini-btn.remove {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M2 4h6v2h-6z" fill="%23A33232" /></svg>');
+}
+
+#sidebar #links {
+    width: 100%;
+}
 
 #sidebar #constraint-code-section {
 }
+
     #sidebar #constraint-code-section > .label {
         position: relative;
         padding-left: .6cm;
@@ -646,9 +674,10 @@ svg.puzzle-svg .multi-select {
     #sidebar #constraint-code-section .constraint-code {
         display: none;
     }
-        #sidebar #constraint-code-section.expanded .constraint-code {
-            display: block;
-        }
+
+    #sidebar #constraint-code-section.expanded .constraint-code {
+        display: block;
+    }
 
     #sidebar #constraint-code-section span.fixed {
         background: white;
@@ -672,6 +701,7 @@ svg.puzzle-svg .multi-select {
     background: hsl(225, 80%, 90%);
     width: 100%;
 }
+
     #sidebar #constraint-code-variables select {
         width: 1.9cm;
         margin-left: .2cm;
@@ -688,9 +718,9 @@ svg.puzzle-svg .multi-select {
         padding-right: .2cm;
     }
 
-        #sidebar #constraint-code-variables tr.fixed td {
-            padding-top: .1cm;
-        }
+    #sidebar #constraint-code-variables tr.fixed td {
+        padding-top: .1cm;
+    }
 
     #sidebar #constraint-code-variables tr.fixed th, #sidebar #constraint-code-variables tr.fixed td {
         background: hsl(225, 100%, 80%);
@@ -699,9 +729,11 @@ svg.puzzle-svg .multi-select {
 #sidebar #constraint-add-section {
     font-size: 12pt;
 }
+
     #sidebar #constraint-add-section .main {
         padding: 0 .25cm;
     }
+
         #sidebar #constraint-add-section .main ul {
             padding: 0 0 0 1em;
         }
@@ -714,15 +746,18 @@ svg.puzzle-svg .multi-select {
             border-spacing: 2px;
             width: 100%;
         }
-            #sidebar #constraint-add-section .main th {
-                text-align: center;
-                background: hsl(225, 80%, 80%);
-                padding: .05cm .25cm;
-            }
-            #sidebar #constraint-add-section .main td {
-                background: white;
-                padding: .05cm .25cm;
-            }
+
+        #sidebar #constraint-add-section .main th {
+            text-align: center;
+            background: hsl(225, 80%, 80%);
+            padding: .05cm .25cm;
+        }
+
+        #sidebar #constraint-add-section .main td {
+            background: white;
+            padding: .05cm .25cm;
+        }
+
         #sidebar #constraint-add-section .main hr {
             border: none;
             border-bottom: 1px solid hsl(225, 40%, 60%);
@@ -744,73 +779,74 @@ svg.puzzle-svg .multi-select {
         display: grid;
     }
 
-    #constraint-search-box {
-        padding: .3cm .3cm;
-        font-size: 24pt;
-        background: hsl(225, 80%, 70%);
+#constraint-search-box {
+    padding: .3cm .3cm;
+    font-size: 24pt;
+    background: hsl(225, 80%, 70%);
+}
+
+#constraint-button-row {
+    padding: .3cm .5cm;
+    text-align: right;
+    font-size: 24pt;
+    background: hsl(225, 80%, 70%);
+}
+
+    #constraint-button-row button {
+        margin-left: .2cm;
+        padding: 0 .5cm;
     }
 
-    #constraint-button-row {
-        padding: .3cm .5cm;
-        text-align: right;
-        font-size: 24pt;
-        background: hsl(225, 80%, 70%);
+#constraint-results-box {
+    box-shadow: inset 0 0 .1cm rgba(0, 0, 0, .3);
+    overflow: auto;
+    display: flex;
+    flex-wrap: wrap;
+    padding: .1cm;
+    align-content: start;
+}
+
+    #constraint-results-box .item {
+        margin: .1cm;
+        width: 5.8cm;
+        text-align: center;
+        border: 2px solid transparent;
+        cursor: pointer;
+        height: auto;
+        min-height: 0;
+        box-sizing: content-box;
     }
 
-        #constraint-button-row button {
-            margin-left: .2cm;
-            padding: 0 .5cm;
+        #constraint-results-box .item:hover {
+            border-color: hsl(225, 90%, 40%);
+            background-color: hsl(225, 90%, 85%);
         }
 
-    #constraint-results-box {
-        box-shadow: inset 0 0 .1cm rgba(0, 0, 0, .3);
-        overflow: auto;
-        display: flex;
-        flex-wrap: wrap;
-        padding: .1cm;
-        align-content: start;
-    }
-
-        #constraint-results-box .item {
-            margin: .1cm;
-            width: 5.8cm;
-            text-align: center;
-            border: 2px solid transparent;
-            cursor: pointer;
-            height: auto;
-            min-height: 0;
-            box-sizing: content-box;
+        #constraint-results-box .item > svg {
+            width: 5.6cm;
+            margin-top: .1cm;
         }
-            #constraint-results-box .item:hover {
-                border-color: hsl(225, 90%, 40%);
-                background-color: hsl(225, 90%, 85%);
-            }
 
-            #constraint-results-box .item > svg {
-                width: 5.6cm;
-                margin-top: .1cm;
-            }
+        #constraint-results-box .item > .name {
+            font-size: 18pt;
+            font-weight: bold;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
 
-            #constraint-results-box .item > .name {
-                font-size: 18pt;
-                font-weight: bold;
-                text-overflow: ellipsis;
-                overflow: hidden;
-                white-space: nowrap;
-            }
+        #constraint-results-box .item > .akas {
+            font-size: 12pt;
+            font-weight: bold;
+        }
 
-            #constraint-results-box .item > .akas {
-                font-size: 12pt;
-                font-weight: bold;
-            }
+        #constraint-results-box .item > .descr {
+            font-size: 10pt;
+            margin: .1cm 0;
+        }
 
-            #constraint-results-box .item > .descr {
-                font-size: 10pt;
-                margin: .1cm 0;
-            }
-
-            #constraint-results-box .item > .error {
-                color: #800;
-                font-size: 10pt;
-                font-style: italic;
-            }
+        #constraint-results-box .item > .error {
+            color: #800;
+            font-size: 10pt;
+            font-style: italic;
+        }

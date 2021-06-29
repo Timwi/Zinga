@@ -225,7 +225,7 @@ namespace Zinga
                                     new DIV { class_ = "rules" }._(new DIV { id = "rules-text" }._(
                                         puzzle?.Rules.NullOr(r => Regex.Split(r, @"\r?\n").Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => new P(s)))
                                             ?? (object) "Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.")),
-                                    puzzle?.Links == null || puzzle.Links.Length == 0 ? null : new UL { class_ = "links" }._(puzzle.Links.Select(link => new LI(new A { href = link.Url }._(link.Text)))),
+                                    isTest ? new UL { class_ = "links" } : (puzzle?.Links == null || puzzle.Links.Length == 0) ? null : new UL { class_ = "links" }._(puzzle.Links.Select(link => new LI(new A { href = link.Url }._(link.Text)))),
                                     new DIV { class_ = "options" }._(
                                         new DIV { class_ = "opt-minor" }._(new BUTTON { type = btype.button, id = "opt-screenshot", accesskey = "s" }._("Screenshot".Accel('S')), new BUTTON { type = btype.button, id = "opt-edit", accesskey = "e" }._("Edit this puzzle".Accel('E'))),
                                         new DIV(new INPUT { type = itype.checkbox, id = "opt-show-errors" }, new LABEL { for_ = "opt-show-errors", accesskey = "c" }._(" Show conflicts".Accel('c'))),

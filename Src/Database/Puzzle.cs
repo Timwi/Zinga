@@ -33,7 +33,7 @@ namespace Zinga.Database
         public Link[] Links
         {
             get => _linksCache ??= LinksJson.NullOr(l => ClassifyJson.Deserialize<Link[]>(l));
-            set { LinksJson = value.NullOr(v => ClassifyJson.Serialize(v).ToString()); _linksCache = value; }
+            set { LinksJson = value.NullOr(v => v.Length == 0 ? null : ClassifyJson.Serialize(v).ToString()); _linksCache = value; }
         }
 
         private (int cell, int value)[] _givensCache;

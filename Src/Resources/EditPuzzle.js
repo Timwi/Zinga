@@ -378,6 +378,7 @@
             title: 'Sudoku',
             author: 'unknown',
             rules: '',
+            links: [],
             givens: Array(81).fill(null),
             constraints: [],
             customConstraintTypes: []
@@ -898,7 +899,7 @@
         // options:
         //  storage (bool)    — updates localStorage with the current state and the undo/redo history
         //  svg (bool)          — updates constraint SVG in the grid (this involves Blazor)
-        //  metadata (bool) — updates the title / author / rules textboxes
+        //  metadata (bool) — updates the title / author / rules / links section
 
         // Update localStorage
         if (localStorage && opt && opt.storage)
@@ -1357,6 +1358,32 @@
             document.getElementById('puzzle-title-input').value = state.title;
             document.getElementById('puzzle-author-input').value = state.author;
             document.getElementById('puzzle-rules-input').value = state.rules;
+
+            if (!Array.isArray(state.links))
+                state.links = [];
+            document.getElementById('links').innerHTML = `
+                ${state.links.length > 0 ? '<thead><tr><th></th><th>Text</th><th>URL</th></tr></thead>' : ''}
+                <tbody>
+                    ${state.links.map(_ => `
+                        <tr class='link'>
+                            <td><button class='mini-btn remove'></button></td>
+                            <td><input type='text' class='text' /></td>
+                            <td><input type='text' class='url' /></td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            `;
+            var ts = Array.from(document.querySelectorAll('#links .text'));
+            var us = Array.from(document.querySelectorAll('#links .url'));
+            var delBtns = Array.from(document.querySelectorAll('#links .remove'));
+            state.links.forEach((lnk, ix) =>
+            {
+                ts[ix].value = lnk.text;
+                ts[ix].onchange = function() { saveUndo(); lnk.text = ts[ix].value; updateVisuals({ storage: true, metadata: true }); };
+                us[ix].value = lnk.url;
+                us[ix].onchange = function() { saveUndo(); lnk.url = us[ix].value; updateVisuals({ storage: true, metadata: true }); };
+                setButtonHandler(delBtns[ix], () => { saveUndo(); state.links.splice(ix, 1); updateVisuals({ storage: true, metadata: true }); });
+            });
         }
 
         if (lastFocusedElement)
@@ -1569,6 +1596,16 @@
     document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
     document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
     document.getElementById('puzzle-rules-input').onchange = function() { saveUndo(); state.rules = document.getElementById('puzzle-rules-input').value; updateVisuals({ storage: true }); };
+    setButtonHandler(document.getElementById('add-link'), () =>
+    {
+        saveUndo();
+        if (!Array.isArray(state.links))
+            state.links = [];
+        state.links.push({ text: '', url: '' });
+        updateVisuals({ storage: true, metadata: true });
+        let ts = Array.from(document.querySelectorAll('#links .text'));
+        ts[ts.length - 1].focus();
+    });
 
     constraintCodeBox.querySelector('.label').ondblclick = function(ev) { if (ev.target !== constraintCodeExpander) setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); };
 

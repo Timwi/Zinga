@@ -504,6 +504,8 @@
 
                 document.querySelector('#topbar>.title').innerText = state.title ?? 'Sudoku';
                 document.querySelector('#topbar>.author').innerText = `by ${state.author ?? 'unknown'}`;
+                document.querySelector('#sidebar .links').innerHTML = Array.isArray(state.links) ? state.links.map(_ => `<li><a></a></li>`).join('') : '';
+                Array.from(document.querySelectorAll('#sidebar .links a')).forEach((obj, ix) => { obj.setAttribute('href', state.links[ix].url); obj.innerText = state.links[ix].text; });
                 document.title = `Testing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
 
                 puzzleDiv.dataset.title = state.title;
@@ -669,6 +671,7 @@
     let state = makeCleanState();
     let undoBuffer = [];
     let redoBuffer = [];
+
 
     // Events
     puzzleContainer.onmouseup = handler(puzzleContainer.ontouchend = function(ev)
