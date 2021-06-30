@@ -63,11 +63,14 @@ namespace Zinga
                     ("Redo", false, "redo", 1, 2, false),
                     ("More", false, "sidebar", 1, 2, false)));
 
-            var hsls = new[] { 0, 30, 60, 120, 180, 210, 240, 280, 310 };
+            var hues = new[] { 0, 30, 60, 120, 180, 220, 270, 310, 0 };
+            var saturations = new[] { 80, 80, 80, 80, 80, 80, 80, 80, 0 };
+            var lightnesses = new[] { 80, 80, 80, 80, 80, 80, 80, 80, 70 };
+            var colors = Enumerable.Range(0, 9).Select(i => $"hsl({hues[i]}, {saturations[i]}%, {lightnesses[i]}%)").ToArray();
             string renderButton(string id, double x, double y, double width, string label, bool color, bool isSvg = false) => $@"
                 <g class='button' id='{id}' transform='translate({x}, {y})'>
                     <rect class='clickable' x='0' y='0' width='{width}' height='{btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>{(color ? $@"
-                    <rect class='color' x='{width / 2 - .3}' y='{btnHeight / 2 - .3}' width='.6' height='.6' fill='hsl({hsls[int.Parse(label) - 1]}, 80%, 80%)' stroke='black' stroke-width='.01' />" : null)}
+                    <rect class='color' x='{width / 2 - .3}' y='{btnHeight / 2 - .3}' width='.6' height='.6' fill='{colors[int.Parse(label) - 1]}' stroke='black' stroke-width='.01' />" : null)}
                     {(isSvg ? label : $"<text class='label' x='{width / 2}' y='.6' font-size='.55' text-anchor='middle'>{label}</text>")}
                 </g>";
 
@@ -101,6 +104,10 @@ namespace Zinga
                     new SCRIPTLiteral(Resources.Js),
                     new STYLELiteral(Resources.Css),
 #endif
+                    new STYLELiteral(Enumerable.Range(0, 9).Select(i => $@"
+                        svg.puzzle-svg .cell.c{i} rect, svg.puzzle-svg .cell path.c{i} {{ fill: {colors[i]}; }}
+                        svg.puzzle-svg .cell.highlighted.c{i} rect, svg.puzzle-svg .cell.highlighted path.c{i} {{ fill: hsl({hues[i]}, {saturations[i] * 5 / 8}%, {lightnesses[i] / 2}%); }}
+                    ").JoinString()),
                     new LINK { rel = "shortcut icon", type = "image/png", href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQAAQMAAABF07nAAAAABlBMVEUAAAD///+l2Z/dAAACFElEQVR42u3YsQ2AMBAEwZMIKINS3RplERm38ERvodn4gokvkSRJkiRJ2qHxFrqTXJXhk+SsDCcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAJEmSJEmStslFAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8EPA8Q0gSZIkSZLUflD4iAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANoBkiRJkiRJnS37yw5ZFqD7+QAAAABJRU5ErkJggg==" }),
                 new BODY { class_ = "is-puzzle" }._(
                     new DIV { id = "topbar" }._(
