@@ -3,6 +3,7 @@
     internal class SucoListExpressionCondition : SucoListCondition
     {
         public SucoExpression Expression { get; private set; }
+        public override string ToString() => $"({Expression})";
 
         public SucoListExpressionCondition(int startIndex, int endIndex, SucoExpression expression)
             : base(startIndex, endIndex)

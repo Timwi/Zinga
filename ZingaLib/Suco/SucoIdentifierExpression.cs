@@ -3,6 +3,7 @@
     public class SucoIdentifierExpression : SucoExpression
     {
         public string Name { get; private set; }
+        public override string ToString() => Name;
 
         public SucoIdentifierExpression(int startIndex, int endIndex, string name, SucoType type = null)
             : base(startIndex, endIndex, type)

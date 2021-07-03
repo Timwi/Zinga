@@ -6,6 +6,25 @@
         public SucoExpression Right { get; private set; }
         public BinaryOperator Operator { get; private set; }
 
+        public override string ToString() => $@"({Left} {Operator switch
+        {
+            BinaryOperator.Or => "|",
+            BinaryOperator.And => "&",
+            BinaryOperator.Equal => "=",
+            BinaryOperator.NotEqual => "!=",
+            BinaryOperator.LessThan => "<",
+            BinaryOperator.LessThanOrEqual => "≤",
+            BinaryOperator.GreaterThan => ">",
+            BinaryOperator.GreaterThanOrEqual => "≥",
+            BinaryOperator.Plus => "+",
+            BinaryOperator.Minus => "-",
+            BinaryOperator.Times => "×",
+            BinaryOperator.Modulo => "%",
+            BinaryOperator.Divide => "÷",
+            BinaryOperator.Power => "^",
+            _ => "?"
+        }} {Right})";
+
         public SucoBinaryOperatorExpression(int startIndex, int endIndex, SucoExpression left, SucoExpression right, BinaryOperator op, SucoType type = null)
             : base(startIndex, endIndex, type)
         {

@@ -6,11 +6,14 @@ namespace Zinga.Suco
     public class SucoOptimizedListComprehensionExpression : SucoExpression
     {
         public IList<(SucoListComprehensionVariable[] variables, List<SucoListCondition> conditions, SucoExpression expr)> Content { get; private set; }
+        private readonly SucoListComprehensionExpression _original;
+        public override string ToString() => _original.ToString();
 
-        public SucoOptimizedListComprehensionExpression(int startIndex, int endIndex, IList<(SucoListComprehensionVariable[] variables, List<SucoListCondition> conditions, SucoExpression expr)> content, SucoType type)
+        public SucoOptimizedListComprehensionExpression(SucoListComprehensionExpression original, int startIndex, int endIndex, IList<(SucoListComprehensionVariable[] variables, List<SucoListCondition> conditions, SucoExpression expr)> content, SucoType type)
             : base(startIndex, endIndex, type)
         {
             Content = content;
+            _original = original;
         }
 
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => this;

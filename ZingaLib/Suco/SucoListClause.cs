@@ -1,4 +1,7 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
+using RT.Util;
+using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
 {
@@ -11,6 +14,7 @@ namespace Zinga.Suco
         public SucoExpression FromExpression { get; private set; }
         public List<SucoListCondition> Conditions { get; private set; }
         public SucoType VariableType { get; private set; }
+        public override string ToString() => $"{(HasDollar ? "$" : "")}{(HasPlus ? "+" : "")}{(HasSingleton ? "1 " : "")}{VariableName}{FromExpression.NullOr(fe => $" from ({fe})")}{Conditions.Select(c => $" {c}").JoinString()}";
 
         public SucoListClause(int startIndex, int endIndex, string variableName, bool hasDollar, bool hasPlus, bool hasSingleton, SucoExpression fromExpression, List<SucoListCondition> conditions, SucoType varType = null)
             : base(startIndex, endIndex)

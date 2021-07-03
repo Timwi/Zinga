@@ -4,6 +4,7 @@
     {
         public SucoExpression Operand { get; private set; }
         public string MemberName { get; private set; }
+        public override string ToString() => $"{Operand}.{MemberName}";
 
         public SucoMemberAccessExpression(int startIndex, int endIndex, SucoExpression operand, string memberName, SucoType type = null)
             : base(startIndex, endIndex, type)

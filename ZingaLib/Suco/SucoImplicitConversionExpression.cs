@@ -3,6 +3,7 @@
     public class SucoImplicitConversionExpression : SucoExpression
     {
         public SucoExpression Expression { get; private set; }
+        public override string ToString() => $"{Expression}.({Type})";
 
         public SucoImplicitConversionExpression(int startIndex, int endIndex, SucoExpression inner, SucoType type)
             : base(startIndex, endIndex, type)

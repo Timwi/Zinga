@@ -8,6 +8,7 @@ namespace Zinga.Suco
     public class SucoListShortcutCondition : SucoListCondition
     {
         public string Name { get; private set; }
+        public override string ToString() => Name;
 
         public SucoListShortcutCondition(int startIndex, int endIndex, string name)
             : base(startIndex, endIndex)

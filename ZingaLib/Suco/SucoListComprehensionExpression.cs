@@ -15,6 +15,7 @@ namespace Zinga.Suco
         public SucoExpression Selector { get; private set; }
         private SucoContext _context;
         public SucoType ElementType => ((SucoListType) Type).ElementType;
+        public override string ToString() => $"{{{Clauses.JoinString(", ")}{Selector.NullOr(s => $": {s}")}}}";
 
         public SucoListComprehensionExpression(int startIndex, int endIndex, List<SucoListClause> clauses, SucoExpression selector, SucoType type = null)
             : base(startIndex, endIndex, type)
@@ -145,7 +146,7 @@ namespace Zinga.Suco
                 return new SucoConstant(StartIndex, EndIndex, Type, array);
             }
 
-            return new SucoOptimizedListComprehensionExpression(StartIndex, EndIndex, optimized, Type);
+            return new SucoOptimizedListComprehensionExpression(this, StartIndex, EndIndex, optimized, Type);
         }
 
         private IEnumerable<T> recurse<T>(int clIx, SucoEnvironment curEnv, int?[] grid, object[] collections, int[] positions)

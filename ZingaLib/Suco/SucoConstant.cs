@@ -4,6 +4,7 @@
     {
         public object Value { get; private set; }
         public override object Interpret(SucoEnvironment env, int?[] grid) => Value;
+        public override string ToString() => Value.ToString();
 
         public SucoConstant(int startIndex, int endIndex, SucoType type, object value)
             : base(startIndex, endIndex, type)

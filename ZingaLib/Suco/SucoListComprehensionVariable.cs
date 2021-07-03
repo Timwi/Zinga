@@ -21,5 +21,7 @@ namespace Zinga.Suco
             List = list;
             Position = position;
         }
+
+        public override string ToString() => $"{Name} = {Value} ({(List == null ? "-" : Position.ToString())})";
     }
 }

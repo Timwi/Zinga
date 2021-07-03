@@ -3,6 +3,7 @@
     public class SucoIntegerLiteralExpression : SucoExpression
     {
         public int LiteralValue { get; private set; }
+        public override string ToString() => LiteralValue.ToString();
 
         public SucoIntegerLiteralExpression(int startIndex, int endIndex, int numericalValue, SucoType type = null)
             : base(startIndex, endIndex, type)
