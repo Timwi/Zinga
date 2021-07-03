@@ -154,7 +154,7 @@ namespace Zinga
                                             <g id='constraint-svg-global'>{constraints?
                                                 .Select((c, cIx) => (constraint: c, cIx))
                                                 .Where(tup => constraintTypes[tup.constraint.ConstraintID].Kind == ConstraintKind.Global)
-                                                .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ConstraintID].GetSvg(decodedValues[tup.cIx])}</g>")
+                                                .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' class='constraint-svg' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ConstraintID].GetSvg(decodedValues[tup.cIx])}</g>")
                                                 .JoinString()}</g>
 
                                             <g id='bb-puzzle-without-global'>
@@ -209,7 +209,7 @@ namespace Zinga
                                                 <rect class='region-invalid' id='box-invalid-7' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 6)' />
                                                 <rect class='region-invalid' id='box-invalid-8' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 6)' />
 
-                                                <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
+                                                <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g class='constraint-svg' id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
 
                                                 {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
                                                     <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>

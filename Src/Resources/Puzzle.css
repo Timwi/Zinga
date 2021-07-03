@@ -122,9 +122,6 @@ svg.puzzle-svg {
         fill: hsl(0, 0%, 50%);
     }
 
-    /*##*/
-    /*###*/
-
     svg.puzzle-svg .cell.highlighted text {
         fill: white;
     }
@@ -176,6 +173,18 @@ svg.puzzle-svg {
 
 #puzzle.mode-color svg .button rect.color {
     opacity: 1;
+}
+
+#puzzle .constraint-svg.selected {
+    filter: url(#constraint-selection-shadow);
+}
+
+#puzzle .constraint-svg.violated {
+    filter: url(#constraint-invalid-shadow);
+}
+
+#puzzle .constraint-svg:not(.selected):not(.violated) .violation-only {
+    opacity: 0;
 }
 
 #sidebar {

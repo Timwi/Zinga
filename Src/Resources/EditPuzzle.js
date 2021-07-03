@@ -915,9 +915,9 @@
             for (let cIx = 0; cIx < state.constraints.length; cIx++)
             {
                 if (selectedConstraints.includes(cIx))
-                    setAttributeSafe(document.getElementById(`constraint-svg-${cIx}`), 'filter', 'url(#constraint-selection-shadow)');
+                    document.getElementById(`constraint-svg-${cIx}`).classList.add('selected');
                 else
-                    removeAttributeSafe(document.getElementById(`constraint-svg-${cIx}`), 'filter');
+                    document.getElementById(`constraint-svg-${cIx}`).classList.remove('selected');
             }
         }
 
@@ -939,7 +939,7 @@
             {
                 let results = JSON.parse(resultsRaw);
                 document.getElementById('constraint-defs').innerHTML = results.svgDefs;
-                document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g id='constraint-svg-${cIx}'>${svg}</g>`).join('');
+                document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g class='constraint-svg' id='constraint-svg-${cIx}'>${svg}</g>`).join('');
                 document.getElementById('constraint-svg-global').innerHTML = results.globalSvgs.map((svg, cIx) => [svg, cIx]).filter(inf => inf[0] !== null).map((inf, y) => `<g id='constraint-svg-${inf[1]}' transform='translate(0, ${y * 1.5})'>${inf[0]}</g>`).join('');
                 constraintErrors = results.errors;
                 updateConstraintSelection();
@@ -1782,6 +1782,9 @@
             case 'Ctrl+KeyO':
                 console.log(selectedCells.join(", "));
                 break;
+            case 'Ctrl+Shift+KeyO':
+                console.log(state);
+                break;
 
             default:
                 anyFunction = false;
@@ -1883,6 +1886,16 @@
         }
     });
     document.getElementById('constraint-search-input').addEventListener('keyup', () => { runConstraintSearch(document.getElementById('constraint-search-input').value); });
+
+    document.addEventListener('paste', ev =>
+    {
+        let newState;
+        try { newState = JSON.parse(ev.clipboardData.getData('text')); }
+        catch { return; }
+        saveUndo();
+        state = newState;
+        updateVisuals({ storage: true, svg: true, metadata: true });
+    });
 
 
     /// — RUN

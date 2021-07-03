@@ -143,10 +143,10 @@
                     if (violatedConstraintIxs.includes(cIx) && showErrors)
                     {
                         console.log(`Constraint ${cIx} is violated.`);
-                        document.getElementById(`constraint-svg-${cIx}`).setAttribute('filter', 'url(#constraint-invalid-shadow)');
+                        document.getElementById(`constraint-svg-${cIx}`).classList.add('violated');
                     }
                     else
-                        document.getElementById(`constraint-svg-${cIx}`).removeAttribute('filter');
+                        document.getElementById(`constraint-svg-${cIx}`).classList.remove('violated');
                 }
             });
         }
@@ -521,8 +521,8 @@
                 {
                     let results = JSON.parse(resultsRaw);
                     document.getElementById('constraint-defs').innerHTML = results.svgDefs;
-                    document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g id='constraint-svg-${cIx}'>${svg}</g>`).join('');
-                    document.getElementById('constraint-svg-global').innerHTML = results.globalSvgs.map((svg, cIx) => [svg, cIx]).filter(inf => inf[0] !== null).map((inf, y) => `<g id='constraint-svg-${inf[1]}' transform='translate(0, ${y * 1.5})'>${inf[0]}</g>`).join('');
+                    document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g class='constraint-svg' id='constraint-svg-${cIx}'>${svg}</g>`).join('');
+                    document.getElementById('constraint-svg-global').innerHTML = results.globalSvgs.map((svg, cIx) => [svg, cIx]).filter(inf => inf[0] !== null).map((inf, y) => `<g class='constraint-svg' id='constraint-svg-${inf[1]}' transform='translate(0, ${y * 1.5})'>${inf[0]}</g>`).join('');
                     updateVisuals();
                     fixViewBox();
                     window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
