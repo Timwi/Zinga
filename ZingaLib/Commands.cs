@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using RT.Json;
 using RT.Serialization;
 using RT.Util;
@@ -30,6 +32,7 @@ namespace Zinga.Lib
 
         public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
         {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 #if DEBUG
             Console.WriteLine($@"Zinga.Lib.Commands.RenderConstraintSvgs(""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
 #endif
@@ -330,6 +333,7 @@ namespace Zinga.Lib
 
         public static void SetupConstraints(string givensJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
         {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 #if DEBUG
             Console.WriteLine($@"Zinga.Lib.Commands.SetupConstraints(""{givensJson.CLiteralEscape()}"", ""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
 #endif
@@ -360,6 +364,7 @@ namespace Zinga.Lib
 
         public static string CheckConstraints(string enteredDigitsJson, string constraintsJson)
         {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 #if DEBUG
             Console.WriteLine($@"Zinga.Lib.Commands.CheckConstraints(""{enteredDigitsJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
 #endif
@@ -381,6 +386,7 @@ namespace Zinga.Lib
 
         public static string CompileSuco(string suco, string variableTypesJson)
         {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             try
             {
                 var env = new SucoTypeEnvironment();
@@ -423,6 +429,7 @@ namespace Zinga.Lib
 
         public static string GenerateOutline(string regionsJson)
         {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             var regions = JsonList.Parse(regionsJson);
             var svg = new StringBuilder();
             foreach (var region in regions)
