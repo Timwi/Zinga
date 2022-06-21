@@ -24,38 +24,50 @@ namespace Zinga
             if (jsonRaw == null || !JsonDict.TryParse(jsonRaw, out var json))
                 return HttpResponse.PlainText("The data transmitted is not valid JSON.", HttpStatusCode._400_BadRequest);
 
+            var constraintIx = -1;
+            JsonList constraints = null;
+            var errorLocation = 0;
             try
             {
                 var puzzle = new Puzzle();
                 puzzle.UrlName = MD5.ComputeUrlName(jsonRaw);
 
+                errorLocation = 1;
                 using var tr = new TransactionScope(TransactionScopeOption.RequiresNew, new TransactionOptions { IsolationLevel = System.Transactions.IsolationLevel.Serializable });
                 using var db = new Db();
 
+                errorLocation = 2;
                 if (db.Puzzles.Any(p => p.UrlName == puzzle.UrlName))
                     return HttpResponse.PlainText(puzzle.UrlName);
 
+                errorLocation = 3;
                 puzzle.Title = json["title"].GetString();
                 puzzle.Author = json["author"].GetString();
                 puzzle.Rules = json["rules"].GetString();
                 puzzle.Links = json["links"] == null ? null : json["links"].GetList().Select(lnk => new Link { Text = lnk["text"].GetString(), Url = lnk["url"].GetString() }).ToArray();
 
+                errorLocation = 4;
                 var givens = json["givens"].GetList().Select((v, ix) => (v, ix)).Where(tup => tup.v != null).Select(tup => (cell: tup.ix, value: tup.v.GetInt())).ToArray();
                 if (givens.Any(given => given.cell < 0 || given.cell >= 81))
                     return HttpResponse.PlainText($"At least one given is out of range (cell {puzzle.Givens.First(given => given.cell < 0 || given.cell >= 81).cell}).", HttpStatusCode._400_BadRequest);
                 puzzle.Givens = givens.Length > 0 ? givens : null;
 
-                var constraints = json["constraints"].GetList();
+                errorLocation = 5;
+                constraints = json["constraints"].GetList();
                 var customConstraintTypes = json["customConstraintTypes"].GetList();
 
+                errorLocation = 6;
                 var dbConstraintTypes = constraints.Select(c => c["type"].GetInt()).Where(c => c >= 0).Distinct().ToArray()
                     .Apply(cIds => db.Constraints.Where(c => cIds.Contains(c.ConstraintID))).AsEnumerable().ToDictionary(c => c.ConstraintID);
                 var faultyId = constraints.Select(c => c["type"].GetInt()).Where(c => c >= 0).FirstOrNull(c => !dbConstraintTypes.ContainsKey(c));
                 if (faultyId != null)
                     return HttpResponse.PlainText($"Unknown constraint type ID: {faultyId.Value}.", HttpStatusCode._400_BadRequest);
 
+                errorLocation = 7;
                 // Add the custom constraint types into the database
-                foreach (var constraint in constraints)
+                for (constraintIx = 0; constraintIx < constraints.Count; constraintIx++)
+                {
+                    var constraint = constraints[constraintIx];
                     if (constraint["type"].GetInt() is int typeId && typeId < 0 && !dbConstraintTypes.ContainsKey(typeId))
                     {
                         if (~typeId >= customConstraintTypes.Count || customConstraintTypes[~typeId] == null)
@@ -107,9 +119,13 @@ namespace Zinga
                             dbConstraintTypes[typeId] = newConstraintType;
                         }
                     }
+                }
+
+                errorLocation = 8;
                 db.Puzzles.Add(puzzle);
                 db.SaveChanges();   // This assigns new IDs to all the new constraint types and the puzzle itself
 
+                errorLocation = 9;
                 foreach (var constraint in constraints)
                     db.PuzzleConstraints.Add(new PuzzleConstraint
                     {
@@ -118,13 +134,14 @@ namespace Zinga
                         ValuesJson = constraint["values"].ToString()
                     });
 
+                errorLocation = 10;
                 db.SaveChanges();
                 tr.Complete();
                 return HttpResponse.PlainText(puzzle.UrlName);
             }
             catch (Exception e)
             {
-                return HttpResponse.PlainText(e.Message, HttpStatusCode._400_BadRequest);
+                return HttpResponse.PlainText($"{e.Message}{(constraintIx > -1 && constraints != null ? $"\nPossible culprit: constraint #{constraintIx + 1}" : "")} ({errorLocation})\n\nJSON:\n{json.ToStringIndented()}", HttpStatusCode._400_BadRequest);
             }
         }
     }

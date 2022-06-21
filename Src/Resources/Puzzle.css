@@ -167,24 +167,24 @@ svg.puzzle-svg {
         opacity: 0;
     }
 
+    svg.puzzle-svg .constraint-svg.selected {
+        filter: url(#constraint-selection-shadow);
+    }
+
+    svg.puzzle-svg .constraint-svg.violated {
+        filter: url(#constraint-invalid-shadow);
+    }
+
+    svg.puzzle-svg .constraint-svg:not(.selected):not(.violated) .violation-only {
+        opacity: 0;
+    }
+
 #puzzle.solved {
     background: hsl(115, 50%, 40%);
 }
 
 #puzzle.mode-color svg .button rect.color {
     opacity: 1;
-}
-
-#puzzle .constraint-svg.selected {
-    filter: url(#constraint-selection-shadow);
-}
-
-#puzzle .constraint-svg.violated {
-    filter: url(#constraint-invalid-shadow);
-}
-
-#puzzle .constraint-svg:not(.selected):not(.violated) .violation-only {
-    opacity: 0;
 }
 
 #sidebar {

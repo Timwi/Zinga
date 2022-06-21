@@ -520,9 +520,20 @@
                 dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], resultsRaw =>
                 {
                     let results = JSON.parse(resultsRaw);
+
+                    let globalSvgs = '', svgs = '', globalY = 0;
+                    for (let cIx = 0; cIx < results.svgs.length; cIx++)
+                        if (results.svgs[cIx].global)
+                        {
+                            globalSvgs += `<g id='constraint-svg-${cIx}' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
+                            globalY += 1.5;
+                        }
+                        else
+                            svgs += `<g class='constraint-svg' id='constraint-svg-${cIx}'>${results.svgs[cIx].svg}</g>`;
+
+                    document.getElementById('constraint-svg-global').innerHTML = globalSvgs;
+                    document.getElementById('constraint-svg').innerHTML = svgs;
                     document.getElementById('constraint-defs').innerHTML = results.svgDefs;
-                    document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g class='constraint-svg' id='constraint-svg-${cIx}'>${svg}</g>`).join('');
-                    document.getElementById('constraint-svg-global').innerHTML = results.globalSvgs.map((svg, cIx) => [svg, cIx]).filter(inf => inf[0] !== null).map((inf, y) => `<g class='constraint-svg' id='constraint-svg-${inf[1]}' transform='translate(0, ${y * 1.5})'>${inf[0]}</g>`).join('');
                     updateVisuals();
                     fixViewBox();
                     window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
@@ -829,11 +840,11 @@
         {
             alert('Unfortunately, a screenshot of the puzzle could not be generated. This may be due to malformed SVG code on the part of the puzzle author.');
         };
-        img.src = 'data:image/svg+xml;base64,' + btoa(svgElem.outerHTML
+        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgElem.outerHTML
             .replace(/<svg/, `<svg width="${canvas.width}" height="${canvas.height}"`)
             .replace(/viewBox=".*?"/, `viewBox='${nBox.x} ${nBox.y} ${nBox.width} ${nBox.height}'`)
             .replace(/(?=<\/style>)/, Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.rules)), [])
-                .filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n")));
+                .filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n")))));
     });
     puzzleContainer.addEventListener("keydown", ev =>
     {

@@ -40,8 +40,7 @@ namespace Zinga.Lib
             var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
             var constraints = JsonList.Parse(constraintsJson);
             var resultSvgDefs = new HashSet<string>();
-            var resultSvgs = new JsonList(Enumerable.Repeat<JsonValue>(null, constraints.Count));
-            var resultGlobalSvgs = new JsonList(Enumerable.Repeat<JsonValue>(null, constraints.Count));
+            var resultSvgs = Enumerable.Range(0, constraints.Count).Select(c => new JsonDict { ["global"] = false, ["svg"] = null }).ToJsonList();
             var resultErrors = new JsonList(Enumerable.Range(0, constraints.Count).Select(_ => new JsonDict()));
 
             for (var cIx = 0; cIx < constraints.Count; cIx++)
@@ -115,9 +114,9 @@ namespace Zinga.Lib
                 if (svgCode != null)
                 {
                     if (type["kind"].GetString() == "Global")
-                        resultGlobalSvgs[cIx] = $"<rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{svgCode}";
+                        resultSvgs[cIx] = new JsonDict { ["global"] = true, ["svg"] = $"<rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{svgCode}" };
                     else
-                        resultSvgs[cIx] = svgCode;
+                        resultSvgs[cIx] = new JsonDict { ["global"] = false, ["svg"] = svgCode };
                 }
             }
 
@@ -125,7 +124,6 @@ namespace Zinga.Lib
             {
                 ["svgDefs"] = resultSvgDefs.JoinString(),
                 ["svgs"] = resultSvgs,
-                ["globalSvgs"] = resultGlobalSvgs,
                 ["errors"] = resultErrors
             }.ToString();
         }
@@ -222,6 +220,7 @@ namespace Zinga.Lib
                             case (_, true, false, false):
                                 if (!char.IsLetter(svg[i]))
                                     return new SvgError { Index = i, Message = "Letter or ‘;’ expected." };
+                                isStart = false;
                                 break;
                             case (_, false, false, false):
                                 if (svg[i] != '_' && !char.IsLetterOrDigit(svg[i]))

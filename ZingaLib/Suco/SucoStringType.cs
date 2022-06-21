@@ -25,7 +25,7 @@ namespace Zinga.Suco
         public override SucoType GetBinaryOperatorType(BinaryOperator op, SucoType rightType, SucoContext context) => (op, rightType) switch
         {
             (BinaryOperator.Plus, SucoStringType) => SucoType.String,
-            _ => GetBinaryOperatorType(op, rightType, context)
+            _ => base.GetBinaryOperatorType(op, rightType, context)
         };
 
         public override object InterpretBinaryOperator(object left, BinaryOperator op, SucoType rightType, object right) => (op, rightType) switch

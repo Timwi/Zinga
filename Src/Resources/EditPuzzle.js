@@ -802,8 +802,8 @@
                     {
                         let cTypeId = constrInfosFiltered[i].cTypeId;
                         let svg = i === 0 && results.svgDefs !== '' ? `<defs id='constraint-search-result-defs'>${results.svgDefs}</defs>` : '';
-                        svg += results.svgs[i] !== null ? blankGrid : '';
-                        svg += `<g id='constraint-search-result-svg-${cTypeId}'>${results.svgs[i] ?? results.globalSvgs[i] ?? ''}</g>`;
+                        svg += results.svgs[i].global ? blankGrid : '';
+                        svg += `<g id='constraint-search-result-svg-${cTypeId}'>${results.svgs[i].svg ?? ''}</g>`;
                         constrInfosFiltered[i].svg.innerHTML = svg;
                         let bBox = document.getElementById(`constraint-search-result-svg-${cTypeId}`).getBBox();
 
@@ -938,9 +938,19 @@
             dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)], resultsRaw =>
             {
                 let results = JSON.parse(resultsRaw);
+                let globalSvgs = '', svgs = '', globalY = 0;
+                for (let cIx = 0; cIx < results.svgs.length; cIx++)
+                    if (results.svgs[cIx].global)
+                    {
+                        globalSvgs += `<g id='constraint-svg-${cIx}' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
+                        globalY += 1.5;
+                    }
+                    else
+                        svgs += `<g class='constraint-svg' id='constraint-svg-${cIx}'>${results.svgs[cIx].svg}</g>`;
+
+                document.getElementById('constraint-svg-global').innerHTML = globalSvgs;
+                document.getElementById('constraint-svg').innerHTML = svgs;
                 document.getElementById('constraint-defs').innerHTML = results.svgDefs;
-                document.getElementById('constraint-svg').innerHTML = results.svgs.map((svg, cIx) => svg === null ? '' : `<g class='constraint-svg' id='constraint-svg-${cIx}'>${svg}</g>`).join('');
-                document.getElementById('constraint-svg-global').innerHTML = results.globalSvgs.map((svg, cIx) => [svg, cIx]).filter(inf => inf[0] !== null).map((inf, y) => `<g id='constraint-svg-${inf[1]}' transform='translate(0, ${y * 1.5})'>${inf[0]}</g>`).join('');
                 constraintErrors = results.errors;
                 updateConstraintSelection();
                 Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv => { updateConstraintErrors(constraintDiv, constraintDiv.dataset.index | 0); });
@@ -1511,7 +1521,7 @@
         };
     });
     Array.from(document.querySelectorAll('#sidebar>.tabs>.tab')).forEach(tab => setButtonHandler(tab, function() { selectTab(tab.dataset.tab); }));
-    Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given); }); });
+    Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given | 0); }); });
     Array.from(document.querySelectorAll('.multi-select')).forEach(btn =>
     {
         btn.onclick = function(ev)
