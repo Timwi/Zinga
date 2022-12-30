@@ -80,8 +80,6 @@
     // Puzzle
     function checkSudokuValid()
     {
-        // Checks only the basic Sudoku rules, not the constraints
-
         let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
         Array.from(document.querySelectorAll('.region-invalid')).forEach(elem => { elem.setAttribute('opacity', 0); });
         let isValid = true;
@@ -151,7 +149,7 @@
             });
         }
         else
-            Array.from(document.querySelectorAll('#constraint-svg>g,#constraint-svg-global>g')).forEach(g => { g.removeAttribute('filter'); });
+            Array.from(document.querySelectorAll('#constraint-svg>g,#constraint-svg-global>g')).forEach(g => { g.removeAttribute('filter'); g.classList.remove('violated'); });
     }
     function clearCells()
     {
