@@ -631,8 +631,12 @@
         puzzleDiv.querySelector('#opt-show-errors').checked = showErrors;
         puzzleDiv.querySelector('#opt-multi-color').checked = multiColorMode;
 
-        // Check if there are any conflicts (red glow) and/or the puzzle is solved
-        checkSudokuValid();
+        if (digitsAtPrevCheck === null || Array(81).fill(null).map((_, c) => c).some(ix => state.enteredDigits[ix] !== digitsAtPrevCheck[ix]))
+        {
+            // Check if there are any conflicts (red glow) and/or the puzzle is solved
+            checkSudokuValid();
+            digitsAtPrevCheck = Array.from(state.enteredDigits);
+        }
     }
 
     // Debugging
@@ -670,6 +674,7 @@
     let selectedCells = [];
     let showErrors = true;
     let sidebarOn = true;
+    let digitsAtPrevCheck = null;
 
     // Variables: puzzle
     let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
