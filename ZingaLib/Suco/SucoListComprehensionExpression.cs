@@ -149,7 +149,7 @@ namespace Zinga.Suco
             return new SucoOptimizedListComprehensionExpression(this, StartIndex, EndIndex, optimized, Type);
         }
 
-        private IEnumerable<T> recurse<T>(int clIx, SucoEnvironment curEnv, int?[] grid, object[] collections, int[] positions)
+        private IEnumerable<T> recurse<T>(int clIx, SucoEnvironment curEnv, int?[] grid, object[] collections, Cell[] cells, int[] positions)
         {
             if (clIx == Clauses.Count)
             {
@@ -170,15 +170,13 @@ namespace Zinga.Suco
                 if (item is Cell c)
                 {
                     collections[clIx] = null;
-                    if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == null && positions[ix] == c.Index))
+                    if (!Clauses[clIx].HasPlus && cells.Contains(c))
                         goto skipped;
-                    positions[clIx] = c.Index;
                 }
                 else
                 {
                     if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == collections[clIx] && positions[ix] == pos))
                         goto skipped;
-                    positions[clIx] = pos;
                 }
                 var newEnv = curEnv.DeclareVariable(Clauses[clIx].VariableName, item, list, pos);
                 foreach (var condition in Clauses[clIx].Conditions)
@@ -209,7 +207,9 @@ namespace Zinga.Suco
                 }
                 else
                 {
-                    foreach (var result in recurse<T>(clIx + 1, newEnv, grid, collections, positions))
+                    positions[clIx] = pos;
+                    cells[clIx] = item as Cell;
+                    foreach (var result in recurse<T>(clIx + 1, newEnv, grid, collections, cells, positions))
                         yield return result;
                 }
                 skipped:;
@@ -223,7 +223,9 @@ namespace Zinga.Suco
                     yield return (T) (object) (nullFound || anyConditionNull ? null : false);
                     yield break;
                 }
-                foreach (var result in recurse<T>(clIx + 1, curEnv.DeclareVariable(Clauses[clIx].VariableName, oneFoundValue, list, oneFoundPosition.Value), grid, collections, positions))
+                positions[clIx] = oneFoundPosition.Value;
+                cells[clIx] = oneFoundValue as Cell;
+                foreach (var result in recurse<T>(clIx + 1, curEnv.DeclareVariable(Clauses[clIx].VariableName, oneFoundValue, list, oneFoundPosition.Value), grid, collections, cells, positions))
                     yield return (T) (object) (Equals(result, true) && nullFound ? null : result);
             }
             else if (anyConditionNull)
@@ -234,11 +236,12 @@ namespace Zinga.Suco
         {
             var positions = new int[Clauses.Count];
             var collections = new object[Clauses.Count];
+            var cells = new Cell[Clauses.Count];
             var type = Selector == null ? Clauses[0].VariableType : Selector.Type;
 
             return typeof(SucoListComprehensionExpression).GetMethod(nameof(recurse), BindingFlags.NonPublic | BindingFlags.Instance)
                 .MakeGenericMethod(type.CsType)
-                .Invoke(this, new object[] { 0, env, grid, collections, positions });
+                .Invoke(this, new object[] { 0, env, grid, collections, cells, positions });
         }
     }
 }

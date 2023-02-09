@@ -13,5 +13,6 @@
         protected override SucoExpression deduceTypes(SucoTypeEnvironment env, SucoContext context) => this;
         public override SucoExpression Optimize(SucoEnvironment env, int?[] givens) => new SucoConstant(StartIndex, EndIndex, Type, env.GetPosition(Name));
         public override object Interpret(SucoEnvironment env, int?[] grid) => env.GetPosition(Name);
+        public override string ToString() => $"{Name}.pos";
     }
 }
