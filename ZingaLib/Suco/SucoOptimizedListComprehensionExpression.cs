@@ -25,6 +25,7 @@ namespace Zinga.Suco
 
         private IEnumerable<T> interpret<T>(SucoEnvironment env, int?[] grid)
         {
+            var anyNull = false;
             for (var i = 0; i < Content.Count; i++)
             {
                 var (variables, conditions, expr) = Content[i];
@@ -34,13 +35,18 @@ namespace Zinga.Suco
                     {
                         var result = condition.Interpret(ne, grid);
                         if (result == null)
-                            yield return default;
+                        {
+                            anyNull = true;
+                            goto skipped;
+                        }
                         else if (!result.Value)
                             goto skipped;
                     }
                 yield return (T) expr.Interpret(ne, grid);
                 skipped:;
             }
+            if (anyNull)
+                yield return (T) (object) null;
         }
     }
 }
