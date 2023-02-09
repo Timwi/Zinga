@@ -169,13 +169,6 @@ namespace Zinga.Suco
             {
                 if (item is Cell c)
                 {
-                    // Optimization: if the cell value is not known, we’ll assume that the constraint will evaluate as null anyway
-                    if (_context == SucoContext.Constraint && grid[c.Index] == null)
-                    {
-                        anyConditionNull = true;
-                        goto skipped;
-                    }
-
                     collections[clIx] = null;
                     if (!Clauses[clIx].HasPlus && Enumerable.Range(0, clIx).Any(ix => collections[ix] == null && positions[ix] == c.Index))
                         goto skipped;
