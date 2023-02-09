@@ -494,6 +494,7 @@
             let state = null;
             try { state = JSON.parse(localStorage.getItem(`zinga-edit`)); }
             catch { }
+            digitsAtPrevCheck = null;
             if (state && state.givens && state.constraints)
             {
                 givens = state.givens;
