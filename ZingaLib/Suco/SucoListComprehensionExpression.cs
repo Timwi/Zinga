@@ -170,7 +170,7 @@ namespace Zinga.Suco
                 if (item is Cell c)
                 {
                     collections[clIx] = null;
-                    if (!Clauses[clIx].HasPlus && cells.Contains(c))
+                    if (!Clauses[clIx].HasPlus && cells.Take(clIx).Any(cl => cl.Index == c.Index))
                         goto skipped;
                 }
                 else
