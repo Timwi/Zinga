@@ -704,6 +704,22 @@
             }
         };
     }
+    function insertConstraint(constr, cType)
+    {
+        saveUndo();
+        let cIx = state.constraints.length;
+        state.constraints.push(constr);
+        constraintTypes[constr.type] = cType;
+        document.getElementById('constraint-search').classList.remove('shown');
+        puzzleContainer.focus();
+
+        selectedConstraints = [cIx];
+        lastSelectedConstraint = cIx;
+        editingConstraintType = null;
+        selectedCells = [];
+
+        updateVisuals({ storage: true, svg: true });
+    }
     function pressEscape()
     {
         if (document.getElementById('constraint-search').classList.contains('shown'))
@@ -737,25 +753,21 @@
                 console.log(req, arguments);
             else if (req.response && req.response.status === 'ok' && Array.isArray(req.response.order))
             {
-                function insertConstraint(constr, cType)
+                constraintResultsSel = null;
+
+                // Create a constraint object for each constraint to determine which ones are valid for the current selection
+                let constrPrelimInfos = req.response.order.map(cTypeId =>
                 {
-                    saveUndo();
-                    let cIx = state.constraints.length;
-                    state.constraints.push(constr);
-                    constraintTypes[constr.type] = cType;
-                    document.getElementById('constraint-search').classList.remove('shown');
-                    puzzleContainer.focus();
+                    let cType = req.response.results[cTypeId];
+                    let enf = createDefaultConstraint(cType, cTypeId, selectedCells);
+                    return { cTypeId: cTypeId, cType: cType, enf: enf };
+                });
+                // Sort the invalid ones to the end
+                constrPrelimInfos.sort((a, b) => a.enf.valid ? b.enf.valid ? 0 : -1 : b.enf.valid ? 1 : 0);
 
-                    selectedConstraints = [cIx];
-                    lastSelectedConstraint = cIx;
-                    editingConstraintType = null;
-                    selectedCells = [];
-
-                    updateVisuals({ storage: true, svg: true });
-                }
-
-                document.getElementById('constraint-results-box').innerHTML = req.response.order.map(cTypeId => `
-                    <div class='item' data-ix='${cTypeId}'>
+                // Generate DOM elements
+                document.getElementById('constraint-results-box').innerHTML = constrPrelimInfos.map((obj, ix) => `
+                    <div class='item${obj.enf.valid ? " valid" : ""}' data-ix='${ix}'>
                         <svg viewBox='0 0 10 10' text-anchor='middle' font-family='Bitter'><circle cx='5' cy='5' r='3' stroke-width='.5' stroke='black' fill='#8df' /></svg>
                         <div class='name'></div><div class='akas'></div><div class='descr'></div><div class='error'></div>
                     </div>
@@ -763,48 +775,40 @@
 
                 let constrInfos = Array.from(document.getElementById('constraint-results-box').querySelectorAll('.item')).map(div =>
                 {
-                    let cTypeId = div.dataset.ix | 0;
-                    let cType = req.response.results[cTypeId];
+                    let dat = constrPrelimInfos[div.dataset.ix | 0];
+                    let constr = dat.enf.valid ? dat.enf.constraint : null;
 
-                    // Create constraint object
-                    let enf = createDefaultConstraint(cType, cTypeId, selectedCells);
-                    let constr = enf.valid ? enf.constraint : null;
-                    if (!enf.valid)
-                        div.querySelector('.error').innerText = enf.message;
+                    // Set HTML text
+                    div.querySelector('.name').innerText = dat.cType.name;
+                    if (dat.cType.akas)
+                        div.querySelector('.akas').innerText = `a.k.a.: ${dat.cType.akas.join(', ')}`;
+                    div.querySelector('.descr').innerText = dat.cType.description;
+                    if (!dat.enf.valid)
+                        div.querySelector('.error').innerText = dat.enf.message;
 
-                    // Set HTML text etc.
-                    div.querySelector('.name').innerText = cType.name;
-                    if (cType.akas)
-                        div.querySelector('.akas').innerText = `a.k.a.: ${cType.akas.join(', ')}`;
-                    div.querySelector('.descr').innerText = cType.description;
+                    // Double-click event
+                    if (dat.enf.valid)
+                        div.ondblclick = function() { insertConstraint(constr, dat.cType); };
 
-                    // Events
-                    div.ondblclick = function() { insertConstraint(constr, cType); };
-
-                    return { constraint: constr, svg: div.querySelector('svg'), cTypeId: cTypeId };
+                    return { constraint: constr, div: div, cType: dat.cType, cTypeId: dat.cTypeId };
                 });
 
-                let constrInfosFiltered = constrInfos.filter(inf => inf.constraint !== null);
-
-                let blankGrid = `
-                    <rect x='0' y='0' width='9' height='9' fill='white' stroke='black' stroke-width='.05' />
-                    <path d='M3 0v9M6 0v9M0 3h9M0 6h9' fill='none' stroke='black' stroke-width='.05' />
-                    <path d='M1 0v9M2 0v9M4 0v9M5 0v9M7 0v9M8 0v9M0 1h9M0 2h9M0 4h9M0 5h9M0 7h9M0 8h9' fill='none' stroke='black' stroke-width='.01' />
-                `;
+                // Render SVGs (for the valid constraints only)
+                constraintResults = constrInfos.filter(inf => inf.constraint !== null);
                 let minX = Math.min(...selectedCells.map(sc => sc % 9));
                 let maxX = Math.max(...selectedCells.map(sc => sc % 9)) + 1;
                 let minY = Math.min(...selectedCells.map(sc => (sc / 9) | 0));
                 let maxY = Math.max(...selectedCells.map(sc => (sc / 9) | 0)) + 1;
-                dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), "[]", JSON.stringify(constrInfosFiltered.map(inf => inf.constraint))], resultsRaw =>
+                dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), "[]", JSON.stringify(constraintResults.map(inf => inf.constraint))], resultsRaw =>
                 {
                     let results = JSON.parse(resultsRaw);
                     for (let i = 0; i < results.svgs.length; i++)
                     {
-                        let cTypeId = constrInfosFiltered[i].cTypeId;
+                        let cTypeId = constraintResults[i].cTypeId;
                         let svg = i === 0 && results.svgDefs !== '' ? `<defs id='constraint-search-result-defs'>${results.svgDefs}</defs>` : '';
-                        svg += results.svgs[i].global ? blankGrid : '';
                         svg += `<g id='constraint-search-result-svg-${cTypeId}'>${results.svgs[i].svg ?? ''}</g>`;
-                        constrInfosFiltered[i].svg.innerHTML = svg;
+                        let svgElem = constraintResults[i].div.querySelector('svg');
+                        svgElem.innerHTML = svg;
                         let bBox = document.getElementById(`constraint-search-result-svg-${cTypeId}`).getBBox();
 
                         if (minX < bBox.x)
@@ -827,7 +831,7 @@
                         let x = tall ? bBox.x + bBox.width / 2 - bBox.height / 2 : bBox.x;
                         let y = tall ? bBox.y : bBox.y + bBox.height / 2 - bBox.width / 2;
                         let size = Math.max(bBox.width, bBox.height);
-                        constrInfosFiltered[i].svg.setAttribute('viewBox', `${x - .1} ${y - .1} ${size + .2} ${size + .2}`);
+                        svgElem.setAttribute('viewBox', `${x - .1} ${y - .1} ${size + .2} ${size + .2}`);
                     }
                 });
             }
@@ -942,7 +946,7 @@
                 for (let cIx = 0; cIx < results.svgs.length; cIx++)
                     if (results.svgs[cIx].global)
                     {
-                        globalSvgs += `<g id='constraint-svg-${cIx}' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
+                        globalSvgs += `<g class='constraint-svg' id='constraint-svg-${cIx}' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
                         globalY += 1.5;
                     }
                     else
@@ -1442,6 +1446,8 @@
     let lastCellLineDir = null;
     let lastCellLineCell = null;
     let lastFocusedElement = null;
+    let constraintResults = [];
+    let constraintResultsSel = null;
 
     // Variables: state, editing, constraints
     let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes || null) || {};
@@ -1740,7 +1746,6 @@
                 si.value = str.substr(str.length - 1);
                 si.setSelectionRange(1, 1);
                 si.focus();
-                runConstraintSearch(si.value);
                 break;
 
             // Navigation
@@ -1881,6 +1886,19 @@
         switch (str)
         {
             case 'Escape': pressEscape(); break;
+            case 'Tab':
+                if (constraintResults.length === 0)
+                    break;
+                constraintResultsSel = ((constraintResultsSel ?? -1) + 1) % constraintResults.length;
+                constraintResults.forEach((cri, ix) => { if (ix === constraintResultsSel) cri.div.classList.add('kbsel'); else cri.div.classList.remove('kbsel'); });
+                break;
+            case 'Enter':
+                if (constraintResultsSel === null || constraintResultsSel < 0 || constraintResultsSel >= constraintResults.length)
+                    break;
+                insertConstraint(constraintResults[constraintResultsSel].constraint, constraintResults[constraintResultsSel].cType);
+                document.getElementById('constraint-search').classList.remove('shown');
+                puzzleContainer.focus();
+                break;
 
             default:
                 anyFunction = false;
@@ -1895,7 +1913,11 @@
             return false;
         }
     });
-    document.getElementById('constraint-search-input').addEventListener('keyup', () => { runConstraintSearch(document.getElementById('constraint-search-input').value); });
+    document.getElementById('constraint-search-input').addEventListener('keyup', ev =>
+    {
+        if (ev.keyCode === 32 || (ev.keyCode >= 65 && ev.keyCode <= 90))
+            runConstraintSearch(document.getElementById('constraint-search-input').value);
+    });
 
     document.addEventListener('paste', ev =>
     {
