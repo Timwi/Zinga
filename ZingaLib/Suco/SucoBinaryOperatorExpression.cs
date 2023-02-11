@@ -1,4 +1,6 @@
-﻿namespace Zinga.Suco
+﻿using System;
+
+namespace Zinga.Suco
 {
     public class SucoBinaryOperatorExpression : SucoExpression
     {
@@ -22,7 +24,7 @@
             BinaryOperator.Modulo => "%",
             BinaryOperator.Divide => "÷",
             BinaryOperator.Power => "^",
-            _ => "?"
+            _ => throw new InvalidOperationException()
         }} {Right})";
 
         public SucoBinaryOperatorExpression(int startIndex, int endIndex, SucoExpression left, SucoExpression right, BinaryOperator op, SucoType type = null)

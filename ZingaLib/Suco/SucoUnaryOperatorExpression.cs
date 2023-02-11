@@ -1,4 +1,6 @@
-﻿namespace Zinga.Suco
+﻿using System;
+
+namespace Zinga.Suco
 {
     public class SucoUnaryOperatorExpression : SucoExpression
     {
@@ -37,5 +39,12 @@
                 ? new SucoConstant(StartIndex, EndIndex, Type, Operand.Type.InterpretUnaryOperator(Operator, c))
                 : new SucoUnaryOperatorExpression(StartIndex, EndIndex, optimizedOperand, Operator, Type);
         }
+
+        public override string ToString() => $@"{Operator switch
+        {
+            UnaryOperator.Negative => "-",
+            UnaryOperator.Not => "!",
+            _ => throw new InvalidOperationException()
+        }}{Operand}";
     }
 }

@@ -37,7 +37,7 @@ namespace Zinga.Suco
 
         public override object InterpretUnaryOperator(UnaryOperator op, object operand) => op switch
         {
-            UnaryOperator.Not => !(bool) operand,
+            UnaryOperator.Not => operand == null ? null : !(bool) operand,
             _ => base.InterpretUnaryOperator(op, operand)
         };
     }
