@@ -579,9 +579,15 @@
             }
 
             document.getElementById(`sudoku-text-${cell}`).textContent = intendedText !== null ? intendedText : '';
-            document.getElementById(`sudoku-center-text-${cell}`).textContent = intendedCenterDigits !== null ? intendedCenterDigits : '';
             for (let i = 0; i < 8; i++)
                 document.getElementById(`sudoku-corner-text-${cell}-${i}`).textContent = intendedCornerDigits !== null && i < intendedCornerDigits.length ? intendedCornerDigits[i] : '';
+
+            var centerText = document.getElementById(`sudoku-center-text-${cell}`);
+            centerText.setAttribute('transform', `translate(${cell % 9 + .5} ${((cell / 9) | 0) + .62})`);
+            centerText.textContent = intendedCenterDigits !== null ? intendedCenterDigits : '';
+            var ctBb = centerText.getBBox();
+            if (ctBb.width > .8)
+                centerText.setAttribute('transform', `translate(${cell % 9 + .5} ${((cell / 9) | 0) + .62}) scale(${.8 / ctBb.width})`);
 
             function getPerimeterPoint(angle)
             {
