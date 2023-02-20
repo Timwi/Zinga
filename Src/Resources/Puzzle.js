@@ -1013,6 +1013,7 @@
                 break;
 
             case 'Shift+Backspace':
+            case 'Ctrl+Shift+KeyZ':
             case 'Ctrl+KeyY':
                 redo();
                 break;
