@@ -179,6 +179,14 @@ svg.puzzle-svg {
         opacity: 0;
     }
 
+    svg.puzzle-svg .constraint-svg.dimmed {
+        opacity: .25;
+    }
+
+#puzzle-container.dimmable svg.puzzle-svg .constraint-svg * {
+    pointer-events: all;
+}
+
 #puzzle.solved {
     background: hsl(115, 50%, 40%);
 }

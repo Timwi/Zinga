@@ -533,6 +533,9 @@
                     document.getElementById('constraint-svg-global').innerHTML = globalSvgs;
                     document.getElementById('constraint-svg').innerHTML = svgs;
                     document.getElementById('constraint-defs').innerHTML = results.svgDefs;
+
+                    Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
+
                     updateVisuals();
                     fixViewBox();
                     window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
@@ -828,7 +831,7 @@
         let img = new Image();
         let svgElem = puzzleDiv.querySelector('svg.puzzle-svg');
         let bBox = document.getElementById('bb-puzzle-with-global').getBBox({ fill: true, stroke: true, markers: true });
-        let margin = .35;
+        let margin = .1;
         let nBox = { x: bBox.x - margin, y: bBox.y - margin, width: bBox.width + 2 * margin, height: bBox.height + 2 * margin };
         let canvas = document.createElement('canvas');
         canvas.width = 1000;
@@ -856,7 +859,7 @@
             .replace(/(?=<\/style>)/, Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.rules)), [])
                 .filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n")))));
     });
-    puzzleContainer.addEventListener("keydown", ev =>
+    puzzleContainer.addEventListener('keydown', ev =>
     {
         let str = ev.code;
         if (ev.shiftKey)
@@ -865,6 +868,9 @@
             str = `Alt+${str}`;
         if (ev.ctrlKey)
             str = `Ctrl+${str}`;
+
+        if (ev.ctrlKey && ev.shiftKey)
+            puzzleContainer.classList.add('dimmable');
 
         let anyFunction = true;
 
@@ -1036,6 +1042,11 @@
             return false;
         }
     });
+    puzzleContainer.addEventListener('keyup', ev =>
+    {
+        if (!ev.ctrlKey || !ev.shiftKey)
+            puzzleContainer.classList.remove('dimmable');
+    });
     puzzleContainer.onmousedown = function(ev)
     {
         if (!ev.shiftKey && !ev.ctrlKey)
@@ -1137,6 +1148,7 @@
         dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
     }
 
+    Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
     updateVisuals(true);
     puzzleContainer.focus();
     fixViewBox();

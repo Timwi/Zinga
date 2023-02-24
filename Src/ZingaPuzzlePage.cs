@@ -123,7 +123,7 @@ namespace Zinga
                         .Data("constraints", constraintsJson)
                         ._(
                             new DIV { id = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
-                                <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
+                                <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 13.5' text-anchor='middle' font-family='Bitter' class='puzzle-svg' stroke-width='.1'>
                                     <style></style>
                                     <defs>
                                         <filter id='constraint-invalid-shadow' x='-1' y='-1' width='500%' height='500%' filterUnits='userSpaceOnUse'>
