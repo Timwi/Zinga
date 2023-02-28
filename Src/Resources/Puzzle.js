@@ -524,7 +524,7 @@
                     for (let cIx = 0; cIx < results.svgs.length; cIx++)
                         if (results.svgs[cIx].global)
                         {
-                            globalSvgs += `<g id='constraint-svg-${cIx}' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
+                            globalSvgs += `<g id='constraint-svg-${cIx}' class='constraint-svg' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
                             globalY += 1.5;
                         }
                         else
