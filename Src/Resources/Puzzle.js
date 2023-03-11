@@ -295,38 +295,26 @@
         }
         return str;
     }
-    function enterCenterNotation(digit)
+    function enterCenterNotation(digit) { enterNotation(digit, cell => state.centerNotation[cell]); }
+    function enterCornerNotation(digit) { enterNotation(digit, cell => state.cornerNotation[cell]); }
+    function enterNotation(digit, getNotation)
     {
         if (selectedCells.every(c => getDisplayedSudokuDigit(state, c)))
             return;
         saveUndo();
-        let allHaveDigit = selectedCells.filter(c => !getDisplayedSudokuDigit(state, c)).every(c => state.centerNotation[c].includes(digit));
-        selectedCells.forEach(cell =>
+        let allHaveDigit = selectedCells.filter(c => !getDisplayedSudokuDigit(state, c)).every(c => getNotation(c).includes(digit));
+        selectedCells.forEach((cell, ix) =>
         {
+            // ignore cells with a full digit in them, and duplicated entries of ‘selectedCells’
+            if (getDisplayedSudokuDigit(state, cell) || selectedCells.indexOf(cell) !== ix)
+                return;
+            var notation = getNotation(cell);
             if (allHaveDigit)
-                state.centerNotation[cell].splice(state.centerNotation[cell].indexOf(digit), 1);
-            else if (!state.centerNotation[cell].includes(digit))
+                notation.splice(notation.indexOf(digit), 1);
+            else if (!notation.includes(digit))
             {
-                state.centerNotation[cell].push(digit);
-                state.centerNotation[cell].sort();
-            }
-        });
-        updateVisuals(true);
-    }
-    function enterCornerNotation(digit)
-    {
-        if (selectedCells.every(c => getDisplayedSudokuDigit(state, c)))
-            return;
-        saveUndo();
-        let allHaveDigit = selectedCells.filter(c => !getDisplayedSudokuDigit(state, c)).every(c => state.cornerNotation[c].includes(digit));
-        selectedCells.forEach(cell =>
-        {
-            if (allHaveDigit)
-                state.cornerNotation[cell].splice(state.cornerNotation[cell].indexOf(digit), 1);
-            else if (!state.cornerNotation[cell].includes(digit))
-            {
-                state.cornerNotation[cell].push(digit);
-                state.cornerNotation[cell].sort();
+                notation.push(digit);
+                notation.sort();
             }
         });
         updateVisuals(true);
