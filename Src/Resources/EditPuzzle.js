@@ -1907,15 +1907,15 @@
             runConstraintSearch(document.getElementById('constraint-search-input').value);
     });
 
-    document.addEventListener('paste', ev =>
-    {
-        let newState;
-        try { newState = JSON.parse(ev.clipboardData.getData('text')); }
-        catch { return; }
-        saveUndo();
-        state = newState;
-        updateVisuals({ storage: true, svg: true, metadata: true });
-    });
+    //document.addEventListener('paste', ev =>
+    //{
+    //    let newState;
+    //    try { newState = JSON.parse(ev.clipboardData.getData('text')); }
+    //    catch { return; }
+    //    saveUndo();
+    //    state = newState;
+    //    updateVisuals({ storage: true, svg: true, metadata: true });
+    //});
 
 
     /// — RUN
