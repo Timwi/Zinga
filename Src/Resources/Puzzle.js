@@ -939,7 +939,10 @@
                 }
                 break;
 
-            case 'Delete': clearCells(); break;
+            case 'Delete':
+            case 'Backspace':
+                clearCells();
+                break;
 
             case 'Ctrl+KeyC':
             case 'Ctrl+Insert':
@@ -1001,12 +1004,12 @@
             case 'Ctrl+KeyA': selectedCells = Array(81).fill(null).map((_, c) => c); updateVisuals(); break;
 
             // Undo/redo
-            case 'Backspace':
+            case 'Alt+Backspace':
             case 'Ctrl+KeyZ':
                 undo();
                 break;
 
-            case 'Shift+Backspace':
+            case 'Alt+Shift+Backspace':
             case 'Ctrl+Shift+KeyZ':
             case 'Ctrl+KeyY':
                 redo();
