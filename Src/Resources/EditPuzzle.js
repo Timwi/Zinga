@@ -125,26 +125,24 @@
     }
 
     // State, editing, constraints
-    function addConstraintWithShortcut(letter)
+    function createConstraint(cTypeId)
     {
-        // Find constraint type with the right shortcut key
-        let sc = Object.keys(constraintTypes).filter(id => constraintTypes[id].shortcut === letter);
-        if (sc.length === 0)
-            return;
-        let cIx = state.constraints.length;
-        let cTypeId = sc[0] | 0;
-        let cType = constraintTypes[cTypeId];
-
-        let enf = createDefaultConstraint(cType, cTypeId, selectedCells);
+        // Creates a new constraint (from a constraint type ID) and adds it to the puzzle
+        let enf = createDefaultConstraint(getConstraintType(cTypeId), cTypeId, selectedCells);
         if (!enf.valid)
         {
             alert(enf.message);
             return;
         }
+        addConstraint(enf.constraint);
+    }
+    function addConstraint(constraint)
+    {
+        // Adds a constraints to the puzzle that has already been generated (e.g. by the constraint search box). (Use createConstraint() instead to generate a new constraint.)
 
         saveUndo();
-
-        state.constraints.push(enf.constraint);
+        let cIx = state.constraints.length;
+        state.constraints.push(constraint);
         selectConstraintRange(cIx, cIx, { storage: true, svg: true });
 
         let constraintElem = document.getElementById(`constraint-${cIx}`);
@@ -153,11 +151,17 @@
         {
             selectTab('constraints');
             setClass(constraintElem, 'expanded', true);
-            enf.constraint.expanded = true;
+            constraint.expanded = true;
             uiElement.focus();
             if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
                 uiElement.select();
         }
+    }
+    function addConstraintFromSearch(constr, cType)
+    {
+        constraintTypes[constr.type] = cType;
+        document.getElementById('constraint-search').classList.remove('shown');
+        addConstraint(constr);
     }
     function clearCells()
     {
@@ -224,7 +228,6 @@
             let oldLength = state.constraints.length;
             state.constraints.push(...selectedConstraints.map(c => JSON.parse(JSON.stringify(state.constraints[c]))));
             selectConstraintRange(oldLength, state.constraints.length - 1, { storage: true, svg: true });
-            console.log(state.constraints);
         }
     }
     function editConstraintParameter(cTypeId, paramName, setter)
@@ -388,7 +391,7 @@
     {
         let firstSel = Math.min(...selectedConstraints);
         let lastSel = Math.max(...selectedConstraints) + 1;
-        let prevSel = state.constraints[lastSelectedConstraint];
+        let prevSel = state.constraints[lastSelectedConstraint ?? 0];
         // If there is a gap in the selection
         if ((lastSel - firstSel) !== selectedConstraints.length)
         {
@@ -580,7 +583,7 @@
             redoBuffer.push(state);
             state = undoBuffer.pop();
             selectedConstraints = selectedConstraints.filter(sc => sc >= 0 && sc < state.constraints.length);
-            lastSelectedConstraint = 0;
+            lastSelectedConstraint = null;
             updateVisuals({ storage: true, svg: true, metadata: true });
         }
     }
@@ -591,7 +594,7 @@
             undoBuffer.push(state);
             state = redoBuffer.pop();
             selectedConstraints = selectedConstraints.filter(sc => sc >= 0 && sc < state.constraints.length);
-            lastSelectedConstraint = 0;
+            lastSelectedConstraint = null;
             updateVisuals({ storage: true, svg: true, metadata: true });
         }
     }
@@ -686,6 +689,7 @@
             selectedConstraints = Array(cIx2 - cIx1 + 1).fill(null).map((_, c) => c + cIx1);
         else
             selectedConstraints = Array(cIx1 - cIx2 + 1).fill(null).map((_, c) => c + cIx2);
+        lastSelectedConstraint = selectedConstraints.length > 0 ? selectedConstraints[0] | 0 : lastSelectedConstraint;
         editingConstraintType = null;
         selectedCells = [];
         updateVisuals(updateOpt);
@@ -703,22 +707,6 @@
                 return false;
             }
         };
-    }
-    function insertConstraint(constr, cType)
-    {
-        saveUndo();
-        let cIx = state.constraints.length;
-        state.constraints.push(constr);
-        constraintTypes[constr.type] = cType;
-        document.getElementById('constraint-search').classList.remove('shown');
-        puzzleContainer.focus();
-
-        selectedConstraints = [cIx];
-        lastSelectedConstraint = cIx;
-        editingConstraintType = null;
-        selectedCells = [];
-
-        updateVisuals({ storage: true, svg: true });
     }
     function pressEscape()
     {
@@ -788,7 +776,7 @@
 
                     // Double-click event
                     if (dat.enf.valid)
-                        div.ondblclick = function() { insertConstraint(constr, dat.cType); };
+                        div.ondblclick = function() { addConstraintFromSearch(constr, dat.cType); };
 
                     return { constraint: constr, div: div, cType: dat.cType, cTypeId: dat.cTypeId };
                 });
@@ -1151,6 +1139,7 @@
                             nv = result.value;
                             selectedCells = [];
                             selectedConstraints = [cIx];
+                            lastSelectedConstraint = cIx;
                             document.getElementById(`constraint-${cIx}`).classList.remove('warning');
                             document.getElementById(`constraint-${cIx}`).querySelector('.name').removeAttribute('title');
                         }
@@ -1170,7 +1159,7 @@
                     return true;
                 sidebarDiv.focus();
                 if (ev.shiftKey && !ev.ctrlKey)
-                    selectConstraintRange(lastSelectedConstraint, cIx);
+                    selectConstraintRange(lastSelectedConstraint ?? 0, cIx);
                 else if (ev.ctrlKey && !ev.shiftKey)
                 {
                     if (selectedConstraints.includes(cIx))
@@ -1289,6 +1278,7 @@
                     setter(regions);
                     selectedCells = [];
                     selectedConstraints = [regCtrl.dataset.constraintix | 0];
+                    lastSelectedConstraint = selectedConstraints[0];
                     editingConstraintType = null;
                     regCtrl.zingaRegions = regions;
                     updateVisuals();
@@ -1304,26 +1294,6 @@
             document.getElementById(`sudoku-text-${cell}`).textContent = state.givens[cell] !== null ? state.givens[cell] : '';
         }
 
-        //// Selection arrows
-        //let selectionArrowsSvg = '';
-        //let angles = [
-        //    [225, 270, 315],
-        //    [180, null, 0],
-        //    [135,90,45]
-        //];
-        //for (let selIx = 0; selIx < selectedCells.length - 1; selIx++)
-        //{
-        //    let x1 = selectedCells[selIx] % 9;
-        //    let y1 = (selectedCells[selIx] / 9) | 0;
-        //    let x2 = selectedCells[selIx + 1] % 9;
-        //    let y2 = (selectedCells[selIx + 1] / 9) | 0;
-        //    let mx = (x1 + x2) / 2 + .5;
-        //    let my = (y1 + y2) / 2 + .5;
-        //    let angleDeg = angles[y2 - y1 + 1][x2 - x1 + 1];
-        //    selectionArrowsSvg += `<path d='M-.1 0h.2' transform='translate(${mx}, ${my}) rotate(${angleDeg})' />`;
-        //}
-        //document.getElementById('selection-arrows-svg').innerHTML = selectionArrowsSvg;
-
         // Selection arrows
         let selectionArrowsSvg = '';
         for (let selIx = 0; selIx < selectedCells.length - 1; selIx++)
@@ -1336,6 +1306,16 @@
             selectionArrowsSvg += `<path d='M${x1 + .4 * Math.cos(angle)} ${y1 + .4 * Math.sin(angle)} ${x2 - .4 * Math.cos(angle)} ${y2 - .4 * Math.sin(angle)}' transform='translate(${.5 + .1 * Math.cos(angle + Math.PI / 2)}, ${.5 + .1 * Math.sin(angle + Math.PI / 2)})' />`;
         }
         document.getElementById('selection-arrows-svg').innerHTML = selectionArrowsSvg;
+
+        // Last selected constraint
+        let lscTh = document.getElementById('add-last-selected-constraint');
+        if (lastSelectedConstraint === null)
+            lscTh.style.display = 'none';
+        else
+        {
+            lscTh.style.display = 'table-row';
+            lscTh.querySelector('td').innerText = `Last selected constraint (${getConstraintType(state.constraints[lastSelectedConstraint].type).name})`;
+        }
 
         function fixViewBox()
         {
@@ -1438,9 +1418,9 @@
     // Variables: UI other
     let draggingMode = null;
     let selectedCells = [];
-    let selectedConstraints = [];
     let lastSelectedCell = 0;
-    let lastSelectedConstraint = 0;
+    let selectedConstraints = [];
+    let lastSelectedConstraint = null;
     let editingConstraintType = null;
     let editingConstraintTypeParameter = null;
     let lastCellLineDir = null;
@@ -1711,8 +1691,15 @@
             case 'KeyX':
             case 'KeyY':
             case 'KeyZ':
-                if (selectedCells.length > 0)
-                    addConstraintWithShortcut(str.substr(str.length - 1).toLowerCase());
+                let shortcutLetter = str.substr(str.length - 1).toLowerCase();
+                let shortcutConstraint = Object.keys(constraintTypes).filter(id => constraintTypes[id].shortcut === shortcutLetter);
+                if (shortcutConstraint.length !== 0)
+                    createConstraint(shortcutConstraint[0] | 0);
+                break;
+
+            case 'Equal':
+                if (lastSelectedConstraint !== null)
+                    createConstraint(state.constraints[lastSelectedConstraint].type);
                 break;
 
             case 'Shift+KeyA':
@@ -1896,7 +1883,7 @@
             case 'Enter':
                 if (constraintResultsSel === null || constraintResultsSel < 0 || constraintResultsSel >= constraintResults.length)
                     break;
-                insertConstraint(constraintResults[constraintResultsSel].constraint, constraintResults[constraintResultsSel].cType);
+                addConstraintFromSearch(constraintResults[constraintResultsSel].constraint, constraintResults[constraintResultsSel].cType);
                 document.getElementById('constraint-search').classList.remove('shown');
                 puzzleContainer.focus();
                 break;

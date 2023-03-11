@@ -196,8 +196,10 @@ namespace Zinga
                                             new LI("Press a lower-case letter to add one of the common constraints listed below."),
                                             new LI("Press Shift with a letter to search for more constraints.")),
                                         new HR(),
-                                        new P("Shortcuts for common constraint:"),
-                                        new TABLE(constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name)))))))),
+                                        new P("Shortcuts for common constraints:"),
+                                        new TABLE(
+                                            constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))),
+                                            new TR { id="add-last-selected-constraint"}._(new TH('='), new TD("Last selected constraint"))))))),
                         new DIV { class_ = "focus-catcher", tabindex = 0 }),
 
                     new DIV { id = "constraint-search" }._(
