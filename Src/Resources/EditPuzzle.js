@@ -174,11 +174,15 @@
                 if (selectedConstraints.includes(i))
                     state.constraints.splice(i, 1);
             let anyConstraintsSelected = selectedConstraints.length > 0;
-            selectedConstraints = [];
-            editingConstraintType = null;
-            for (let i = 0; i < state.customConstraintTypes.length; i++)
-                if (state.customConstraintTypes[i] !== null && state.constraints.every(c => c.type !== ~i))
-                    state.customConstraintTypes[i] = null;
+            if (anyConstraintsSelected)
+            {
+                selectedConstraints = [];
+                lastSelectedConstraint = null;
+                editingConstraintType = null;
+                for (let i = 0; i < state.customConstraintTypes.length; i++)
+                    if (state.customConstraintTypes[i] !== null && state.constraints.every(c => c.type !== ~i))
+                        state.customConstraintTypes[i] = null;
+            }
             updateVisuals({ storage: true, svg: anyConstraintsSelected });
         }
     }
