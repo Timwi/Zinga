@@ -26,7 +26,8 @@ namespace Zinga
                 new UrlMapping(path: "/css-websocket", specificPath: true, handler: req => new HttpResponseWebSocket(new AutoUpdatingCssWebsocket(Settings))),
 #endif
 
-                new UrlMapping(path: "/tmp", handler: PlayWithSuco2),
+                new UrlMapping(path: "/", specificPath: true, handler: req => HttpResponse.Redirect(req.Url.WithPathParent().WithPathOnly("/edit"))),
+                //new UrlMapping(path: "/tmp", handler: PlayWithSuco2),
                 new UrlMapping(path: "/font", handler: req => HttpResponse.Css(Resources.FontCss)),
                 new UrlMapping(path: "/edit", handler: PuzzleEditPage),
                 new UrlMapping(path: "/publish", handler: PuzzlePublish),
