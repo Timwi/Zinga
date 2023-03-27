@@ -123,7 +123,7 @@ namespace Zinga.Suco
                 if (innerResult == null)
                     return null;
                 computedResults.AddRange(innerResult.Select(ir => (ir.variables, conditions: ir.conditions == null ? conditions.Count == 0 ? null : conditions : conditions.Count == 0 ? ir.conditions : ir.conditions.Concat(conditions).ToList(), ir.expr)));
-                skipped:;
+                skipped:
                 pos++;
             }
             return computedResults;

@@ -29,5 +29,7 @@
             var innerExpr = InnerExpression.Optimize(env.DeclareVariable(VariableName, valueExpr is SucoConstant c ? c.Value : null), givens);
             return innerExpr is SucoConstant ? innerExpr : new SucoLetExpression(StartIndex, EndIndex, VariableName, valueExpr, innerExpr, Type);
         }
+
+        public override string ToString() => $"let {VariableName} = {ValueExpression}; {InnerExpression}";
     }
 }

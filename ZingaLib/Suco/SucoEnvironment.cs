@@ -99,5 +99,12 @@ namespace Zinga.Suco
         public object GetPrevLastValue() => _variables[GetLastListVariableIndex(2)].Value;
         public IEnumerable GetPrevLastList() => _variables[GetLastListVariableIndex(2)].List;
         public int GetPrevLastPosition() => _variables[GetLastListVariableIndex(2)].Position;
+
+        public string GetDebugString(Func<SucoListComprehensionVariable, string> selector = null) =>
+            _variables
+                .Select(v => (variable: v, text: selector(v)))
+                .Where(v => v.text != null)
+                .Select(v => $"{v.variable.Name}={v.text}")
+                .JoinString(" | ");
     }
 }
