@@ -131,6 +131,9 @@ namespace Zinga.Suco
 
         public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
         {
+            // Temporary
+            return this;
+
             if (Clauses.Any(c => c.HasSingleton))
                 return this;
 
