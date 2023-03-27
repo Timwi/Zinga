@@ -40,6 +40,8 @@ namespace Zinga.Suco
             ("same", SucoIntegerType) => SucoType.Boolean,
             ("sum", SucoIntegerType) => SucoType.Integer,
             ("product", SucoIntegerType) => SucoType.Integer,
+            ("min", SucoIntegerType) => SucoType.Integer,
+            ("max", SucoIntegerType) => SucoType.Integer,
 
             // Lists of booleans
             ("all", SucoBooleanType) => SucoType.Boolean,
@@ -71,6 +73,8 @@ namespace Zinga.Suco
             ("count", SucoIntegerType) => count<int?>(operand),
             ("sum", SucoIntegerType) => ((IEnumerable<int?>) operand)?.Aggregate((int?) 0, (prev, next) => prev == null || next == null ? null : prev.Value + next.Value),
             ("product", SucoIntegerType) => ((IEnumerable<int?>) operand)?.Aggregate((int?) 1, (prev, next) => prev == null || next == null ? null : prev.Value * next.Value),
+            ("min", SucoIntegerType) => minMax((IEnumerable<int?>) operand, min: true),
+            ("max", SucoIntegerType) => minMax((IEnumerable<int?>) operand, min: false),
 
             // Lists of booleans
             ("all", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || next == false ? false : prev == null || next == null ? null : true),
@@ -98,6 +102,21 @@ namespace Zinga.Suco
                 if (e.Current == null || grid[e.Current.Index] == null)
                     return null;
                 result = min ? Math.Min(result, grid[e.Current.Index].Value) : Math.Max(result, grid[e.Current.Index].Value);
+            }
+            return result;
+        }
+
+        private int? minMax(IEnumerable<int?> cells, bool min)
+        {
+            using var e = cells.GetEnumerator();
+            if (!e.MoveNext() || e.Current == null)
+                return null;
+            var result = e.Current.Value;
+            while (e.MoveNext())
+            {
+                if (e.Current == null)
+                    return null;
+                result = min ? Math.Min(result, e.Current.Value) : Math.Max(result, e.Current.Value);
             }
             return result;
         }
