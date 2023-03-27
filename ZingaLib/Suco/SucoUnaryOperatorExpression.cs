@@ -36,7 +36,7 @@ namespace Zinga.Suco
         {
             var optimizedOperand = Operand.Optimize(env, givens);
             return optimizedOperand is SucoConstant c
-                ? new SucoConstant(StartIndex, EndIndex, Type, Operand.Type.InterpretUnaryOperator(Operator, c))
+                ? new SucoConstant(StartIndex, EndIndex, Type, Operand.Type.InterpretUnaryOperator(Operator, c.Value))
                 : new SucoUnaryOperatorExpression(StartIndex, EndIndex, optimizedOperand, Operator, Type);
         }
 
