@@ -119,6 +119,7 @@ namespace Zinga
                         .Data("title", puzzle?.Title)
                         .Data("author", puzzle?.Author)
                         .Data("rules", puzzle?.Rules)
+                        .Data("links", puzzle?.LinksJson)
                         .Data("constrainttypes", constraintTypesJson)
                         .Data("constraints", constraintsJson)
                         ._(

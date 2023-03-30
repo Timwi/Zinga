@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using RT.Serialization;
 using RT.Util;
-using SvgPuzzleConstraints;
 
 namespace Zinga.Database
 {

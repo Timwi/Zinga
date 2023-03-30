@@ -799,6 +799,7 @@
                 title: puzzleDiv.dataset.title,
                 author: puzzleDiv.dataset.author,
                 rules: puzzleDiv.dataset.rules,
+                links: puzzleDiv.dataset.links,
                 givens: givens,
                 constraints: [],
                 customConstraintTypes: []
