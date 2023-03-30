@@ -795,11 +795,15 @@
             localStorage.setItem('zinga-edit-undo', JSON.stringify(editUndoBuffer));
             localStorage.setItem('zinga-edit-redo', "[]");
 
+            let links = [];
+            try { links = JSON.parse(puzzleDiv.dataset.links); }
+            catch { }
+
             let newEditState = {
                 title: puzzleDiv.dataset.title,
                 author: puzzleDiv.dataset.author,
                 rules: puzzleDiv.dataset.rules,
-                links: puzzleDiv.dataset.links,
+                links: links ?? [],
                 givens: givens,
                 constraints: [],
                 customConstraintTypes: []

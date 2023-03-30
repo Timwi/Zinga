@@ -119,7 +119,7 @@ namespace Zinga
                         .Data("title", puzzle?.Title)
                         .Data("author", puzzle?.Author)
                         .Data("rules", puzzle?.Rules)
-                        .Data("links", puzzle?.LinksJson)
+                        .Data("links", puzzle?.Links.Select(l => new JsonDict { ["text"] = l.Text, ["url"] = l.Url }).ToJsonList())
                         .Data("constrainttypes", constraintTypesJson)
                         .Data("constraints", constraintsJson)
                         ._(

@@ -44,7 +44,7 @@ namespace Zinga
                 puzzle.Title = json["title"].GetString();
                 puzzle.Author = json["author"].GetString();
                 puzzle.Rules = json["rules"].GetString();
-                puzzle.Links = json["links"] == null ? null : json["links"].GetList().Select(lnk => new Link { Text = lnk["text"].GetString(), Url = lnk["url"].GetString() }).ToArray();
+                puzzle.Links = json["links"]?.GetList().Select(lnk => new Link { Text = lnk["text"].GetString(), Url = lnk["url"].GetString() }).ToArray();
 
                 errorLocation = 4;
                 var givens = json["givens"].GetList().Select((v, ix) => (v, ix)).Where(tup => tup.v != null).Select(tup => (cell: tup.ix, value: tup.v.GetInt())).ToArray();
