@@ -22,7 +22,7 @@ namespace Zinga.Lib
             var key = (suco, variablesJson.ToString(), context, expectedResultTypeStr);
             if (!_parsedSuco.ContainsKey(key))
             {
-                var env = new SucoTypeEnvironment();
+                var env = new SucoTypeEnvironment().DeclareVariable("allcells", SucoType.List(SucoType.Cell));
                 foreach (var (varName, varValue) in variablesJson)
                     env = env.DeclareVariable(varName, SucoType.Parse(varValue.GetString()));
                 _parsedSuco[key] = (SucoParser.ParseCode(suco, env, context, expectedResultType), env, new Dictionary<string, object>());
@@ -42,6 +42,7 @@ namespace Zinga.Lib
             var resultSvgDefs = new HashSet<string>();
             var resultSvgs = Enumerable.Range(0, constraints.Count).Select(c => new JsonDict { ["global"] = false, ["svg"] = null }).ToJsonList();
             var resultErrors = new JsonList(Enumerable.Range(0, constraints.Count).Select(_ => new JsonDict()));
+            var allCells = Ut.NewArray(81, c => new Cell(c));
 
             for (var cIx = 0; cIx < constraints.Count; cIx++)
             {
@@ -57,11 +58,11 @@ namespace Zinga.Lib
                         return;
                     try
                     {
-                        var (expr, env, cache) = parseSuco(type[parameter].GetString(), type["variables"].GetDict(), SucoContext.Svg, expectedReturnType);
+                        var (expr, _, cache) = parseSuco(type[parameter].GetString(), type["variables"].GetDict(), SucoContext.Svg, expectedReturnType);
                         var cacheKey = constraint["values"].ToString();
                         if (!cache.ContainsKey(cacheKey))
                         {
-                            variableValues ??= ZingaUtil.ConvertVariableValues(type["variables"].GetDict(), constraint["values"].GetDict());
+                            variableValues ??= ZingaUtil.ConvertVariableValues(type["variables"].GetDict(), constraint["values"].GetDict()).DeclareVariable("allcells", allCells);
                             cache[cacheKey] = expr.Interpret(variableValues, null);
                         }
                         callback(cache[cacheKey]);
