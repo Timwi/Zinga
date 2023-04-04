@@ -764,8 +764,7 @@ svg.puzzle-svg .multi-select {
     }
 
         #constraint-results-box .item:hover {
-            border-color: hsl(125, 90%, 40%);
-            background-color: hsl(125, 90%, 85%);
+            background-color: hsl(225, 90%, 85%);
         }
 
         #constraint-results-box .item.kbsel {
@@ -781,9 +780,7 @@ svg.puzzle-svg .multi-select {
         #constraint-results-box .item > .name {
             font-size: 18pt;
             font-weight: bold;
-            text-overflow: ellipsis;
             overflow: hidden;
-            white-space: nowrap;
         }
 
         #constraint-results-box .item > .akas {

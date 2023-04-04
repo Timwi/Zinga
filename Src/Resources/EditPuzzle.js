@@ -1907,8 +1907,13 @@
     });
     document.getElementById('constraint-search-input').addEventListener('keyup', ev =>
     {
-        if (ev.keyCode === 32 || (ev.keyCode >= 65 && ev.keyCode <= 90))
-            runConstraintSearch(document.getElementById('constraint-search-input').value);
+        let isLetter = ev.key.length === 1 && ((ev.key.charCodeAt(0) >= 0x41 && ev.key.charCodeAt(0) <= 0x5A) || (ev.key.charCodeAt(0) >= 0x61 && ev.key.charCodeAt(0) <= 0x7A));
+        if ((isLetter || ev.key === ' ' || ev.key === 'Backspace'))
+        {
+            let val = document.getElementById('constraint-search-input').value;
+            if (val.length > 0)
+                runConstraintSearch(val);
+        }
     });
 
     //document.addEventListener('paste', ev =>
