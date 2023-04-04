@@ -24,6 +24,9 @@ namespace Zinga.Suco
         public override SucoType GetMemberType(string memberName, SucoContext context) => (memberName, ElementType) switch
         {
             // Lists of cells
+            ("contains", SucoCellType) => new SucoFunctionType(
+                (new[] { SucoType.Cell }, SucoType.Boolean),
+                (new[] { SucoType.Cell.List() }, SucoType.Boolean)),
             ("sum", SucoCellType) => SucoType.Integer,
             ("product", SucoCellType) => SucoType.Integer,
             ("min", SucoCellType) => SucoType.Integer,
@@ -60,6 +63,7 @@ namespace Zinga.Suco
         public override object InterpretMemberAccess(string memberName, object operand, SucoEnvironment env, int?[] grid) => (memberName, ElementType) switch
         {
             // Lists of cells
+            ("contains", SucoCellType) => operand == null ? null : contains(((IEnumerable<Cell>) operand).ToArray()),
             ("sum", SucoCellType) => ((IEnumerable<Cell>) operand)?.Aggregate((int?) 0, (prev, next) => prev == null || next == null || grid[next.Index] == null ? null : prev.Value + grid[next.Index].Value),
             ("product", SucoCellType) => ((IEnumerable<Cell>) operand)?.Aggregate((int?) 1, (prev, next) => prev == null || next == null || grid[next.Index] == null ? null : prev.Value * grid[next.Index].Value),
             ("min", SucoCellType) => minMax((IEnumerable<Cell>) operand, grid, min: true),
@@ -165,7 +169,11 @@ namespace Zinga.Suco
 
         private SucoFunction contains(IEnumerable<int?> operand) => new(
             (parameters: new[] { SucoType.Integer }, returnType: SucoType.Boolean, interpreter: arg => containsInt(operand, (int?) arg[0])),
-            (parameters: new[] { SucoType.Integer.List() }, returnType: SucoType.Boolean, interpreter: arg => containsList(operand, ((IEnumerable<int?>) arg[0]).ToArray())));
+            (parameters: new[] { SucoType.Integer.List() }, returnType: SucoType.Boolean, interpreter: arg => containsIntList(operand, ((IEnumerable<int?>) arg[0]).ToArray())));
+
+        private SucoFunction contains(IEnumerable<Cell> operand) => new(
+            (parameters: new[] { SucoType.Cell }, returnType: SucoType.Boolean, interpreter: arg => containsCell(operand, (Cell) arg[0])),
+            (parameters: new[] { SucoType.Cell.List() }, returnType: SucoType.Boolean, interpreter: arg => containsCellList(operand, ((IEnumerable<Cell>) arg[0]).ToArray())));
 
         private static bool? containsInt(IEnumerable<int?> listToSearch, int? find)
         {
@@ -182,12 +190,37 @@ namespace Zinga.Suco
             return anyNull ? null : false;
         }
 
-        private static bool? containsList(IEnumerable<int?> listToSearch, int?[] find)
+        private static bool? containsCell(IEnumerable<Cell> listToSearch, Cell find)
+        {
+            if (find == null || listToSearch == null)
+                return null;
+            var anyNull = false;
+            foreach (var value in listToSearch)
+            {
+                if (value == null)
+                    anyNull = true;
+                else if (value.Index == find.Index)
+                    return true;
+            }
+            return anyNull ? null : false;
+        }
+
+        private static bool? containsIntList(IEnumerable<int?> listToSearch, int?[] find)
         {
             var list = listToSearch.ToArray();
             if (find == null || find.Contains(null))
                 return null;
-            if (find.All(f => list.Count(v => v == f.Value) >= find.Count(v => v == f.Value)))
+            if (find.All(f => list.Count(v => v.Value == f.Value) >= find.Count(v => v.Value == f.Value)))
+                return true;
+            return list.Contains(null) ? null : false;
+        }
+
+        private static bool? containsCellList(IEnumerable<Cell> listToSearch, Cell[] find)
+        {
+            var list = listToSearch.ToArray();
+            if (find == null || find.Contains(null))
+                return null;
+            if (find.All(f => list.Count(v => v.Index == f.Index) >= find.Count(v => v.Index == f.Index)))
                 return true;
             return list.Contains(null) ? null : false;
         }
