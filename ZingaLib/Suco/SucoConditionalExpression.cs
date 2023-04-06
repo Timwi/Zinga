@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Zinga.Suco;
+﻿using Zinga.Suco;
 
 namespace Zinga
 {
@@ -8,6 +7,8 @@ namespace Zinga
         public SucoExpression Condition { get; private set; }
         public SucoExpression True { get; private set; }
         public SucoExpression False { get; private set; }
+
+        public override string ToString() => $"{Condition} ? {True} : {False}";
 
         public SucoConditionalExpression(int startIndex, int endIndex, SucoExpression condition, SucoExpression truePart, SucoExpression falsePart, SucoType type = null)
             : base(startIndex, endIndex, type)
@@ -55,7 +56,7 @@ namespace Zinga
         {
             var conditionOpt = Condition.Optimize(env, givens);
             if (conditionOpt is SucoConstant c)
-                return c.Equals(true) ? True.Optimize(env, givens) : False.Optimize(env, givens);
+                return c.Value.Equals(true) ? True.Optimize(env, givens) : False.Optimize(env, givens);
             return new SucoConditionalExpression(StartIndex, EndIndex, conditionOpt, True.Optimize(env, givens), False.Optimize(env, givens), Type);
         }
     }

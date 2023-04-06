@@ -1908,7 +1908,7 @@
     document.getElementById('constraint-search-input').addEventListener('keyup', ev =>
     {
         let isLetter = ev.key.length === 1 && ((ev.key.charCodeAt(0) >= 0x41 && ev.key.charCodeAt(0) <= 0x5A) || (ev.key.charCodeAt(0) >= 0x61 && ev.key.charCodeAt(0) <= 0x7A));
-        if ((isLetter || ev.key === ' ' || ev.key === 'Backspace'))
+        if (isLetter || ev.key === ' ' || ev.key === 'Backspace')
         {
             let val = document.getElementById('constraint-search-input').value;
             if (val.length > 0)
