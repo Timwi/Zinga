@@ -438,10 +438,10 @@
         document.getElementById('constraint-code-svg').value = cType.svg;
         document.getElementById('constraint-code-svgdefs').value = cType.svgdefs;
 
-        function constraintUpdate(setter)
+        function constraintUpdate(newCTypeId, setter)
         {
             for (let i = 0; i < state.constraints.length; i++)
-                if (state.constraints[i].type === cTypeId)
+                if (state.constraints[i].type === newCTypeId)
                     setter(state.constraints[i]);
         }
 
@@ -469,11 +469,13 @@
                     // Button to delete a property
                     setButtonHandler(tr.querySelector('button.remove'), () =>
                     {
-                        saveUndo();
-                        delete cType.variables[variableName];
-                        constraintUpdate(c => { delete c.values[variableName]; });
-                        generateVariablesTable();
-                        updateVisuals({ storage: true, svg: true });
+                        editConstraintParameter(cTypeId, `variables-${variableName}-delete`, newCTypeId =>
+                        {
+                            let newCType = getConstraintType(newCTypeId);
+                            delete newCType.variables[variableName];
+                            constraintUpdate(newCTypeId, c => { delete c.values[variableName]; });
+                            generateVariablesTable();
+                        });
                     });
 
                     // Double-click to rename a property
@@ -493,17 +495,19 @@
                                 continue;
                             }
 
-                            saveUndo();
-                            cType.variables[newName] = cType.variables[variableName];
-                            delete cType.variables[variableName];
-                            constraintUpdate(c =>
+                            editConstraintParameter(cTypeId, `variables-${variableName}-rename`, newCTypeId =>
                             {
-                                c.values[newName] = c.values[variableName];
-                                delete c.values[variableName];
+                                let newCType = getConstraintType(newCTypeId);
+                                newCType.variables[newName] = newCType.variables[variableName];
+                                delete newCType.variables[variableName];
+                                constraintUpdate(newCTypeId, c =>
+                                {
+                                    c.values[newName] = c.values[variableName];
+                                    delete c.values[variableName];
+                                });
+                                generateVariablesTable();
+                                document.getElementById(`constraint-code-variable-${newName}-0`).focus();
                             });
-                            generateVariablesTable();
-                            updateVisuals({ storage: true, svg: true });
-                            document.getElementById(`constraint-code-variable-${newName}-0`).focus();
                             break;
                         }
                     };
@@ -534,7 +538,7 @@
                                     ? `${'list('.repeat(selIx + 1)}cell${')'.repeat(selIx + 1)}`
                                     : `${'list('.repeat(selIx)}${sel.value}${')'.repeat(selIx)}`;
                                 newCType.variables[variableName] = newType;
-                                constraintUpdate(c => { c.values[variableName] = coerceValue(c.values[variableName], newType); });
+                                constraintUpdate(newCTypeId, c => { c.values[variableName] = coerceValue(c.values[variableName], newType); });
                             });
                         };
                     });
@@ -550,15 +554,15 @@
         // Button to add a new property
         setButtonHandler(document.getElementById('constraint-code-addvar'), () =>
         {
-            saveUndo();
-            let i = 1;
-            while (`property${i === 1 ? '' : i}` in cType.variables)
-                i++;
-            let varName = `property${i === 1 ? '' : i}`;
-            cType.variables[varName] = 'int';
-            constraintUpdate(c => { c.values[varName] = coerceValue(0, 'int'); });
-            generateVariablesTable();
-            updateVisuals({ storage: true, svg: true });
+            editConstraintParameter(cTypeId, `variables-addvar`, newCTypeId =>
+            {
+                let newCType = getConstraintType(newCTypeId), i = 1, varName = 'property';
+                while (varName in cType.variables)
+                    varName = `property${++i}`;
+                newCType.variables[varName] = 'int';
+                constraintUpdate(newCTypeId, c => { c.values[varName] = coerceValue(0, 'int'); });
+                generateVariablesTable();
+            });
         });
 
         generateVariablesTable();
