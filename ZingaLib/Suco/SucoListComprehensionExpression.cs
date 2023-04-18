@@ -129,27 +129,39 @@ namespace Zinga.Suco
             return computedResults;
         }
 
+        // Bit of a hack. This makes it so that only top-level list comprehensions are optimized.
+        // Nested list comprehensions often result in an explosion of the number of sets of cells considered.
+        private static bool _optimizingListComprehension = false;
+
         public override SucoExpression Optimize(SucoEnvironment env, int?[] givens)
         {
-            // Temporary
-            return this;
-
-            if (Clauses.Any(c => c.HasSingleton))
+            if (_optimizingListComprehension)
                 return this;
 
-            var optimized = optimizeClause(0, null, env, givens);
-            if (optimized == null)
-                return this;
-
-            if (optimized.All(tup => tup.conditions == null && tup.expr is SucoConstant))
+            _optimizingListComprehension = true;
+            try
             {
-                var array = ElementType.CreateArray(optimized.Count);
-                for (var i = 0; i < array.Length; i++)
-                    array.SetValue(((SucoConstant) optimized[i].expr).Value, i);
-                return new SucoConstant(StartIndex, EndIndex, Type, array);
-            }
+                if (Clauses.Any(c => c.HasSingleton))
+                    return this;
 
-            return new SucoOptimizedListComprehensionExpression(this, StartIndex, EndIndex, optimized, Type);
+                var optimized = optimizeClause(0, null, env, givens);
+                if (optimized == null)
+                    return this;
+
+                if (optimized.All(tup => tup.conditions == null && tup.expr is SucoConstant))
+                {
+                    var array = ElementType.CreateArray(optimized.Count);
+                    for (var i = 0; i < array.Length; i++)
+                        array.SetValue(((SucoConstant) optimized[i].expr).Value, i);
+                    return new SucoConstant(StartIndex, EndIndex, Type, array);
+                }
+
+                return new SucoOptimizedListComprehensionExpression(this, StartIndex, EndIndex, optimized, Type);
+            }
+            finally
+            {
+                _optimizingListComprehension = false;
+            }
         }
 
         private IEnumerable<T> recurse<T>(int clIx, SucoEnvironment curEnv, int?[] grid, object[] collections, Cell[] cells, int[] positions)
