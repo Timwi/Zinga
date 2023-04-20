@@ -1670,6 +1670,7 @@
                 break;
 
             case 'Delete':
+            case 'Backspace':
                 clearCells();
                 break;
 
@@ -1778,12 +1779,12 @@
                 break;
 
             // Undo/redo
-            case 'Backspace':
+            case 'Alt+Backspace':
             case 'Ctrl+KeyZ':
                 undo();
                 break;
 
-            case 'Shift+Backspace':
+            case 'Alt+Shift+Backspace':
             case 'Ctrl+Shift+KeyZ':
             case 'Ctrl+KeyY':
                 redo();
@@ -1821,7 +1822,7 @@
         switch (str)
         {
             // Keys that change something
-            case 'Delete': clearCells(); break;
+            case 'Delete': case 'Backspace': clearCells(); break;
             case 'Ctrl+KeyD': duplicateConstraints(); break;
 
             case 'Alt+ArrowUp': moveConstraints(true); break;
@@ -1851,12 +1852,13 @@
             case 'Ctrl+KeyA': selectedCells = []; selectedConstraints = state.constraints.map((_, c) => c); editingConstraintType = null; updateVisuals(); break;
 
             // Undo/redo
-            case 'Backspace':
+            case 'Alt+Backspace':
             case 'Ctrl+KeyZ':
                 undo();
                 break;
 
-            case 'Shift+Backspace':
+            case 'Alt+Shift+Backspace':
+            case 'Ctrl+Shift+KeyZ':
             case 'Ctrl+KeyY':
                 redo();
                 break;
