@@ -1,20 +1,12 @@
 ﻿using RT.CommandLine;
+using Zinga;
 
-namespace Zinga
+try
 {
-    class Program
-    {
-        static int Main(string[] args)
-        {
-            try
-            {
-                return CommandLineParser.Parse<CommandLineBase>(args).Execute();
-            }
-            catch (CommandLineParseException ex)
-            {
-                ex.WriteUsageInfoToConsole();
-                return 1;
-            }
-        }
-    }
+    return CommandLineParser.Parse<CommandLineBase>(args).Execute();
+}
+catch (CommandLineParseException ex)
+{
+    ex.WriteUsageInfoToConsole();
+    return 1;
 }
