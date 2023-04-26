@@ -93,7 +93,6 @@ namespace Zinga.Suco
             "left" => cellOp(env, (c1, c2) => c2.X < c1.X && c2.Y == c1.Y),
             "samerow" => cellOp(env, (c1, c2) => c2.Y == c1.Y),
             "samecol" => cellOp(env, (c1, c2) => c2.X == c1.X),
-            "samebox" => cellOp(env, (c1, c2) => c2.Box == c1.Box),
             "topleft" => cellSetOp(env, c => c.GroupBy(c => c.Y).MinElement(g => g.Key).MinElement(c => c.X).Index),
             "topright" => cellSetOp(env, c => c.GroupBy(c => c.Y).MinElement(g => g.Key).MaxElement(c => c.X).Index),
             "bottomleft" => cellSetOp(env, c => c.GroupBy(c => c.Y).MaxElement(g => g.Key).MinElement(c => c.X).Index),

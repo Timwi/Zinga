@@ -20,12 +20,12 @@ namespace Zinga.Database
         private SucoEnvironment _valuesCache;
         [ClassifyIgnore]
         private string _valuesCacheVariables;
-        public SucoEnvironment DecodeValues(string variablesJson)
+        public SucoEnvironment DecodeValues(string variablesJson, int width)
         {
             if (_valuesCache == null || _valuesCacheVariables != variablesJson)
             {
                 _valuesCacheVariables = variablesJson;
-                _valuesCache = ZingaUtil.ConvertVariableValues(JsonDict.Parse(variablesJson), JsonDict.Parse(ValuesJson));
+                _valuesCache = ZingaUtil.ConvertVariableValues(JsonDict.Parse(variablesJson), JsonDict.Parse(ValuesJson), width);
             }
             return _valuesCache;
         }

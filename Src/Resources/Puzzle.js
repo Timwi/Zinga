@@ -34,7 +34,7 @@
 
         // Step 1: move the button row so that it’s below the puzzle
         let buttons = document.getElementById('bb-buttons');
-        let extraBBox = document.getElementById('bb-puzzle-without-global').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
+        let extraBBox = document.getElementById('bb-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
         buttons.setAttribute('transform', `translate(0, ${Math.max(9.4, extraBBox.y + extraBBox.height + .25)})`);
 
         // Step 2: move the global constraints so they’re to the left of the puzzle
@@ -823,7 +823,7 @@
     {
         let img = new Image();
         let svgElem = puzzleDiv.querySelector('svg.puzzle-svg');
-        let bBox = document.getElementById('bb-puzzle-with-global').getBBox({ fill: true, stroke: true, markers: true });
+        let bBox = document.getElementById('bb-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
         let margin = .1;
         let nBox = { x: bBox.x - margin, y: bBox.y - margin, width: bBox.width + 2 * margin, height: bBox.height + 2 * margin };
         let canvas = document.createElement('canvas');

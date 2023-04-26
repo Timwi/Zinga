@@ -84,7 +84,7 @@ namespace Zinga
                     renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
             }).JoinString();
 
-            var decodedValues = constraints?.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].VariablesJson)).ToArray();
+            var decodedValues = constraints?.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].VariablesJson, puzzle.Width)).ToArray();
 
             var constraintsJson = constraints?.Select(c => c.ToJson()).ToJsonList().ToString();
             var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToJson()).ToString();
@@ -151,65 +151,63 @@ namespace Zinga
                                     <g id='bb-everything'>
                                         <g id='bb-buttons' transform='translate(0, 9.5)'>{renderButtonArea(btns, 9)}</g>
 
-                                        <g id='bb-puzzle-with-global'>
+                                        <g id='bb-puzzle'>
                                             <g id='constraint-svg-global'>{constraints?
                                                 .Select((c, cIx) => (constraint: c, cIx))
                                                 .Where(tup => constraintTypes[tup.constraint.ConstraintID].Kind == ConstraintKind.Global)
                                                 .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' class='constraint-svg' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ConstraintID].GetSvg(decodedValues[tup.cIx])}</g>")
                                                 .JoinString()}</g>
 
-                                            <g id='bb-puzzle-without-global'>
-                                                {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
-                                                    <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
-                                                    <g id='sudoku-multicolor-{cell}' transform='translate({cell % 9 + .5}, {cell / 9 + .5})'></g>
-                                                </g>").JoinString()}
+                                            {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
+                                                <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
+                                                <g id='sudoku-multicolor-{cell}' transform='translate({cell % 9 + .5}, {cell / 9 + .5})'></g>
+                                            </g>").JoinString()}
 
-                                                <path d='M0 3H9M0 6H9M3 0V9M6 0V9M0 0H9V9H0z' fill='none' stroke='black' stroke-width='.05' />
-                                                <path d='M0 1H9M0 2H9M0 4H9M0 5H9M0 7H9M0 8H9M1 0V9M2 0V9M4 0V9M5 0V9M7 0V9M8 0V9' fill='none' stroke='black' stroke-width='.01' />
+                                            <path d='M0 3H9M0 6H9M3 0V9M6 0V9M0 0H9V9H0z' fill='none' stroke='black' stroke-width='.05' />
+                                            <path d='M0 1H9M0 2H9M0 4H9M0 5H9M0 7H9M0 8H9M1 0V9M2 0V9M4 0V9M5 0V9M7 0V9M8 0V9' fill='none' stroke='black' stroke-width='.01' />
 
-                                                <rect class='region-invalid' id='row-invalid-0' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 0)' />
-                                                <rect class='region-invalid' id='row-invalid-1' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 1)' />
-                                                <rect class='region-invalid' id='row-invalid-2' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 2)' />
-                                                <rect class='region-invalid' id='row-invalid-3' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 3)' />
-                                                <rect class='region-invalid' id='row-invalid-4' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 4)' />
-                                                <rect class='region-invalid' id='row-invalid-5' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 5)' />
-                                                <rect class='region-invalid' id='row-invalid-6' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 6)' />
-                                                <rect class='region-invalid' id='row-invalid-7' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 7)' />
-                                                <rect class='region-invalid' id='row-invalid-8' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 8)' />
-                                                <rect class='region-invalid' id='column-invalid-0' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(0, 0)' />
-                                                <rect class='region-invalid' id='column-invalid-1' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(1, 0)' />
-                                                <rect class='region-invalid' id='column-invalid-2' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(2, 0)' />
-                                                <rect class='region-invalid' id='column-invalid-3' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(3, 0)' />
-                                                <rect class='region-invalid' id='column-invalid-4' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(4, 0)' />
-                                                <rect class='region-invalid' id='column-invalid-5' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(5, 0)' />
-                                                <rect class='region-invalid' id='column-invalid-6' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(6, 0)' />
-                                                <rect class='region-invalid' id='column-invalid-7' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(7, 0)' />
-                                                <rect class='region-invalid' id='column-invalid-8' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(8, 0)' />
-                                                <rect class='region-invalid' id='box-invalid-0' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 0)' />
-                                                <rect class='region-invalid' id='box-invalid-1' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 0)' />
-                                                <rect class='region-invalid' id='box-invalid-2' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 0)' />
-                                                <rect class='region-invalid' id='box-invalid-3' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 3)' />
-                                                <rect class='region-invalid' id='box-invalid-4' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 3)' />
-                                                <rect class='region-invalid' id='box-invalid-5' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 3)' />
-                                                <rect class='region-invalid' id='box-invalid-6' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 6)' />
-                                                <rect class='region-invalid' id='box-invalid-7' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 6)' />
-                                                <rect class='region-invalid' id='box-invalid-8' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 6)' />
+                                            <rect class='region-invalid' id='row-invalid-0' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 0)' />
+                                            <rect class='region-invalid' id='row-invalid-1' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 1)' />
+                                            <rect class='region-invalid' id='row-invalid-2' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 2)' />
+                                            <rect class='region-invalid' id='row-invalid-3' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 3)' />
+                                            <rect class='region-invalid' id='row-invalid-4' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 4)' />
+                                            <rect class='region-invalid' id='row-invalid-5' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 5)' />
+                                            <rect class='region-invalid' id='row-invalid-6' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 6)' />
+                                            <rect class='region-invalid' id='row-invalid-7' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 7)' />
+                                            <rect class='region-invalid' id='row-invalid-8' x='0' y='0' width='9' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, 8)' />
+                                            <rect class='region-invalid' id='column-invalid-0' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(0, 0)' />
+                                            <rect class='region-invalid' id='column-invalid-1' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(1, 0)' />
+                                            <rect class='region-invalid' id='column-invalid-2' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(2, 0)' />
+                                            <rect class='region-invalid' id='column-invalid-3' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(3, 0)' />
+                                            <rect class='region-invalid' id='column-invalid-4' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(4, 0)' />
+                                            <rect class='region-invalid' id='column-invalid-5' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(5, 0)' />
+                                            <rect class='region-invalid' id='column-invalid-6' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(6, 0)' />
+                                            <rect class='region-invalid' id='column-invalid-7' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(7, 0)' />
+                                            <rect class='region-invalid' id='column-invalid-8' x='0' y='0' width='1' height='9' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate(8, 0)' />
+                                            <rect class='region-invalid' id='box-invalid-0' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 0)' />
+                                            <rect class='region-invalid' id='box-invalid-1' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 0)' />
+                                            <rect class='region-invalid' id='box-invalid-2' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 0)' />
+                                            <rect class='region-invalid' id='box-invalid-3' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 3)' />
+                                            <rect class='region-invalid' id='box-invalid-4' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 3)' />
+                                            <rect class='region-invalid' id='box-invalid-5' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 3)' />
+                                            <rect class='region-invalid' id='box-invalid-6' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(0, 6)' />
+                                            <rect class='region-invalid' id='box-invalid-7' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(3, 6)' />
+                                            <rect class='region-invalid' id='box-invalid-8' x='0' y='0' width='3' height='3' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#box-invalid-mask)' transform='translate(6, 6)' />
 
-                                                <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g class='constraint-svg' id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
+                                            <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ConstraintID].Kind == ConstraintKind.Global ? null : $"<g class='constraint-svg' id='constraint-svg-{cIx}'>{constraintTypes[c.ConstraintID].GetSvg(decodedValues[cIx])}</g>").JoinString()}</g>
 
-                                                {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
-                                                    <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
-                                                    <text class='notation' id='sudoku-center-text-{cell}' font-size='.3'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-0' x='{cell % 9 + .1}' y='{cell / 9 + .3}' text-anchor='start'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-1' x='{cell % 9 + .9}' y='{cell / 9 + .3}' text-anchor='end'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-2' x='{cell % 9 + .1}' y='{cell / 9 + .875}' text-anchor='start'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-3' x='{cell % 9 + .9}' y='{cell / 9 + .875}' text-anchor='end'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-4' x='{cell % 9 + .5}' y='{cell / 9 + .3}'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-5' x='{cell % 9 + .9}' y='{cell / 9 + .6125}' text-anchor='end'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-6' x='{cell % 9 + .5}' y='{cell / 9 + .875}'></text>
-                                                    <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % 9 + .1}' y='{cell / 9 + .6125}' text-anchor='start'></text>
-                                                </g>").JoinString()}
-                                            </g>
+                                            {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
+                                                <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
+                                                <text class='notation' id='sudoku-center-text-{cell}' font-size='.3'></text>
+                                                <text class='notation' id='sudoku-corner-text-{cell}-0' x='{cell % 9 + .1}' y='{cell / 9 + .3}' text-anchor='start'></text>
+                                                <text class='notation' id='sudoku-corner-text-{cell}-1' x='{cell % 9 + .9}' y='{cell / 9 + .3}' text-anchor='end'></text>
+                                                <text class='notation' id='sudoku-corner-text-{cell}-2' x='{cell % 9 + .1}' y='{cell / 9 + .875}' text-anchor='start'></text>
+                                                <text class='notation' id='sudoku-corner-text-{cell}-3' x='{cell % 9 + .9}' y='{cell / 9 + .875}' text-anchor='end'></text>
+                                                <text class='notation' id='sudoku-corner-text-{cell}-4' x='{cell % 9 + .5}' y='{cell / 9 + .3}'></text>
+                                                <text class='notation' id='sudoku-corner-text-{cell}-5' x='{cell % 9 + .9}' y='{cell / 9 + .6125}' text-anchor='end'></text>
+                                                <text class='notation' id='sudoku-corner-text-{cell}-6' x='{cell % 9 + .5}' y='{cell / 9 + .875}'></text>
+                                                <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % 9 + .1}' y='{cell / 9 + .6125}' text-anchor='start'></text>
+                                            </g>").JoinString()}
                                         </g>
                                     </g>
                                 </svg>")),

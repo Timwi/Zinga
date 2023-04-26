@@ -1,16 +1,12 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.30804.86
+# Visual Studio Version 17
+VisualStudioVersion = 17.6.33513.286
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zinga", "Src\Zinga.csproj", "{CA13A37B-4850-4889-B0D6-525E747957DB}"
 	ProjectSection(ProjectDependencies) = postProject
 		{F911EC69-67D5-4769-A549-E7EC0876DA04} = {F911EC69-67D5-4769-A549-E7EC0876DA04}
 	EndProjectSection
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "PuzzleSolvers", "..\PuzzleSolvers\Src\PuzzleSolvers.csproj", "{F1EC7C1B-884D-4D3F-9D31-58D2539CEEB1}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SvgPuzzleConstraints", "..\SvgPuzzleConstraints\Src\SvgPuzzleConstraints.csproj", "{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZingaWasm", "ZingaWasm\ZingaWasm.csproj", "{F911EC69-67D5-4769-A549-E7EC0876DA04}"
 EndProject
@@ -26,14 +22,6 @@ Global
 		{CA13A37B-4850-4889-B0D6-525E747957DB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CA13A37B-4850-4889-B0D6-525E747957DB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CA13A37B-4850-4889-B0D6-525E747957DB}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F1EC7C1B-884D-4D3F-9D31-58D2539CEEB1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F1EC7C1B-884D-4D3F-9D31-58D2539CEEB1}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F1EC7C1B-884D-4D3F-9D31-58D2539CEEB1}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F1EC7C1B-884D-4D3F-9D31-58D2539CEEB1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{592301F2-D4EA-4F45-9BA9-4F28C1DFD6BB}.Release|Any CPU.Build.0 = Release|Any CPU
 		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Release|Any CPU.ActiveCfg = Release|Any CPU

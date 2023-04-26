@@ -5,14 +5,14 @@
     // Utility
     function adjacent(cell)
     {
-        let list = [];
-        let x = cell % 9;
-        let y = (cell / 9) | 0;
+        let list = [], w = state.width;
+        let x = cell % w;
+        let y = (cell / w) | 0;
         for (let xx = x - 1; xx <= x + 1; xx++)
             if (inRange(xx))
                 for (let yy = y - 1; yy <= y + 1; yy++)
                     if (inRange(yy) && (xx != x || yy != y))
-                        list.push(xx + 9 * yy);
+                        list.push(xx + w * yy);
         return list;
     }
     function dotNet(method, args, callback)
@@ -26,6 +26,7 @@
     {
         if (cells.length < 2)
             return [];
+        let w = state.width;
         let smallestFactor = cells.length <= 5 ? 1 : 2;
         while (cells.length % smallestFactor !== 0)
             smallestFactor++;
@@ -46,12 +47,12 @@
                 let regions = [reg];
                 while (rem.length > 0)
                 {
-                    let xOffset = rem[0] % 9 - reg[0] % 9;
-                    let yOffset = ((rem[0] / 9) | 0) - ((reg[0] / 9) | 0);
-                    if (!reg.every(c => inRange(c % 9 + xOffset) && inRange(((c / 9) | 0) + yOffset) && rem.includes(c + xOffset + 9 * yOffset)))
+                    let xOffset = rem[0] % w - reg[0] % w;
+                    let yOffset = ((rem[0] / w) | 0) - ((reg[0] / w) | 0);
+                    if (!reg.every(c => inRange(c % w + xOffset) && inRange(((c / w) | 0) + yOffset) && rem.includes(c + xOffset + w * yOffset)))
                         break;
-                    regions.push(reg.map(c => c + xOffset + 9 * yOffset));
-                    rem = rem.filter(c => !reg.includes(c - xOffset - 9 * yOffset));
+                    regions.push(reg.map(c => c + xOffset + w * yOffset));
+                    rem = rem.filter(c => !reg.includes(c - xOffset - w * yOffset));
                 }
                 if (rem.length === 0 && regions.length > 1)
                     yield regions;
@@ -89,7 +90,7 @@
         }
         return [null, null];
     }
-    function inRange(x) { return x >= 0 && x < 9; }
+    function inRange(x) { return x >= 0 && x < state.width; }
     function keyName(ev)
     {
         let str = ev.code;
@@ -103,25 +104,15 @@
     }
     function orthogonal(cell)
     {
-        let list = [];
-        let x = cell % 9;
-        let y = (cell / 9) | 0;
+        let list = [], w = state.width;
+        let x = cell % w;
+        let y = (cell / w) | 0;
         for (let xx = x - 1; xx <= x + 1; xx++)
             if (inRange(xx))
                 for (let yy = y - 1; yy <= y + 1; yy++)
                     if (inRange(yy) && (xx == x || yy == y) && (xx != x || yy != y))
-                        list.push(xx + 9 * yy);
+                        list.push(xx + w * yy);
         return list;
-    }
-    function removeAttributeSafe(elem, attr)
-    {
-        if (elem !== null)
-            elem.removeAttribute(attr);
-    }
-    function setAttributeSafe(elem, attr, value)
-    {
-        if (elem !== null)
-            elem.setAttribute(attr, value);
     }
 
     // State, editing, constraints
@@ -269,6 +260,7 @@
     }
     function enforceConstraintKind(kind, value)
     {
+        let w = state.width;
         // Return value is either:
         // { valid: false, message: 'error message' }
         // { valid: true, value?: new value (may or may not be the same as the input) (may be a single cell, list, list of lists, or absent) }
@@ -302,8 +294,8 @@
 
             case 'MatchingRegions':
                 if (Array.isArray(value) && value.every(inner => Array.isArray(inner) &&
-                    inner.map((v, ix) => v % 9 - value[0][ix] % 9).every(df => df === inner[0] % 9 - value[0][0] % 9) &&
-                    inner.map((v, ix) => ((v / 9) | 0) - ((value[0][ix] / 9) | 0)).every(df => df === ((inner[0] / 9) | 0) - ((value[0][0] / 9) | 0))))
+                    inner.map((v, ix) => v % w - value[0][ix] % w).every(df => df === inner[0] % w - value[0][0] % w) &&
+                    inner.map((v, ix) => ((v / w) | 0) - ((value[0][ix] / w) | 0)).every(df => df === ((inner[0] / w) | 0) - ((value[0][0] / w) | 0))))
                     return { valid: true, value: value };
 
                 if (Array.isArray(value) && value.every(c => typeof c === 'number'))
@@ -321,31 +313,31 @@
                 if (!Array.isArray(value) || value.length < 2)
                     return { valid: false, message: 'This constraint requires at least two cells that are in the same row or column.' };
 
-                let row = value.every(c => ((c / 9) | 0) === ((value[0] / 9) | 0)) ? ((value[0] / 9) | 0) : null;
-                let col = value.every(c => (c % 9) === (value[0] % 9)) ? (value[0] % 9) : null;
+                let row = value.every(c => ((c / w) | 0) === ((value[0] / w) | 0)) ? ((value[0] / w) | 0) : null;
+                let col = value.every(c => (c % w) === (value[0] % w)) ? (value[0] % w) : null;
                 if (row === null && col === null)
                     return { valid: false, message: 'This constraint requires a row or a column.' };
 
                 return {
                     valid: true,
                     value: value[1] > value[0]
-                        ? (row !== null ? Array(9).fill(null).map((_, c) => c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * r))
-                        : (row !== null ? Array(9).fill(null).map((_, c) => 8 - c + 9 * row) : Array(9).fill(null).map((_, r) => col + 9 * (8 - r)))
+                        ? (row !== null ? Array(w).fill(null).map((_, c) => c + w * row) : Array(w).fill(null).map((_, r) => col + w * r))
+                        : (row !== null ? Array(w).fill(null).map((_, c) => w - 1 - c + w * row) : Array(w).fill(null).map((_, r) => col + w * (w - 1 - r)))
                 };
 
             case 'Diagonal':
                 if (!Array.isArray(value) || value.length < 2)
                     return { valid: false, message: 'This constraint requires at least two cells that are on the same diagonal.' };
 
-                let forward = value.every(c => (c % 9) - ((c / 9) | 0) === (value[0] % 9) - ((value[0] / 9) | 0)) ? (value[0] % 9) - ((value[0] / 9) | 0) : null;
-                let backward = value.every(c => (c % 9) + ((c / 9) | 0) === (value[0] % 9) + ((value[0] / 9) | 0)) ? (value[0] % 9) + ((value[0] / 9) | 0) : null;
+                let forward = value.every(c => (c % w) - ((c / w) | 0) === (value[0] % w) - ((value[0] / w) | 0)) ? (value[0] % w) - ((value[0] / w) | 0) : null;
+                let backward = value.every(c => (c % w) + ((c / w) | 0) === (value[0] % w) + ((value[0] / w) | 0)) ? (value[0] % w) + ((value[0] / w) | 0) : null;
                 if (forward === null && backward === null)
                     return { valid: false, message: 'This constraint requires a diagonal.' };
 
                 return {
                     valid: true,
                     value: Array(81).fill(null).map((_, c) => value[1] > value[0] ? c : 80 - c)
-                        .filter(c => forward !== null ? ((c % 9) - ((c / 9) | 0) === forward) : ((c % 9) + ((c / 9) | 0) === backward))
+                        .filter(c => forward !== null ? ((c % w) - ((c / w) | 0) === forward) : ((c % w) + ((c / w) | 0) === backward))
                 };
 
             case 'TwoCells':
@@ -354,15 +346,15 @@
                 return { valid: true, value: value };
 
             case 'FourCells':
-                if (typeof value === 'number' && value % 9 >= 0 && value % 9 < 9 - 1 && ((value / 9) | 0) >= 0 && ((value / 9) | 0) < 9 - 1)
-                    return { valid: true, value: [value, value + 1, value + 10, value + 9] };
+                if (typeof value === 'number' && value % w >= 0 && value % w < w - 1 && ((value / w) | 0) >= 0 && ((value / w) | 0) < state.height - 1)
+                    return { valid: true, value: [value, value + 1, value + w + 1, value + w] };
 
                 if (!Array.isArray(value) || value.length !== 4)
                     return { valid: false, message: 'This constraint requires four cells that form a 2×2 square.' };
 
                 let sorted = [...value];
                 sorted.sort((c1, c2) => c1 - c2);
-                if (sorted[0] % 9 === 9 - 1 || sorted[1] != sorted[0] + 1 || ((sorted[0] / 9) | 0) === 9 - 1 || sorted[2] != sorted[0] + 9 || sorted[3] != sorted[0] + 9 + 1)
+                if (sorted[0] % w === w - 1 || sorted[1] != sorted[0] + 1 || ((sorted[0] / w) | 0) === state.height - 1 || sorted[2] != sorted[0] + w || sorted[3] != sorted[0] + w + 1)
                     return { valid: false, message: 'This constraint requires four cells that form a 2×2 square.' };
 
                 return { valid: true, value: [0, 1, 3, 2].map(c => sorted[c]) };
@@ -387,6 +379,10 @@
             rules: '',
             links: [],
             givens: Array(81).fill(null),
+            width: 9,
+            height: 9,
+            regions: Array(9).fill(null).map((_, r) => Array(9).fill(null).map((_, c) => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0)))),
+            labels: Array(9).fill(null).map((_, v) => `${v + 1}`),
             constraints: [],
             customConstraintTypes: []
         };
@@ -489,7 +485,7 @@
                                 break;
 
                             lastInput = newName;
-                            if (['gw', 'gh', 'allcells', 'true', 'false'].includes(newName))
+                            if (['width', 'height', 'allcells', 'true', 'false'].includes(newName))
                             {
                                 alert('This property name is reserved. Please choose a different name.');
                                 continue;
@@ -584,12 +580,28 @@
         undoBuffer.push(JSON.parse(JSON.stringify(state)));
         redoBuffer = [];
     }
+    function upgrade(st)
+    {
+        if (st.width === null || st.width === undefined || st.height === null || st.height === undefined
+            || st.regions === null || st.regions === undefined || st.labels === null || st.labels === undefined)
+        {
+            st.width = 9;
+            st.height = 9;
+            st.regions = Array(9).fill(null).map((_, r) => Array(9).fill(null).map((_, c) => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0))));
+            st.labels = Array(9).fill(null).map((_, v) => `${v + 1}`);
+        }
+        if (st.width < 1)
+            st.width = 1;
+        if (st.height < 1)
+            st.height = 1;
+        return st;
+    }
     function undo()
     {
         if (undoBuffer.length > 0)
         {
             redoBuffer.push(state);
-            state = undoBuffer.pop();
+            state = upgrade(undoBuffer.pop());
             selectedConstraints = selectedConstraints.filter(sc => sc >= 0 && sc < state.constraints.length);
             lastSelectedConstraint = null;
             updateVisuals({ storage: true, svg: true, metadata: true });
@@ -600,7 +612,7 @@
         if (redoBuffer.length > 0)
         {
             undoBuffer.push(state);
-            state = redoBuffer.pop();
+            state = upgrade(redoBuffer.pop());
             selectedConstraints = selectedConstraints.filter(sc => sc >= 0 && sc < state.constraints.length);
             lastSelectedConstraint = null;
             updateVisuals({ storage: true, svg: true, metadata: true });
@@ -610,16 +622,17 @@
     // Selection
     function cellLine(what, offset)
     {
+        let w = state.width, h = state.height;
         switch (what)
         {
-            case 'e': return Array(9).fill(null).map((_, c) => c + 9 * offset);
-            case 'w': return Array(9).fill(null).map((_, c) => 8 - c + 9 * offset);
-            case 's': return Array(9).fill(null).map((_, c) => offset + 9 * c);
-            case 'n': return Array(9).fill(null).map((_, c) => offset + 9 * (8 - c));
-            case 'se': return Array(81).fill(null).map((_, c) => c).filter(c => (c % 9) - ((c / 9) | 0) === offset);
-            case 'sw': return Array(81).fill(null).map((_, c) => c).filter(c => (c % 9) + ((c / 9) | 0) === offset);
-            case 'nw': return Array(81).fill(null).map((_, c) => 80 - c).filter(c => (c % 9) - ((c / 9) | 0) === offset);
-            case 'ne': return Array(81).fill(null).map((_, c) => 80 - c).filter(c => (c % 9) + ((c / 9) | 0) === offset);
+            case 'e': return Array(w).fill(null).map((_, c) => c + w * offset);
+            case 'w': return Array(w).fill(null).map((_, c) => w - 1 - c + w * offset);
+            case 's': return Array(h).fill(null).map((_, c) => offset + w * c);
+            case 'n': return Array(h).fill(null).map((_, c) => offset + w * (h - 1 - c));
+            case 'se': return Array(w * h).fill(null).map((_, c) => c).filter(c => (c % w) - ((c / w) | 0) === offset);
+            case 'sw': return Array(w * h).fill(null).map((_, c) => c).filter(c => (c % w) + ((c / w) | 0) === offset);
+            case 'nw': return Array(w * h).fill(null).map((_, c) => w * h - 1 - c).filter(c => (c % w) - ((c / w) | 0) === offset);
+            case 'ne': return Array(w * h).fill(null).map((_, c) => w * h - 1 - c).filter(c => (c % w) + ((c / w) | 0) === offset);
         }
     }
     function selectCell(cell, mode)
@@ -662,18 +675,18 @@
     function selectCellLine(dir)
     {
         let c = lastCellLineCell !== null ? lastCellLineCell : selectedCells.length === 0 ? 0 : selectedCells[selectedCells.length - 1]
-        let cells, nDir = null;
+        let cells, nDir = null, w = state.width;
         if ((lastCellLineDir === 's' && dir === 'e') || (dir === 's' && lastCellLineDir === 'e'))
-            cells = cellLine('se', (c % 9) - ((c / 9) | 0));
+            cells = cellLine('se', (c % w) - ((c / w) | 0));
         else if ((lastCellLineDir === 's' && dir === 'w') || (dir === 's' && lastCellLineDir === 'w'))
-            cells = cellLine('sw', (c % 9) + ((c / 9) | 0));
+            cells = cellLine('sw', (c % w) + ((c / w) | 0));
         else if ((lastCellLineDir === 'n' && dir === 'w') || (dir === 'n' && lastCellLineDir === 'w'))
-            cells = cellLine('nw', (c % 9) - ((c / 9) | 0));
+            cells = cellLine('nw', (c % w) - ((c / w) | 0));
         else if ((lastCellLineDir === 'n' && dir === 'e') || (dir === 'n' && lastCellLineDir === 'e'))
-            cells = cellLine('ne', (c % 9) + ((c / 9) | 0));
+            cells = cellLine('ne', (c % w) + ((c / w) | 0));
         else
         {
-            cells = cellLine(dir, (dir === 'n' || dir === 's') ? (c % 9) : ((c / 9) | 0));
+            cells = cellLine(dir, (dir === 'n' || dir === 's') ? (c % w) : ((c / w) | 0));
             nDir = dir;
         }
         lastCellLineDir = nDir;
@@ -791,11 +804,12 @@
 
                 // Render SVGs (for the valid constraints only)
                 constraintResults = constrInfos.filter(inf => inf.constraint !== null);
-                let minX = Math.min(...selectedCells.map(sc => sc % 9));
-                let maxX = Math.max(...selectedCells.map(sc => sc % 9)) + 1;
-                let minY = Math.min(...selectedCells.map(sc => (sc / 9) | 0));
-                let maxY = Math.max(...selectedCells.map(sc => (sc / 9) | 0)) + 1;
-                dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), "[]", JSON.stringify(constraintResults.map(inf => inf.constraint))], resultsRaw =>
+                let w = state.width;
+                let minX = Math.min(...selectedCells.map(sc => sc % w));
+                let maxX = Math.max(...selectedCells.map(sc => sc % w)) + 1;
+                let minY = Math.min(...selectedCells.map(sc => (sc / w) | 0));
+                let maxY = Math.max(...selectedCells.map(sc => (sc / w) | 0)) + 1;
+                dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), JSON.stringify({ customConstraintTypes: [], width: state.width, height: state.height, constraints: constraintResults.map(inf => inf.constraint) })], resultsRaw =>
                 {
                     let results = JSON.parse(resultsRaw);
                     for (let i = 0; i < results.svgs.length; i++)
@@ -855,6 +869,60 @@
             elem.classList.add(className);
         else
             elem.classList.remove(className);
+    }
+    function setCellSelectionEvents()
+    {
+        Array.from(puzzleContainer.getElementsByClassName('sudoku-cell')).forEach(cellRect =>
+        {
+            let cell = parseInt(cellRect.dataset.cell);
+            cellRect.onclick = handler(function() { remoteLog2(`onclick ${cell}`); });
+            cellRect.onmousedown = cellRect.ontouchstart = handler(function(ev)
+            {
+                puzzleContainer.focus();
+                if (draggingMode !== null)
+                {
+                    remoteLog2(`${ev.type} ${cell} (canceled)`);
+                    return;
+                }
+                let shift = ev.ctrlKey || ev.shiftKey;
+                draggingMode = shift && selectedCells.includes(cell) ? 'remove' : 'add';
+                selectCell(cell, shift ? draggingMode : 'toggle');
+                updateVisuals();
+                remoteLog2(`${ev.type} ${cell} (${ev.x}, ${ev.y})`);
+            });
+            cellRect.onmousemove = function(ev)
+            {
+                if (draggingMode === null)
+                {
+                    remoteLog2(`onmousemove ${cell} (canceled)`);
+                    return;
+                }
+                selectCell(cell, draggingMode);
+                updateVisuals();
+                remoteLog2(`onmousemove ${cell} (${ev.x}, ${ev.y})`);
+            };
+            cellRect.ontouchmove = function(ev)
+            {
+                if (draggingMode === null)
+                {
+                    remoteLog2(`ontouchmove ${cell} (canceled)`);
+                    return;
+                }
+                let any = false;
+                for (let touch of ev.touches)
+                {
+                    let elem = document.elementFromPoint(touch.pageX, touch.pageY);
+                    if (elem && elem.dataset.cell !== undefined)
+                    {
+                        selectCell(elem.dataset.cell | 0, draggingMode);
+                        any = true;
+                    }
+                }
+                if (any)
+                    updateVisuals();
+                remoteLog2(`ontouchmove ${cell}`);
+            };
+        });
     }
     function setConstraintCodeEditingEvent(id, setEvent, getter, setter)
     {
@@ -935,7 +1003,7 @@
         {
             // Re-render all constraint SVGs
             constraintSelectionUpdated = true;
-            dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)], resultsRaw =>
+            dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state)], resultsRaw =>
             {
                 let results = JSON.parse(resultsRaw);
                 let globalSvgs = '', svgs = '', globalY = 0;
@@ -951,6 +1019,16 @@
                 document.getElementById('constraint-svg-global').innerHTML = globalSvgs;
                 document.getElementById('constraint-svg').innerHTML = svgs;
                 document.getElementById('constraint-defs').innerHTML = results.svgDefs;
+                document.getElementById('puzzle-frame').setAttribute('d', results.frame);
+                document.getElementById('puzzle-lines').setAttribute('d', results.lines);
+
+                let w = state.width, h = state.height;
+                document.getElementById('puzzle-cells').innerHTML = Array(w * h).fill(null).map((_, cell) => `<g class='cell' id='sudoku-${cell}' font-size='.25' stroke-width='0'>
+                    <rect class='clickable sudoku-cell' data-cell='${cell}' x='${cell % w}' y='${(cell / w) | 0}' width='1' height='1' />
+                    <text id='sudoku-text-${cell}' x='${cell % w + .5}' y='${((cell / w) | 0) + .725}' font-size='.65'></text>
+                </g>`).join('');
+                setCellSelectionEvents();
+
                 constraintErrors = results.errors;
                 updateConstraintSelection();
                 Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv => { updateConstraintErrors(constraintDiv, constraintDiv.dataset.index | 0); });
@@ -1273,7 +1351,7 @@
             {
                 btn.onmouseover = function()
                 {
-                    dotNet('GenerateOutline', [btn.dataset.regions], svg => { document.getElementById('outline-svg').innerHTML = svg; });
+                    dotNet('GenerateOutline', [btn.dataset.regions, state.width, state.height], svg => { document.getElementById('outline-svg').innerHTML = svg; });
                 };
                 btn.onmouseout = function()
                 {
@@ -1294,7 +1372,8 @@
             });
         });
 
-        for (let cell = 0; cell < 81; cell++)
+        let w = state.width, h = state.height;
+        for (let cell = 0; cell < w * h; cell++)
         {
             // Cell selection
             setClass(document.getElementById(`sudoku-${cell}`), 'highlighted', selectedCells.includes(cell));
@@ -1306,10 +1385,10 @@
         let selectionArrowsSvg = '';
         for (let selIx = 0; selIx < selectedCells.length - 1; selIx++)
         {
-            let x1 = selectedCells[selIx] % 9;
-            let y1 = (selectedCells[selIx] / 9) | 0;
-            let x2 = selectedCells[selIx + 1] % 9;
-            let y2 = (selectedCells[selIx + 1] / 9) | 0;
+            let x1 = selectedCells[selIx] % w;
+            let y1 = (selectedCells[selIx] / w) | 0;
+            let x2 = selectedCells[selIx + 1] % w;
+            let y2 = (selectedCells[selIx + 1] / w) | 0;
             let angle = Math.atan2(y2 - y1, x2 - x1);
             selectionArrowsSvg += `<path d='M${x1 + .4 * Math.cos(angle)} ${y1 + .4 * Math.sin(angle)} ${x2 - .4 * Math.cos(angle)} ${y2 - .4 * Math.sin(angle)}' transform='translate(${.5 + .1 * Math.cos(angle + Math.PI / 2)}, ${.5 + .1 * Math.sin(angle + Math.PI / 2)})' />`;
         }
@@ -1332,8 +1411,8 @@
 
             // — move the button row so that it’s below the puzzle
             let buttons = document.getElementById('bb-buttons');
-            let sudokuBBox = document.getElementById('bb-puzzle-without-global').getBBox();
-            buttons.setAttribute('transform', `translate(0, ${Math.max(9, sudokuBBox.y + sudokuBBox.height) + .5})`);
+            let sudokuBBox = document.getElementById('bb-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
+            buttons.setAttribute('transform', `translate(0, ${Math.max(h, sudokuBBox.y + sudokuBBox.height) + .5})`);
 
             // — move the global constraints so they’re to the left of the puzzle
             let globalBox = document.getElementById('constraint-svg-global');
@@ -1360,6 +1439,8 @@
             document.getElementById('puzzle-title-input').value = state.title;
             document.getElementById('puzzle-author-input').value = state.author;
             document.getElementById('puzzle-rules-input').value = state.rules;
+            document.getElementById('puzzle-width-input').value = state.width;
+            document.getElementById('puzzle-height-input').value = state.height;
 
             if (!Array.isArray(state.links))
                 state.links = [];
@@ -1463,57 +1544,7 @@
     });
     document.body.addEventListener('focusin', function(ev) { if (ev.target.id) lastFocusedElement = ev.target.id; });
 
-    Array.from(puzzleContainer.getElementsByClassName('sudoku-cell')).forEach(cellRect =>
-    {
-        let cell = parseInt(cellRect.dataset.cell);
-        cellRect.onclick = handler(function() { remoteLog2(`onclick ${cell}`); });
-        cellRect.onmousedown = cellRect.ontouchstart = handler(function(ev)
-        {
-            puzzleContainer.focus();
-            if (draggingMode !== null)
-            {
-                remoteLog2(`${ev.type} ${cell} (canceled)`);
-                return;
-            }
-            let shift = ev.ctrlKey || ev.shiftKey;
-            draggingMode = shift && selectedCells.includes(cell) ? 'remove' : 'add';
-            selectCell(cell, shift ? draggingMode : 'toggle');
-            updateVisuals();
-            remoteLog2(`${ev.type} ${cell} (${ev.x}, ${ev.y})`);
-        });
-        cellRect.onmousemove = function(ev)
-        {
-            if (draggingMode === null)
-            {
-                remoteLog2(`onmousemove ${cell} (canceled)`);
-                return;
-            }
-            selectCell(cell, draggingMode);
-            updateVisuals();
-            remoteLog2(`onmousemove ${cell} (${ev.x}, ${ev.y})`);
-        };
-        cellRect.ontouchmove = function(ev)
-        {
-            if (draggingMode === null)
-            {
-                remoteLog2(`ontouchmove ${cell} (canceled)`);
-                return;
-            }
-            let any = false;
-            for (let touch of ev.touches)
-            {
-                let elem = document.elementFromPoint(touch.pageX, touch.pageY);
-                if (elem && elem.dataset.cell !== undefined)
-                {
-                    selectCell(elem.dataset.cell | 0, draggingMode);
-                    any = true;
-                }
-            }
-            if (any)
-                updateVisuals();
-            remoteLog2(`ontouchmove ${cell}`);
-        };
-    });
+    setCellSelectionEvents();
     Array.from(document.querySelectorAll('#sidebar>.tabs>.tab')).forEach(tab => setButtonHandler(tab, function() { selectTab(tab.dataset.tab); }));
     Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given | 0); }); });
     Array.from(document.querySelectorAll('.multi-select')).forEach(btn =>
@@ -1600,6 +1631,64 @@
     document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
     document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
     document.getElementById('puzzle-rules-input').onchange = function() { saveUndo(); state.rules = document.getElementById('puzzle-rules-input').value; updateVisuals({ storage: true }); };
+    Array.from(document.querySelectorAll('#puzzle-width-input,#puzzle-height-input')).forEach(elem =>
+    {
+        elem.onchange = function()
+        {
+            let oldW = state.width, oldH = state.height;
+            let newW = document.getElementById('puzzle-width-input').value | 0;
+            let newH = document.getElementById('puzzle-height-input').value | 0;
+            if (newW < 1)
+            {
+                document.getElementById('puzzle-width-input').value = 1;
+                return;
+            }
+            if (newH < 1)
+            {
+                document.getElementById('puzzle-height-input').value = 1;
+                return;
+            }
+            saveUndo();
+            let newGivens = Array(newW * newH).fill(null);
+            for (let y = 0; y < oldH && y < newH; y++)
+                for (let x = 0; x < oldW && x < newW; x++)
+                    newGivens[x + newW * y] = state.givens[x + oldW * y];
+            state.width = newW;
+            state.height = newH;
+            state.givens = newGivens;
+            function translateValue(value, type)
+            {
+                if (type === 'cell')
+                {
+                    let x = value % oldW;
+                    let y = (value / oldW) | 0;
+                    return (x < newW && y < newH) ? x + newW * y : null;
+                }
+                let res = /^list\((.*)\)$/.exec(type);
+                return res ? value.map(innerVal => translateValue(innerVal, res[1])).filter(v => v !== null || res[1] !== 'cell') : value;
+            }
+            for (let i = 0; i < state.constraints.length; i++)
+            {
+                let t = getConstraintType(state.constraints[i].type);
+                for (let v of Object.keys(t.variables))
+                    state.constraints[i].values[v] = translateValue(state.constraints[i].values[v], t.variables[v]);
+                let sp = getSpecialVariable(t.kind)[0];
+                if (sp !== null)
+                {
+                    let enf = enforceConstraintKind(t.kind, state.constraints[i].values[sp]);
+                    if (enf.valid)
+                        state.constraints[i].values[sp] = enf.value;
+                    else
+                    {
+                        console.log(sp, t, state.constraints[i], enf);
+                        state.constraints.splice(i--, 1);
+                        continue;
+                    }
+                }
+            }
+            updateVisuals({ storage: true, svg: true, metadata: true });
+        };
+    });
     setButtonHandler(document.getElementById('add-link'), () =>
     {
         saveUndo();
@@ -1637,8 +1726,7 @@
     });
     puzzleContainer.addEventListener('keydown', ev =>
     {
-        let str = keyName(ev);
-        let anyFunction = true;
+        let str = keyName(ev), anyFunction = true, w = state.width, h = state.height;
 
         function ArrowMovement(dx, dy, mode)
         {
@@ -1646,9 +1734,9 @@
             if (selectedCells.length !== 0)
             {
                 let lastCell = lastCellLineCell !== null ? lastCellLineCell : selectedCells[selectedCells.length - 1];
-                let newX = ((lastCell % 9) + 9 + dx) % 9;
-                let newY = (((lastCell / 9) | 0) + 9 + dy) % 9;
-                toSelect = newX + 9 * newY;
+                let newX = ((lastCell % w) + w + dx) % w;
+                let newY = (((lastCell / w) | 0) + h + dy) % h;
+                toSelect = newX + w * newY;
             }
             selectCell(toSelect, mode);
             updateVisuals();
@@ -1770,7 +1858,7 @@
             case 'Ctrl+Shift+ArrowLeft': selectCellLine('w'); break;
             case 'Ctrl+Shift+ArrowRight': selectCellLine('e'); break;
 
-            case 'Ctrl+KeyA': selectedCells = Array(81).fill(null).map((_, c) => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
+            case 'Ctrl+KeyA': selectedCells = Array(w * h).fill(null).map((_, c) => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
             case 'Escape': pressEscape(); break;
 
             case 'Ctrl+ControlLeft':
@@ -1954,11 +2042,16 @@
             state = item;
             if (state.title === undefined || state.title === null) state.title = 'Sudoku';
             if (state.author === undefined || state.author === null) state.author = 'unknown';
-            if (state.rules === undefined || state.rules === null) state.author = '';
+            if (state.rules === undefined || state.rules === null) state.rules = '';
             if (state.customConstraintTypes === undefined || state.customConstraintTypes === null) state.customConstraintTypes = [];
+            if (state.width === undefined || state.width === null || state.height === undefined || state.height === null || state.width <= 0 || state.height <= 0)
+            {
+                state.width = 9;
+                state.height = 9;
+            }
 
-            if (!Array.isArray(state.givens) || state.givens.length != 81 || state.givens.some(g => g != null && (g < 1 || g > 9)))
-                state.givens = Array(81).fill(null);
+            if (!Array.isArray(state.givens) || state.givens.length != state.width * state.height)
+                state.givens = Array(state.width * state.height).fill(null);
             state.constraints = Array.isArray(state.constraints) ? state.constraints.filter(c => 'type' in c && Number.isInteger(c.type)) : [];
             for (let i = 0; i < state.constraints.length; i++)
             {

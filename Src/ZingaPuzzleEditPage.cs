@@ -17,7 +17,6 @@ namespace Zinga
         {
             using var db = new Db();
 
-            var puzzle = new Puzzle { Title = "Sudoku", Author = "unknown", Rules = "" };
             var constraintTypes = db.Constraints.Where(c => c.Public).ToDictionary(c => c.ConstraintID);
 
             const double btnHeight = .8;
@@ -51,7 +50,7 @@ namespace Zinga
                 new HEAD(
                     new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
                     new META { name = "viewport", content = "width=device-width,initial-scale=1.0" },
-                    new TITLE($"Editing: {puzzle.Title} by {puzzle.Author}"),
+                    new TITLE($"Editing: Sudoku by unknown"),
                     new RawTag(@"<script src='/_framework/blazor.webassembly.js' autostart='false'></script>"),
 
 #if DEBUG
@@ -86,8 +85,8 @@ namespace Zinga
                     new LINK { rel = "shortcut icon", type = "image/png", href = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQAAQMAAABF07nAAAAABlBMVEUAAAD///+l2Z/dAAACFElEQVR42u3YsQ2AMBAEwZMIKINS3RplERm38ERvodn4gokvkSRJkiRJ2qHxFrqTXJXhk+SsDCcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAJEmSJEmStslFAwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA8EPA8Q0gSZIkSZLUflD4iAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAANoBkiRJkiRJnS37yw5ZFqD7+QAAAABJRU5ErkJggg==" }),
                 new BODY { class_ = "is-puzzle" }._(
                     new DIV { id = "topbar" }._(
-                        new DIV { class_ = "title" }._(puzzle.Title),
-                        puzzle.Author == null ? null : new DIV { class_ = "author" }._("by ", puzzle.Author)),
+                        new DIV { class_ = "title" }._("Sudoku"),
+                        new DIV { class_ = "author" }._("by unknown")),
                     new DIV { id = "puzzle" }.Data("constrainttypes", constraintTypesJson)._(
                         new DIV { id = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
                             <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 11.2' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
@@ -107,31 +106,30 @@ namespace Zinga
                                 <g id='bb-everything'>
                                     <g id='bb-buttons' transform='translate(0, 9.5)'>{renderButtonArea(btns, 9)}</g>
 
-                                    <g id='bb-puzzle-with-global'>
+                                    <g id='bb-puzzle'>
                                         <g id='constraint-svg-global'></g>
-                                        <g id='bb-puzzle-without-global'>
-                                            {Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25' stroke-width='0'>
-                                                <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
-                                                <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
-                                            </g>").JoinString()}
+                                        <g id='puzzle-cells'>{Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25' stroke-width='0'>
+                                            <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
+                                            <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
+                                        </g>").JoinString()}</g>
 
-                                            <path d='M0 3H9M0 6H9M3 0V9M6 0V9M0 0H9V9H0z' fill='none' stroke='black' stroke-width='.05' />
-                                            <path d='M0 1H9M0 2H9M0 4H9M0 5H9M0 7H9M0 8H9M1 0V9M2 0V9M4 0V9M5 0V9M7 0V9M8 0V9' fill='none' stroke='black' stroke-width='.01' />
+                                        <path id='puzzle-frame' d='M0 3H9M0 6H9M3 0V9M6 0V9M0 0H9V9H0z' fill='none' stroke='black' stroke-width='.05' />
+                                        <path id='puzzle-lines' d='M0 1H9M0 2H9M0 4H9M0 5H9M0 7H9M0 8H9M1 0V9M2 0V9M4 0V9M5 0V9M7 0V9M8 0V9' fill='none' stroke='black' stroke-width='.01' />
 
-                                            <g id='constraint-svg'></g>
-                                            <g id='outline-svg'></g>
-                                            <g id='selection-arrows-svg' fill='none' stroke='hsl(220, 80%, 80%)' stroke-width='.03' marker-end='url(#selection-arrow-marker)'></g>
+                                        <g id='constraint-svg'></g>
+                                        <g id='outline-svg'></g>
+                                        <g id='selection-arrows-svg' fill='none' stroke='hsl(220, 80%, 80%)' stroke-width='.03' marker-end='url(#selection-arrow-marker)'></g>
+                                        <g id='multi-selects' fill='black'></g>
 
-                                            {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='n' data-offset='{col}' d='m {col + .3} 9.3 .2 -.2 .2 .2z' fill='black' />").JoinString()}
-                                            {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='e' data-offset='{row}' d='m -.3 {row + .3} .2 .2 -.2 .2z' fill='black' />").JoinString()}
-                                            {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='w' data-offset='{row}' d='m 9.3 {row + .3} -.2 .2 .2 .2z' fill='black' />").JoinString()}
-                                            {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='s' data-offset='{col}' d='m {col + .3} -.3 .2 .2 .2 -.2z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='n' data-offset='{col}' d='m {col + .3} 9.3 .2 -.2 .2 .2z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='e' data-offset='{row}' d='m -.3 {row + .3} .2 .2 -.2 .2z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='w' data-offset='{row}' d='m 9.3 {row + .3} -.2 .2 .2 .2z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='s' data-offset='{col}' d='m {col + .3} -.3 .2 .2 .2 -.2z' fill='black' />").JoinString()}
 
-                                            {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='se' data-offset='{offset - 8}' d='m {(offset < 8 ? 0 : offset - 8) - .1} {(offset > 8 ? 0 : 8 - offset) - .1} -.2 0 .2 -.2 z' fill='black' />").JoinString()}
-                                            {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='sw' data-offset='{offset}' d='m {(offset < 8 ? offset + 1 : 9) + .1} {(offset > 8 ? offset - 8 : 0) - .1} 0 -.2 .2 .2 z' fill='black' />").JoinString()}
-                                            {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='nw' data-offset='{8 - offset}' d='m {(offset < 8 ? 9 : 17 - offset) + .1} {(offset > 8 ? 9 : offset + 1) + .1} .2 0 -.2 .2 z' fill='black' />").JoinString()}
-                                            {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='ne' data-offset='{16 - offset}' d='m {(offset < 8 ? 8 - offset : 0) - .1} {(offset > 8 ? 17 - offset : 9) + .1} -.2 0 .2 .2 z' fill='black' />").JoinString()}
-                                        </g>
+                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='se' data-offset='{offset - 8}' d='m {(offset < 8 ? 0 : offset - 8) - .1} {(offset > 8 ? 0 : 8 - offset) - .1} -.2 0 .2 -.2 z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='sw' data-offset='{offset}' d='m {(offset < 8 ? offset + 1 : 9) + .1} {(offset > 8 ? offset - 8 : 0) - .1} 0 -.2 .2 .2 z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='nw' data-offset='{8 - offset}' d='m {(offset < 8 ? 9 : 17 - offset) + .1} {(offset > 8 ? 9 : offset + 1) + .1} .2 0 -.2 .2 z' fill='black' />").JoinString()}
+                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='ne' data-offset='{16 - offset}' d='m {(offset < 8 ? 8 - offset : 0) - .1} {(offset > 8 ? 17 - offset : 9) + .1} -.2 0 .2 .2 z' fill='black' />").JoinString()}
                                     </g>
                                 </g>
                             </svg>")),
@@ -142,17 +140,22 @@ namespace Zinga
                             new DIV { class_ = "tabc", id = "tab-puzzle" }._(
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Title"),
-                                    new DIV(new INPUT { type = itype.text, id = "puzzle-title-input", value = puzzle.Title })),
+                                    new DIV(new INPUT { type = itype.text, id = "puzzle-title-input" })),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Author(s)"),
-                                    new DIV(new INPUT { type = itype.text, id = "puzzle-author-input", value = puzzle.Author })),
+                                    new DIV(new INPUT { type = itype.text, id = "puzzle-author-input" })),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Rules"),
-                                    new DIV(new TEXTAREA { id = "puzzle-rules-input", accesskey = "/" }._(puzzle.Rules))),
+                                    new DIV(new TEXTAREA { id = "puzzle-rules-input", accesskey = "/" })),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Links",
                                         new BUTTON { id = "add-link", class_ = "mini-btn add", title = "Add a link (for example, to Logic Masters Germany)" }),
                                     new TABLE { id = "links" }),
+                                new SECTION(
+                                    new DIV { class_ = "label" }._("Size"),
+                                    new DIV { id = "grid-size" }._(
+                                        new LABEL { for_ = "puzzle-width-input", accesskey = "w" }._("Width:".Accel('W')), " ", new INPUT { type = itype.number, min = "1", step = "1", id = "puzzle-width-input" }, " ",
+                                        new LABEL { for_ = "puzzle-height-input", accesskey = "h" }._("Height:".Accel('H')), " ", new INPUT { type = itype.number, min = "1", step = "1", id = "puzzle-height-input" })),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Givens"),
                                     new DIV { id = "givens" }._(
@@ -199,7 +202,7 @@ namespace Zinga
                                         new P("Shortcuts for common constraints:"),
                                         new TABLE(
                                             constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))),
-                                            new TR { id="add-last-selected-constraint"}._(new TH('='), new TD("Last selected constraint"))))))),
+                                            new TR { id = "add-last-selected-constraint" }._(new TH('='), new TD("Last selected constraint"))))))),
                         new DIV { class_ = "focus-catcher", tabindex = 0 }),
 
                     new DIV { id = "constraint-search" }._(

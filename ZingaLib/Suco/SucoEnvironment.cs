@@ -10,6 +10,9 @@ namespace Zinga.Suco
     {
         private readonly List<SucoListComprehensionVariable> _variables = new();
 
+        public int Width => (int) GetValue("width");
+        public int Height => (int) GetValue("height");
+
         public SucoEnvironment()
         {
         }

@@ -30,19 +30,24 @@ namespace Zinga.Lib
             return _parsedSuco[key];
         }
 
-        public static string RenderConstraintSvgs(string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
+        public static string RenderConstraintSvgs(string constraintTypesJson, string stateJson)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 #if DEBUG
-            Console.WriteLine($@"Zinga.Lib.Commands.RenderConstraintSvgs(""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
+            Console.WriteLine($@"Zinga.Lib.Commands.RenderConstraintSvgs(""{constraintTypesJson.CLiteralEscape()}"", ""{stateJson.CLiteralEscape()}"");");
 #endif
+
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
-            var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
-            var constraints = JsonList.Parse(constraintsJson);
+            var state = JsonDict.Parse(stateJson);
+
+            var customConstraintTypes = state["customConstraintTypes"].GetList();
+            var constraints = state["constraints"].GetList();
+            var width = state["width"].GetInt();
+            var height = state["height"].GetInt();
             var resultSvgDefs = new HashSet<string>();
             var resultSvgs = Enumerable.Range(0, constraints.Count).Select(c => new JsonDict { ["global"] = false, ["svg"] = null }).ToJsonList();
             var resultErrors = new JsonList(Enumerable.Range(0, constraints.Count).Select(_ => new JsonDict()));
-            var allCells = Ut.NewArray(81, c => new Cell(c));
+            var allCells = Ut.NewArray(width * height, c => new Cell(c, width));
 
             for (var cIx = 0; cIx < constraints.Count; cIx++)
             {
@@ -62,7 +67,10 @@ namespace Zinga.Lib
                         var cacheKey = constraint["values"].ToString();
                         if (!cache.ContainsKey(cacheKey))
                         {
-                            variableValues ??= ZingaUtil.ConvertVariableValues(type["variables"].GetDict(), constraint["values"].GetDict()).DeclareVariable("allcells", allCells);
+                            variableValues ??= ZingaUtil.ConvertVariableValues(type["variables"].GetDict(), constraint["values"].GetDict(), width)
+                                .DeclareVariable("allcells", allCells)
+                                .DeclareVariable("width", width)
+                                .DeclareVariable("height", height);
                             cache[cacheKey] = expr.Interpret(variableValues, null);
                         }
                         callback(cache[cacheKey]);
@@ -121,11 +129,74 @@ namespace Zinga.Lib
                 }
             }
 
+            var puzzleLinesPath =
+                Enumerable.Range(1, width - 1).Select(x => $"M{x} 0V{height}").JoinString() +
+                Enumerable.Range(1, height - 1).Select(x => $"M0 {x}H{width}").JoinString();
+
+            var regions = state["regions"].GetList().Select(region => region.GetList().Select(v => v.GetInt()).ToArray()).ToArray();
+            var segments = new HashSet<Link>();
+            // Horizontal segments
+            for (var y = 0; y <= height; y++)
+                for (var x = 0; x < width; x++)
+                    if (y == 0 || y == height || regions.Any(r => r.Contains(x + width * y) != r.Contains(x + width * (y - 1))))
+                        segments.Add(new Link(x, y, x + 1, y));
+            // Vertical segments
+            for (var x = 0; x <= width; x++)
+                for (var y = 0; y < height; y++)
+                    if (x == 0 || x == width || regions.Any(r => r.Contains(x + width * y) != r.Contains(x - 1 + width * y)))
+                        segments.Add(new Link(x, y, x, y + 1));
+
+            var framePathSvg = new StringBuilder();
+            foreach (var doVert in new[] { false, true })
+                for (var y = 0; y <= height; y++)
+                    for (var x = 0; x <= width; x++)
+                    {
+                        var prevPt = new Xy(x, y);
+                        var curPt = doVert ? new Xy(x, y + 1) : new Xy(x + 1, y);
+                        if (segments.Remove(new Link(prevPt, curPt)))
+                        {
+                            var firstPt = prevPt;
+                            framePathSvg.Append($"M{firstPt.X} {firstPt.Y}");
+                            // Trace out a path starting from here
+                            while (true)
+                            {
+                                // Path complete?
+                                if (curPt.Equals(firstPt))
+                                {
+                                    framePathSvg.Append("z");
+                                    break;
+                                }
+                                // Can we continue the path in the same direction?
+                                var straightPt = new Xy(2 * curPt.X - prevPt.X, 2 * curPt.Y - prevPt.Y);
+                                if (segments.Remove(new Link(curPt, straightPt)))
+                                {
+                                    prevPt = curPt;
+                                    curPt = straightPt;
+                                    continue;
+                                }
+
+                                framePathSvg.Append($" {curPt.X} {curPt.Y}");
+                                var perpendicular1 = prevPt.X == curPt.X ? new Xy(curPt.X - 1, curPt.Y) : new Xy(curPt.X, curPt.Y - 1);
+                                var perpendicular2 = prevPt.X == curPt.X ? new Xy(curPt.X + 1, curPt.Y) : new Xy(curPt.X, curPt.Y + 1);
+                                var one = segments.Contains(new Link(curPt, perpendicular1));
+                                var two = segments.Contains(new Link(curPt, perpendicular2));
+                                if (one == two)
+                                    break;
+
+                                prevPt = curPt;
+                                curPt = one ? perpendicular1 : perpendicular2;
+                                segments.Remove(new Link(prevPt, curPt));
+                            }
+                        }
+                    }
+
             return new JsonDict
             {
                 ["svgDefs"] = resultSvgDefs.JoinString(),
                 ["svgs"] = resultSvgs,
-                ["errors"] = resultErrors
+                ["errors"] = resultErrors,
+                ["frame"] = framePathSvg.ToString(),
+                ["lines"] = puzzleLinesPath
             }.ToString();
         }
 
@@ -331,19 +402,23 @@ namespace Zinga.Lib
 
         public static (SucoExpression expr, JsonDict variables)[] _constraintLogic;
 
-        public static void SetupConstraints(string givensJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
+        public static void SetupConstraints(string constraintTypesJson, string stateJson)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 #if DEBUG
-            Console.WriteLine($@"Zinga.Lib.Commands.SetupConstraints(""{givensJson.CLiteralEscape()}"", ""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
+            Console.WriteLine($@"Zinga.Lib.Commands.SetupConstraints(""{constraintTypesJson.CLiteralEscape()}"", ""{stateJson.CLiteralEscape()}"");");
 #endif
 
-            var givens = JsonList.Parse(givensJson).Select(v => v?.GetInt()).ToArray();
             var constraintTypes = JsonDict.Parse(constraintTypesJson);
-            var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
+            var state = JsonDict.Parse(stateJson);
+
+            var givens = state["givens"].GetList().Select(v => v?.GetInt()).ToArray();
+            var customConstraintTypes = state["customConstraintTypes"].GetList();
             var parsedSucos = new Dictionary<int, (SucoExpression expr, JsonDict variables)>();
-            var constraints = JsonList.Parse(constraintsJson);
-            var allCells = Ut.NewArray(81, c => new Cell(c));
+            var constraints = state["constraints"].GetList();
+            var width = state["width"].GetInt();
+            var height = state["height"].GetInt();
+            var allCells = Ut.NewArray(width * height, c => new Cell(c, width));
 
             _constraintLogic = new (SucoExpression expr, JsonDict variables)[constraints.Count];
             for (var i = 0; i < constraints.Count; i++)
@@ -357,26 +432,29 @@ namespace Zinga.Lib
                     sucoTup = parsedSucos[cTypeId] = (SucoParser.ParseCode(cType["logic"].GetString(), tEnv, SucoContext.Constraint, SucoType.Boolean), cType["variables"].GetDict());
                 }
 
-                var env = ZingaUtil.ConvertVariableValues(sucoTup.variables, constraints[i]["values"].GetDict()).DeclareVariable("allcells", allCells);
+                var env = ZingaUtil.ConvertVariableValues(sucoTup.variables, constraints[i]["values"].GetDict(), width).DeclareVariable("allcells", allCells);
                 _constraintLogic[i] = (sucoTup.expr.Optimize(env, givens), sucoTup.variables);
             }
         }
 
-        public static string CheckConstraints(string enteredDigitsJson, string constraintsJson)
+        public static string CheckConstraints(string enteredDigitsJson, string stateJson)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
 #if DEBUG
-            Console.WriteLine($@"Zinga.Lib.Commands.CheckConstraints(""{enteredDigitsJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
+            Console.WriteLine($@"Zinga.Lib.Commands.CheckConstraints(""{enteredDigitsJson.CLiteralEscape()}"", ""{stateJson.CLiteralEscape()}"");");
 #endif
 
+            var state = JsonDict.Parse(stateJson);
             var enteredDigits = JsonList.Parse(enteredDigitsJson).Select(v => v?.GetInt()).ToArray();
-            var constraints = JsonList.Parse(constraintsJson);
+            var constraints = state["constraints"].GetList();
+            var width = state["width"].GetInt();
+            var height = state["height"].GetInt();
             var results = new JsonList();
-            var allCells = Ut.NewArray(81, c => new Cell(c));
+            var allCells = Ut.NewArray(width * height, c => new Cell(c, width));
 
             for (var cIx = 0; cIx < _constraintLogic.Length; cIx++)
             {
-                var variableValues = ZingaUtil.ConvertVariableValues(_constraintLogic[cIx].variables, constraints[cIx]["values"].GetDict()).DeclareVariable("allcells", allCells);
+                var variableValues = ZingaUtil.ConvertVariableValues(_constraintLogic[cIx].variables, constraints[cIx]["values"].GetDict(), width).DeclareVariable("allcells", allCells);
                 if ((bool?) _constraintLogic[cIx].expr.Interpret(variableValues, enteredDigits) == false)
                     results.Add(cIx);
             }
@@ -427,13 +505,13 @@ namespace Zinga.Lib
             }
         }
 
-        public static string GenerateOutline(string regionsJson)
+        public static string GenerateOutline(string regionsJson, int width, int height)
         {
             Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
             var regions = JsonList.Parse(regionsJson);
             var svg = new StringBuilder();
             foreach (var region in regions)
-                svg.Append($"<path d='{ZingaUtil.GenerateSvgPath(region.GetList().Select(v => v.GetInt()).ToArray(), 0, 0)}' stroke='#2668ff' stroke-width='.15' opacity='.75' fill='none' />");
+                svg.Append($"<path d='{ZingaUtil.GenerateSvgPath(region.GetList().Select(v => v.GetInt()).ToArray(), width, height, 0, 0)}' stroke='#2668ff' stroke-width='.15' opacity='.75' fill='none' />");
             return svg.ToString();
         }
     }

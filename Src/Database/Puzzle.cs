@@ -21,6 +21,9 @@ namespace Zinga.Database
         public DateTime LastAccessed { get; set; }
         public bool Generated { get; set; }
         public string GivensJson { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public string RegionsJson { get; set; }
 
         public Puzzle()
         {
@@ -40,6 +43,13 @@ namespace Zinga.Database
         {
             get => _givensCache ??= GivensJson.NullOr(cstr => ClassifyJson.Deserialize<(int cell, int value)[]>(cstr));
             set { GivensJson = value.NullOr(v => ClassifyJson.Serialize(v).ToString()); _givensCache = value; }
+        }
+
+        private int[][] _regionsCache;
+        public int[][] Regions
+        {
+            get => _regionsCache ??= RegionsJson.NullOr(reg => ClassifyJson.Deserialize<int[][]>(reg));
+            set { RegionsJson = value.NullOr(v => ClassifyJson.Serialize(v).ToString()); _regionsCache = value; }
         }
     }
 }

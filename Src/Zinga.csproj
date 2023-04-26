@@ -140,10 +140,6 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\SvgPuzzleConstraints\Src\SvgPuzzleConstraints.csproj">
-      <Project>{592301f2-d4ea-4f45-9ba9-4f28c1dfd6bb}</Project>
-      <Name>SvgPuzzleConstraints</Name>
-    </ProjectReference>
     <ProjectReference Include="..\ZingaLib\ZingaLib.csproj">
       <Project>{00eb7b3c-171e-4703-9443-2c900d242626}</Project>
       <Name>ZingaLib</Name>

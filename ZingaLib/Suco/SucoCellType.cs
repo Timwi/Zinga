@@ -34,7 +34,6 @@ namespace Zinga.Suco
             {
                 "x" => op.X,
                 "y" => op.Y,
-                "box" => op.Box,
                 "index" => op.Index,
                 "value" => grid[op.Index],
 

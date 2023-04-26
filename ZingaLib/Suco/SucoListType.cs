@@ -69,7 +69,7 @@ namespace Zinga.Suco
             ("min", SucoCellType) => minMax((IEnumerable<Cell>) operand, grid, min: true),
             ("max", SucoCellType) => minMax((IEnumerable<Cell>) operand, grid, min: false),
             ("unique", SucoCellType) => operand == null ? null : checkUnique(((IEnumerable<Cell>) operand).Select(c => grid[c.Index])),
-            ("outline", SucoCellType) => operand == null ? null : outline(((IEnumerable<object>) operand).Cast<Cell>().Select(c => c.Index).ToArray()),
+            ("outline", SucoCellType) => operand == null ? null : outline(((IEnumerable<object>) operand).Cast<Cell>().Select(c => c.Index).ToArray(), env.Width, env.Height),
 
             // Lists of integers
             ("contains", SucoIntegerType) => operand == null ? null : contains(((IEnumerable<int?>) operand).ToArray()),
@@ -243,9 +243,9 @@ namespace Zinga.Suco
                 ? left.Concat(right.Select(obj => rightElementType.InterpretImplicitConversionTo(ElementType, obj))).ToArray()
                 : left.Select(obj => ElementType.InterpretImplicitConversionTo(rightElementType, obj)).Concat(right).ToArray();
 
-        private SucoFunction outline(int[] constraintCells) => new(
-            (parameters: new[] { SucoType.Decimal, SucoType.Decimal }, returnType: SucoType.String, interpreter: arr => ZingaUtil.GenerateSvgPath(constraintCells, (double) arr[0], (double) arr[1])),
-            (parameters: new[] { SucoType.Decimal, SucoType.Decimal, SucoType.Decimal, SucoType.Decimal }, returnType: SucoType.String, interpreter: arr => ZingaUtil.GenerateSvgPath(constraintCells, (double) arr[0], (double) arr[1], (double) arr[2], (double) arr[3])));
+        private SucoFunction outline(int[] constraintCells, int width, int height) => new(
+            (parameters: new[] { SucoType.Decimal, SucoType.Decimal }, returnType: SucoType.String, interpreter: arr => ZingaUtil.GenerateSvgPath(constraintCells, width, height, (double) arr[0], (double) arr[1])),
+            (parameters: new[] { SucoType.Decimal, SucoType.Decimal, SucoType.Decimal, SucoType.Decimal }, returnType: SucoType.String, interpreter: arr => ZingaUtil.GenerateSvgPath(constraintCells, width, height, (double) arr[0], (double) arr[1], (double) arr[2], (double) arr[3])));
 
         private bool? checkUnique(int?[][] lists)
         {
