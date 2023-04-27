@@ -1056,7 +1056,7 @@
             // Regions
             let regionsHtml = '';
             if (state.regions !== null)
-                for (var regionIx = 0; regionIx < state.regions.length; regionIx++)
+                for (let regionIx = 0; regionIx < state.regions.length; regionIx++)
                 {
                     let region = state.regions[regionIx];
                     let xs = region.map(cell => cell % w);
@@ -1101,7 +1101,7 @@
                         return;
                     saveUndo();
                     state.regions[regionIx] = cells;
-                    for (var rg = state.regions.length - 1; rg >= 0; rg--)
+                    for (let rg = state.regions.length - 1; rg >= 0; rg--)
                         if (rg !== regionIx)
                         {
                             state.regions[rg] = state.regions[rg].filter(cell => !cells.includes(cell));
@@ -1141,7 +1141,7 @@
             let listRx = /^list\((.*)\)$/.exec(type);
             if (listRx !== null)
             {
-                var uis = [];
+                let uis = [];
                 if (!Array.isArray(value))
                     value = [];
                 for (let i = 0; i < value.length; i++)
@@ -1244,7 +1244,7 @@
 
         // List of constraints
         let constraintListHtml = '';
-        for (var cIx = 0; cIx < state.constraints.length; cIx++)
+        for (let cIx = 0; cIx < state.constraints.length; cIx++)
         {
             let constraint = state.constraints[cIx];
             let constraintType = getConstraintType(constraint.type);
@@ -1286,7 +1286,7 @@
                     {
                         if (v === getSpecialVariable(cType.kind)[0])
                         {
-                            var result = enforceConstraintKind(cType.kind, nv);
+                            let result = enforceConstraintKind(cType.kind, nv);
                             if (!result.valid)
                             {
                                 alert(result.message);
@@ -1517,9 +1517,9 @@
                     `).join('')}
                 </tbody>
             `;
-            var ts = Array.from(document.querySelectorAll('#links .text'));
-            var us = Array.from(document.querySelectorAll('#links .url'));
-            var delBtns = Array.from(document.querySelectorAll('#links .remove'));
+            let ts = Array.from(document.querySelectorAll('#links .text'));
+            let us = Array.from(document.querySelectorAll('#links .url'));
+            let delBtns = Array.from(document.querySelectorAll('#links .remove'));
             state.links.forEach((lnk, ix) =>
             {
                 ts[ix].value = lnk.text;
