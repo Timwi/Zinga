@@ -637,6 +637,7 @@
     }
     function selectCell(cell, mode)
     {
+        // Processes a mouse click or keypress that causes a cell selection. The cell may be added to an already existing selection.
         if (mode === 'toggle')
         {
             if (selectedCells.length === 1 && selectedCells[0] === cell && selectedConstraints.length === 0)
@@ -674,6 +675,7 @@
     }
     function selectCellLine(dir)
     {
+        // Selects one of the rows, columns or diagonals when the user presses the arrow selection thingie at the edge of the grid
         let c = lastCellLineCell !== null ? lastCellLineCell : selectedCells.length === 0 ? 0 : selectedCells[selectedCells.length - 1]
         let cells, nDir = null, w = state.width;
         if ((lastCellLineDir === 's' && dir === 'e') || (dir === 's' && lastCellLineDir === 'e'))
@@ -690,10 +692,16 @@
             nDir = dir;
         }
         lastCellLineDir = nDir;
-        selectedCells = cells;
+        lastCellLineCell = c;
+        selectCells(cells);
+    }
+    function selectCells(cells)
+    {
+        // Changes the current selection of cells to a specific set of cells.
+        selectedCells = cells.slice(0);
+        lastSelectedCell = selectedCells.length > 0 ? Math.min(...selectedCells) : 0;
         selectedConstraints = [];
         editingConstraintType = null;
-        lastCellLineCell = c;
         updateVisuals();
     }
     function selectConstraint(cIx)
@@ -969,6 +977,8 @@
         //  svg (bool)          — updates constraint SVG in the grid (this involves Blazor)
         //  metadata (bool) — updates the title / author / rules / links section
 
+        let w = state.width, h = state.height;
+
         // Update localStorage
         if (localStorage && opt && opt.storage)
         {
@@ -978,14 +988,22 @@
         }
         resetClearButton();
 
-        function updateConstraintSelection()
+        function updateConstraintAndCellSelection()
         {
+            // Constraint selection
             for (let cIx = 0; cIx < state.constraints.length; cIx++)
             {
                 if (selectedConstraints.includes(cIx))
                     document.getElementById(`constraint-svg-${cIx}`).classList.add('selected');
                 else
                     document.getElementById(`constraint-svg-${cIx}`).classList.remove('selected');
+            }
+
+            // Cell selection and givens
+            for (let cell = 0; cell < w * h; cell++)
+            {
+                setClass(document.getElementById(`sudoku-${cell}`), 'highlighted', selectedCells.includes(cell));
+                document.getElementById(`sudoku-text-${cell}`).textContent = state.givens[cell] !== null ? state.givens[cell] : '';
             }
         }
 
@@ -1022,7 +1040,6 @@
                 document.getElementById('puzzle-frame').setAttribute('d', results.frame);
                 document.getElementById('puzzle-lines').setAttribute('d', results.lines);
 
-                let w = state.width, h = state.height;
                 document.getElementById('puzzle-cells').innerHTML = Array(w * h).fill(null).map((_, cell) => `<g class='cell' id='sudoku-${cell}' font-size='.25' stroke-width='0'>
                     <rect class='clickable sudoku-cell' data-cell='${cell}' x='${cell % w}' y='${(cell / w) | 0}' width='1' height='1' />
                     <text id='sudoku-text-${cell}' x='${cell % w + .5}' y='${((cell / w) | 0) + .725}' font-size='.65'></text>
@@ -1030,10 +1047,70 @@
                 setCellSelectionEvents();
 
                 constraintErrors = results.errors;
-                updateConstraintSelection();
+                updateConstraintAndCellSelection();
                 Array.from(constraintList.querySelectorAll('.constraint')).forEach(constraintDiv => { updateConstraintErrors(constraintDiv, constraintDiv.dataset.index | 0); });
                 updateConstraintErrorReports();
                 fixViewBox();
+            });
+
+            // Regions
+            let regionsHtml = '';
+            if (state.regions !== null)
+                for (var regionIx = 0; regionIx < state.regions.length; regionIx++)
+                {
+                    let region = state.regions[regionIx];
+                    let xs = region.map(cell => cell % w);
+                    let minX = Math.min(...xs);
+                    let maxX = Math.max(...xs);
+                    let ys = region.map(cell => (cell / w) | 0);
+                    let minY = Math.min(...ys);
+                    let maxY = Math.max(...ys);
+                    regionsHtml += `
+                    <div class='region' data-region='${regionIx}'>
+                        <div class='region-svg'>
+                            <svg viewBox='${minX - .2} ${minY - .2} ${maxX - minX + 1.4} ${maxY - minY + 1.4}'>
+                                <path d='${region.map((_, ix) => `M${xs[ix]} ${ys[ix]}h1v1h-1z`).join('')}' fill='white' stroke='none' />
+                                <use href='#puzzle-frame' />
+                                <use href='#puzzle-lines' />
+                            </svg>
+                        </div>
+                        <div class='controls'>
+                            <button class='mini-btn show' title='Select the cells of this region' />
+                            <button class='mini-btn set' title='Change this region' />
+                            <button class='mini-btn remove' title='Remove this region' />
+                        </div>
+                    </div>`;
+                }
+            document.getElementById('regions').innerHTML = regionsHtml;
+
+            Array.from(document.querySelectorAll('#regions .region')).forEach(regionDiv =>
+            {
+                let regionIx = regionDiv.dataset.region | 0;
+                regionDiv.querySelector('.mini-btn.show').onclick = function() { selectCells(state.regions[regionIx]); };
+                regionDiv.querySelector('.mini-btn.remove').onclick = function() { state.regions.splice(regionIx, 1); updateVisuals({ svg: true }); };
+                regionDiv.querySelector('.mini-btn.set').onclick = function()
+                {
+                    if (selectedCells.length < 1)
+                    {
+                        alert('Select a set of cells to change this region.');
+                        return;
+                    }
+                    let cells = [...new Set(selectedCells)];
+                    cells.sort((c1, c2) => c1 - c2);
+                    if (cells.length === state.regions[regionIx].length && cells.every((c, ix) => c === state.regions[regionIx][ix]))
+                        return;
+                    saveUndo();
+                    state.regions[regionIx] = cells;
+                    for (var rg = state.regions.length - 1; rg >= 0; rg--)
+                        if (rg !== regionIx)
+                        {
+                            state.regions[rg] = state.regions[rg].filter(cell => !cells.includes(cell));
+                            if (state.regions[rg].length === 0)
+                                state.regions.splice(rg, 1);
+                        }
+                    state.regions.sort((r1, r2) => r1[0] - r2[0]);
+                    updateVisuals({ svg: true, storage: true });
+                };
             });
         }
 
@@ -1093,14 +1170,7 @@
 
                 case 'cell':
                 case 'list(cell)':
-                    setButtonHandler(document.getElementById(`${id}-show`), function()
-                    {
-                        selectedCells = type === 'cell' ? [getter()] : getter().slice(0);
-                        lastSelectedCell = selectedCells.length > 0 ? Math.min(...selectedCells) : 0;
-                        selectedConstraints = [];
-                        editingConstraintType = null;
-                        updateVisuals();
-                    });
+                    setButtonHandler(document.getElementById(`${id}-show`), function() { selectCells(type === 'cell' ? [getter()] : getter()); });
                     if (type === 'cell')
                         setButtonHandler(document.getElementById(`${id}-set`), function() { if (selectedCells.length > 0) setter(Math.min(...selectedCells)); });
                     else
@@ -1307,7 +1377,7 @@
 
         // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
         if (!constraintSelectionUpdated)
-            updateConstraintSelection();
+            updateConstraintAndCellSelection();
 
         // Decide which buttons to show (“select similar”, “move up/down”, “duplicate”)
         let allSimilar = (selectedConstraints.length > 0 && selectedConstraints.every(ix => state.constraints[ix].type === state.constraints[selectedConstraints[0]].type));
@@ -1351,7 +1421,7 @@
             {
                 btn.onmouseover = function()
                 {
-                    dotNet('GenerateOutline', [btn.dataset.regions, state.width, state.height], svg => { document.getElementById('outline-svg').innerHTML = svg; });
+                    dotNet('GenerateOutline', [btn.dataset.regions, w, h], svg => { document.getElementById('outline-svg').innerHTML = svg; });
                 };
                 btn.onmouseout = function()
                 {
@@ -1371,15 +1441,6 @@
                 });
             });
         });
-
-        let w = state.width, h = state.height;
-        for (let cell = 0; cell < w * h; cell++)
-        {
-            // Cell selection
-            setClass(document.getElementById(`sudoku-${cell}`), 'highlighted', selectedCells.includes(cell));
-            // Givens
-            document.getElementById(`sudoku-text-${cell}`).textContent = state.givens[cell] !== null ? state.givens[cell] : '';
-        }
 
         // Selection arrows
         let selectionArrowsSvg = '';
@@ -1688,6 +1749,28 @@
             }
             updateVisuals({ storage: true, svg: true, metadata: true });
         };
+    });
+    setButtonHandler(document.getElementById('region-add'), () =>
+    {
+        if (selectedCells.length < 1)
+        {
+            alert('Select a set of cells to add a region.');
+            return;
+        }
+        let cells = [...new Set(selectedCells)];
+        cells.sort((c1, c2) => c1 - c2);
+        if (state.regions.findIndex(rg => cells.length === rg.length && cells.every((c, ix) => c === rg[ix])) !== -1)
+            return;
+        saveUndo();
+        state.regions.push(cells);
+        for (let rg = state.regions.length - 2; rg >= 0; rg--)
+        {
+            state.regions[rg] = state.regions[rg].filter(cell => !cells.includes(cell));
+            if (state.regions[rg].length === 0)
+                state.regions.splice(rg, 1);
+        }
+        state.regions.sort((r1, r2) => r1[0] - r2[0]);
+        updateVisuals({ svg: true, storage: true });
     });
     setButtonHandler(document.getElementById('add-link'), () =>
     {

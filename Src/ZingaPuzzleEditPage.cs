@@ -148,14 +148,18 @@ namespace Zinga
                                     new DIV { class_ = "label" }._("Rules"),
                                     new DIV(new TEXTAREA { id = "puzzle-rules-input", accesskey = "/" })),
                                 new SECTION(
-                                    new DIV { class_ = "label" }._("Links",
-                                        new BUTTON { id = "add-link", class_ = "mini-btn add", title = "Add a link (for example, to Logic Masters Germany)" }),
+                                    new DIV { class_ = "btns" }._(new BUTTON { id = "add-link", class_ = "mini-btn add", title = "Add a link (for example, to Logic Masters Germany)" }),
+                                    new DIV { class_ = "label" }._("Links"),
                                     new TABLE { id = "links" }),
                                 new SECTION(
-                                    new DIV { class_ = "label" }._("Size"),
+                                    new DIV { class_ = "label" }._("Grid size"),
                                     new DIV { id = "grid-size" }._(
                                         new LABEL { for_ = "puzzle-width-input", accesskey = "w" }._("Width:".Accel('W')), " ", new INPUT { type = itype.number, min = "1", step = "1", id = "puzzle-width-input" }, " ",
                                         new LABEL { for_ = "puzzle-height-input", accesskey = "h" }._("Height:".Accel('H')), " ", new INPUT { type = itype.number, min = "1", step = "1", id = "puzzle-height-input" })),
+                                new SECTION(
+                                    new DIV { class_ = "btns" }._(new BUTTON { id = "region-add", class_ = "mini-btn add", title = "Add a new region (Alt+R)", accesskey = "r" }),
+                                    new DIV { class_ = "label" }._("Regions"),
+                                    new DIV { id = "regions" }),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Givens"),
                                     new DIV { id = "givens" }._(

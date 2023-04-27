@@ -466,16 +466,31 @@ svg.puzzle-svg .multi-select {
         display: block;
     }
 
+#sidebar .btns {
+    margin-top: .09cm;
+    float: right;
+}
+
+#sidebar #regions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+    #sidebar #regions .region {
+        width: 2.1cm;
+        margin: .3cm;
+    }
+
+    #sidebar #regions .controls {
+        text-align: center;
+    }
+
 /* CONSTRAINTS tab */
 #sidebar #constraint-list {
     border: 1px solid black;
     background: white;
     margin-top: .1cm;
-}
-
-#sidebar #constraints-section .btns {
-    margin-top: .09cm;
-    float: right;
 }
 
 #sidebar #constraints-section .mini-btn#constraint-select-similar {
@@ -568,12 +583,7 @@ svg.puzzle-svg .multi-select {
                 opacity: 1;
             }
 
-    #sidebar .constraint .mini-btn.show {
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -450 2150 1850"><path d="M1694.372881 683.8983q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5q-185 0-316.5-131.5t-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5q234 0 434.5-121.5t333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14q20 0 34-14t14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5q-263 0-499.5-139t-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139q263 0 499.5 139t376.5 368q20 35 20 69z" fill="%23507fcb" /></svg>');
-    }
-
     #sidebar .constraint .mini-btn.set {
-        background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M35 10v42.93L23.54 41.46 20 37.93 12.93 45l3.53 3.54L40 72.07l23.54-23.53L67.07 45 60 37.93l-3.54 3.53L45 52.93V10ZM10 65v25h80V65H55L40 80 25 65Zm67.5 8.63a3.88 3.88 0 1 1 0 7.75 3.88 3.88 0 0 1 0-7.75z" fill="%232fa639" /></svg>');
         text-align: right;
         text-shadow: 0 0 3px white;
         font-weight: bold;
@@ -595,11 +605,18 @@ svg.puzzle-svg .multi-select {
 
 #sidebar .mini-btn.add {
     background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M4 2h2v2h2v2h-2v2h-2v-2h-2v-2h2z" fill="%2339A332" /></svg>');
-    float: right;
 }
 
 #sidebar .mini-btn.remove {
     background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><path d="M2 4h6v2h-6z" fill="%23A33232" /></svg>');
+}
+
+#sidebar .mini-btn.show {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="-150 -450 2150 1850"><path d="M1694.372881 683.8983q-152-236-381-353 61 104 61 225 0 185-131.5 316.5t-316.5 131.5q-185 0-316.5-131.5t-131.5-316.5q0-121 61-225-229 117-381 353 133 205 333.5 326.5t434.5 121.5q234 0 434.5-121.5t333.5-326.5zm-720-384q0-20-14-34t-34-14q-125 0-214.5 89.5t-89.5 214.5q0 20 14 34t34 14q20 0 34-14t14-34q0-86 61-147t147-61q20 0 34-14t14-34zm848 384q0 34-20 69-140 230-376.5 368.5t-499.5 138.5q-263 0-499.5-139t-376.5-368q-20-35-20-69t20-69q140-229 376.5-368t499.5-139q263 0 499.5 139t376.5 368q20 35 20 69z" fill="%23507fcb" /></svg>');
+}
+
+#sidebar .mini-btn.set {
+    background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><path d="M35 10v42.93L23.54 41.46 20 37.93 12.93 45l3.53 3.54L40 72.07l23.54-23.53L67.07 45 60 37.93l-3.54 3.53L45 52.93V10ZM10 65v25h80V65H55L40 80 25 65Zm67.5 8.63a3.88 3.88 0 1 1 0 7.75 3.88 3.88 0 0 1 0-7.75z" fill="%232fa639" /></svg>');
 }
 
 #sidebar #links {

@@ -147,25 +147,20 @@ namespace Zinga.Lib
                         segments.Add(new Link(x, y, x, y + 1));
 
             var framePathSvg = new StringBuilder();
-            foreach (var doVert in new[] { false, true })
-                for (var y = 0; y <= height; y++)
-                    for (var x = 0; x <= width; x++)
+            for (var y = 0; y <= height; y++)
+                for (var x = 0; x <= width; x++)
+                    foreach (var doVert in new[] { false, true })
                     {
                         var prevPt = new Xy(x, y);
                         var curPt = doVert ? new Xy(x, y + 1) : new Xy(x + 1, y);
                         if (segments.Remove(new Link(prevPt, curPt)))
                         {
                             var firstPt = prevPt;
-                            framePathSvg.Append($"M{firstPt.X} {firstPt.Y}");
+                            var pts = new List<Xy> { firstPt };
+                            var dir = false;
                             // Trace out a path starting from here
                             while (true)
                             {
-                                // Path complete?
-                                if (curPt.Equals(firstPt))
-                                {
-                                    framePathSvg.Append("z");
-                                    break;
-                                }
                                 // Can we continue the path in the same direction?
                                 var straightPt = new Xy(2 * curPt.X - prevPt.X, 2 * curPt.Y - prevPt.Y);
                                 if (segments.Remove(new Link(curPt, straightPt)))
@@ -175,14 +170,30 @@ namespace Zinga.Lib
                                     continue;
                                 }
 
-                                framePathSvg.Append($" {curPt.X} {curPt.Y}");
+                                // Can we continue the path in a perpendicular direction?
                                 var perpendicular1 = prevPt.X == curPt.X ? new Xy(curPt.X - 1, curPt.Y) : new Xy(curPt.X, curPt.Y - 1);
                                 var perpendicular2 = prevPt.X == curPt.X ? new Xy(curPt.X + 1, curPt.Y) : new Xy(curPt.X, curPt.Y + 1);
                                 var one = segments.Contains(new Link(curPt, perpendicular1));
                                 var two = segments.Contains(new Link(curPt, perpendicular2));
                                 if (one == two)
+                                {
+                                    // Check if the path may continue in the opposite direction from where we started
+                                    if (!dir && !curPt.Equals(firstPt))
+                                    {
+                                        pts.Add(curPt);
+                                        dir = true;
+                                        pts.Reverse();
+                                        prevPt = pts[pts.Count - 2];
+                                        curPt = pts[pts.Count - 1];
+                                        firstPt = pts[0];
+                                        pts.RemoveAt(pts.Count - 1);
+                                        continue;
+                                    }
+                                    framePathSvg.Append($"M{pts.Select(pt => $"{pt.X} {pt.Y}").JoinString(" ")}{(curPt.Equals(firstPt) ? "z" : $" {curPt.X} {curPt.Y}")}");
                                     break;
+                                }
 
+                                pts.Add(curPt);
                                 prevPt = curPt;
                                 curPt = one ? perpendicular1 : perpendicular2;
                                 segments.Remove(new Link(prevPt, curPt));
