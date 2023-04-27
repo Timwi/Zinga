@@ -33,6 +33,10 @@ input, textarea, button, select {
         width: 100%;
     }
 
+    button.hidden {
+        display: none;
+    }
+
 textarea {
     resize: vertical;
     height: 3cm;
@@ -116,6 +120,10 @@ svg.puzzle-svg {
 
     svg.puzzle-svg .cell rect {
         fill: white;
+    }
+
+    svg.puzzle-svg .cell.no-region rect {
+        fill: #ddd;
     }
 
     svg.puzzle-svg .cell.highlighted rect {
@@ -466,6 +474,20 @@ svg.puzzle-svg .multi-select {
         display: block;
     }
 
+#sidebar #region-buttons {
+    text-align: center;
+    padding: .1cm 0;
+}
+
+    #sidebar #region-buttons button {
+        padding: .1cm .2cm;
+        margin: 0 .05cm;
+    }
+
+#sidebar #region-presets.hidden {
+    display: none;
+}
+
 #sidebar .btns {
     margin-top: .09cm;
     float: right;
@@ -475,6 +497,7 @@ svg.puzzle-svg .multi-select {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
+    align-items: flex-end;
 }
 
     #sidebar #regions .region {

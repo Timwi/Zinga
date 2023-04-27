@@ -120,16 +120,6 @@ namespace Zinga
                                         <g id='outline-svg'></g>
                                         <g id='selection-arrows-svg' fill='none' stroke='hsl(220, 80%, 80%)' stroke-width='.03' marker-end='url(#selection-arrow-marker)'></g>
                                         <g id='multi-selects' fill='black'></g>
-
-                                        {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='n' data-offset='{col}' d='m {col + .3} 9.3 .2 -.2 .2 .2z' fill='black' />").JoinString()}
-                                        {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='e' data-offset='{row}' d='m -.3 {row + .3} .2 .2 -.2 .2z' fill='black' />").JoinString()}
-                                        {Enumerable.Range(0, 9).Select(row => $"<path class='multi-select' data-what='w' data-offset='{row}' d='m 9.3 {row + .3} -.2 .2 .2 .2z' fill='black' />").JoinString()}
-                                        {Enumerable.Range(0, 9).Select(col => $"<path class='multi-select' data-what='s' data-offset='{col}' d='m {col + .3} -.3 .2 .2 .2 -.2z' fill='black' />").JoinString()}
-
-                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='se' data-offset='{offset - 8}' d='m {(offset < 8 ? 0 : offset - 8) - .1} {(offset > 8 ? 0 : 8 - offset) - .1} -.2 0 .2 -.2 z' fill='black' />").JoinString()}
-                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='sw' data-offset='{offset}' d='m {(offset < 8 ? offset + 1 : 9) + .1} {(offset > 8 ? offset - 8 : 0) - .1} 0 -.2 .2 .2 z' fill='black' />").JoinString()}
-                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='nw' data-offset='{8 - offset}' d='m {(offset < 8 ? 9 : 17 - offset) + .1} {(offset > 8 ? 9 : offset + 1) + .1} .2 0 -.2 .2 z' fill='black' />").JoinString()}
-                                        {Enumerable.Range(0, 17).Select(offset => $"<path class='multi-select' data-what='ne' data-offset='{16 - offset}' d='m {(offset < 8 ? 8 - offset : 0) - .1} {(offset > 8 ? 17 - offset : 9) + .1} -.2 0 .2 .2 z' fill='black' />").JoinString()}
                                     </g>
                                 </g>
                             </svg>")),
@@ -159,7 +149,11 @@ namespace Zinga
                                 new SECTION(
                                     new DIV { class_ = "btns" }._(new BUTTON { id = "region-add", class_ = "mini-btn add", title = "Add a new region (Alt+R)", accesskey = "r" }),
                                     new DIV { class_ = "label" }._("Regions"),
-                                    new DIV { id = "regions" }),
+                                    new DIV { id = "regions" },
+                                    new DIV { id = "region-buttons" }._(
+                                        new SPAN { id = "region-presets" },
+                                        new BUTTON { id = "region-remove-all" }._("Remove all"),
+                                        new BUTTON { id = "region-fill" }._("Fill the rest"))),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Givens"),
                                     new DIV { id = "givens" }._(
