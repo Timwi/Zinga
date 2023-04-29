@@ -19,30 +19,6 @@ namespace Zinga
 
             var constraintTypes = db.Constraints.Where(c => c.Public).ToDictionary(c => c.ConstraintID);
 
-            const double btnHeight = .8;
-            const double margin = .135;
-
-            var btns = Ut.NewArray<(string label, bool isSvg, string id, double width, int row, bool color)>(
-                ("Delete", false, "clear", 1, 0, false),
-                ("Undo", false, "undo", 1, 0, false),
-                ("Redo", false, "redo", 1, 0, false));
-
-            string renderButton(string id, double x, double y, double width, string label, bool color, bool isSvg = false) => $@"
-                <g class='button' id='{id}' transform='translate({x}, {y})'>
-                    <rect class='clickable' x='0' y='0' width='{width}' height='{btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>
-                    {(isSvg ? label : $"<text class='label' x='{width / 2}' y='.6' font-size='.55' text-anchor='middle'>{label}</text>")}
-                </g>";
-
-            string renderButtonArea((string label, bool isSvg, string id, double width, int row, bool color)[] btns, double totalWidth) => btns.GroupBy(g => g.row).SelectMany(row =>
-            {
-                var totalButtonWidth = totalWidth - margin * (row.Count() - 1);
-                var buttonWidthWeight = row.Sum(r => r.width);
-                var widthFactor = totalButtonWidth / buttonWidthWeight;
-
-                return row.Select((btn, btnIx) =>
-                    renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
-            }).JoinString();
-
             var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToJson()).ToString();
 
             const bool autoCss = true;
@@ -104,7 +80,7 @@ namespace Zinga
                                 </defs>
                                 <defs id='constraint-defs'></defs>
                                 <g id='bb-everything'>
-                                    <g id='bb-buttons' transform='translate(0, 9.5)'>{renderButtonArea(btns, 9)}</g>
+                                    <g id='bb-buttons'><g id='bb-buttons-scaler' font-size='.55' text-anchor='middle'></g></g>
 
                                     <g id='bb-puzzle'>
                                         <g id='constraint-svg-global'></g>
@@ -142,6 +118,11 @@ namespace Zinga
                                     new DIV { class_ = "label" }._("Links"),
                                     new TABLE { id = "links" }),
                                 new SECTION(
+                                    new DIV { class_ = "label" }._("Givens"),
+                                    new DIV { id = "givens" }._(
+                                        Enumerable.Range(1, 9).Select(n => new BUTTON { type = btype.button, id = $"given-{n}", class_ = "btn given-btn" }.Data("given", n)._(new SPAN(n))),
+                                        new DIV { class_ = "list" })),
+                                new SECTION(
                                     new DIV { class_ = "label" }._("Grid size"),
                                     new DIV { id = "grid-size" }._(
                                         new LABEL { for_ = "puzzle-width-input", accesskey = "w" }._("Width:".Accel('W')), " ", new INPUT { type = itype.number, min = "1", step = "1", id = "puzzle-width-input" }, " ",
@@ -154,11 +135,6 @@ namespace Zinga
                                         new SPAN { id = "region-presets" },
                                         new BUTTON { id = "region-remove-all" }._("Remove all"),
                                         new BUTTON { id = "region-fill" }._("Fill the rest"))),
-                                new SECTION(
-                                    new DIV { class_ = "label" }._("Givens"),
-                                    new DIV { id = "givens" }._(
-                                        Enumerable.Range(1, 9).Select(n => new BUTTON { type = btype.button, id = $"given-{n}", class_ = "btn given-btn" }.Data("given", n)._(new SPAN(n))),
-                                        new DIV { class_ = "list" })),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Save"),
                                     new DIV { class_ = "save-section" }._(

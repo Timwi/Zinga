@@ -986,7 +986,6 @@
             localStorage.setItem(`zinga-edit-undo`, JSON.stringify(undoBuffer));
             localStorage.setItem(`zinga-edit-redo`, JSON.stringify(redoBuffer));
         }
-        resetClearButton();
 
         function updateConstraintAndCellSelection()
         {
@@ -1019,6 +1018,74 @@
         let constraintSelectionUpdated = false;
         if (opt && opt.svg)
         {
+            // Button row
+            let buttonRows = [[
+                { id: 'btn-clear', text: 'Delete' },
+                { id: 'btn-undo', text: 'Undo' },
+                { id: 'btn-redo', text: 'Redo' }
+            ]];
+            let y = 0, btnSvg = '', btnHeight = .8, btnMargin = .135, btnPadding = .135;
+            for (let row of buttonRows)
+                for (let btnInfo of row)
+                    btnSvg += `
+                        <g class='button' id='${btnInfo.id}'>
+                            <rect class='clickable' x='0' y='0' width='1' height='${btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>
+                            <text class='label'>${btnInfo.text}</text>
+                        </g>`;
+            document.getElementById('bb-buttons-scaler').innerHTML = btnSvg;
+            document.getElementById('bb-buttons-scaler').removeAttribute('transform');
+
+            for (let rowIx = 0; rowIx < buttonRows.length; rowIx++)
+            {
+                let row = buttonRows[rowIx];
+                for (let btnInfo of row)
+                {
+                    btnInfo.btn = document.getElementById(btnInfo.id);
+                    btnInfo.label = btnInfo.btn.querySelector('text.label');
+                    btnInfo.rect = btnInfo.btn.querySelector('rect.clickable');
+                    btnInfo.w = btnInfo.label.getBBox().width + 2 * btnPadding;
+                }
+                console.log(row);
+                let totalWidth = row.reduce((p, n) => p + n.w, 0) + (row.length - 1) * btnMargin;
+                let extraPadding = totalWidth <= state.width ? (state.width - totalWidth) / row.length : 0;
+                let scale = totalWidth <= state.width ? null : state.width / totalWidth;
+                let x = 0;
+                for (let btnInfo of row)
+                {
+                    btnInfo.rect.setAttribute('x', x);
+                    btnInfo.rect.setAttribute('y', rowIx);
+                    btnInfo.rect.setAttribute('width', btnInfo.w + extraPadding);
+                    btnInfo.rect.setAttribute('height', btnHeight);
+                    btnInfo.label.setAttribute('x', x + (btnInfo.w + extraPadding) / 2);
+                    btnInfo.label.setAttribute('y', rowIx + .6);
+                    x += btnInfo.w + extraPadding + btnMargin;
+                }
+                y += 1;
+                console.log(scale);
+                if (scale !== null)
+                    document.getElementById('bb-buttons-scaler').setAttribute('transform', `scale(${scale})`);
+            }
+
+            setButtonHandler(document.getElementById('btn-clear'), function()
+            {
+                let elem = document.getElementById(`btn-clear`);
+                if (!elem.classList.contains('warning'))
+                {
+                    clearCells();
+                    elem.classList.add('warning');
+                    puzzleDiv.querySelector(`#btn-clear>text`).textContent = 'Wipe?';
+                }
+                else
+                {
+                    resetClearButton();
+                    saveUndo();
+                    state = makeEmptyState();
+                    updateVisuals({ storage: true, svg: true, metadata: true });
+                }
+            });
+            setButtonHandler(document.getElementById('btn-undo'), undo);
+            setButtonHandler(document.getElementById('btn-redo'), redo);
+
             // Re-render all constraint SVGs
             constraintSelectionUpdated = true;
             dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state)], resultsRaw =>
@@ -1189,6 +1256,8 @@
                 }
             });
         }
+
+        resetClearButton();
 
         function variableUi(type, value, id, kind, cIx)
         {
@@ -1684,25 +1753,6 @@
     Array.from(document.querySelectorAll('#sidebar>.tabs>.tab')).forEach(tab => setButtonHandler(tab, function() { selectTab(tab.dataset.tab); }));
     Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given | 0); }); });
 
-    setButtonHandler(puzzleContainer.querySelector(`#btn-clear>rect`), function()
-    {
-        let elem = document.getElementById(`btn-clear`);
-        if (!elem.classList.contains('warning'))
-        {
-            clearCells();
-            elem.classList.add('warning');
-            puzzleDiv.querySelector(`#btn-clear>text`).textContent = 'Wipe?';
-        }
-        else
-        {
-            resetClearButton();
-            saveUndo();
-            state = makeEmptyState();
-            updateVisuals({ storage: true, svg: true, metadata: true });
-        }
-    });
-    setButtonHandler(puzzleContainer.querySelector(`#btn-undo>rect`), undo);
-    setButtonHandler(puzzleContainer.querySelector(`#btn-redo>rect`), redo);
     setButtonHandler(document.getElementById('puzzle-test'), () => { window.open(`${window.location.protocol}//${window.location.host}/test`); });
     setButtonHandler(document.getElementById('puzzle-save'), () =>
     {
