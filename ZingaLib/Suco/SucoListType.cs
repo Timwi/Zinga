@@ -81,9 +81,9 @@ namespace Zinga.Suco
             ("max", SucoIntegerType) => minMax((IEnumerable<int?>) operand, min: false),
 
             // Lists of booleans
-            ("all", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || next == false ? false : prev == null || next == null ? null : true),
-            ("any", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) false, (prev, next) => prev == true || next == true ? true : prev == null || next == null ? null : false),
-            ("none", SucoBooleanType) => ((IEnumerable<bool?>) operand)?.Aggregate((bool?) true, (prev, next) => prev == false || next == true ? false : prev == null || next == null ? null : true),
+            ("all", SucoBooleanType) => all((IEnumerable<bool?>) operand),
+            ("any", SucoBooleanType) => any((IEnumerable<bool?>) operand),
+            ("none", SucoBooleanType) => none((IEnumerable<bool?>) operand),
             ("count", SucoBooleanType) => count<bool?>(operand),
 
             // Lists of lists of integers
@@ -94,6 +94,37 @@ namespace Zinga.Suco
 
             _ => base.InterpretMemberAccess(memberName, operand, env, grid)
         };
+
+        private bool? all(IEnumerable<bool?> operand)
+        {
+            var hasNull = false;
+            foreach (var v in operand)
+                if (v == false)
+                    return false;
+                else if (v == null)
+                    hasNull = true;
+            return hasNull ? null : true;
+        }
+
+        private bool? any(IEnumerable<bool?> operand)
+        {
+            foreach (var v in operand)
+                if (v == true)
+                    return true;
+                else if (v == null)
+                    return null;
+            return false;
+        }
+
+        private bool? none(IEnumerable<bool?> operand)
+        {
+            foreach (var v in operand)
+                if (v == true)
+                    return false;
+                else if (v == null)
+                    return null;
+            return true;
+        }
 
         private int? minMax(IEnumerable<Cell> cells, int?[] grid, bool min)
         {
