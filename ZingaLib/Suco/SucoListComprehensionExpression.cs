@@ -55,7 +55,8 @@ namespace Zinga.Suco
                     throw new SucoCompileException($"The clause for variable “{clause.VariableName}” is attempting to draw elements from something that is not a list.", clause.StartIndex, clause.EndIndex);
 
                 // Ensure the inner condition expressions are all implicitly convertible to booleans
-                newEnv = newEnv.DeclareVariable(clause.VariableName, ((SucoListType) collectionType).ElementType, isInListComprehension: true);
+                try { newEnv = newEnv.DeclareVariable(clause.VariableName, ((SucoListType) collectionType).ElementType, isInListComprehension: true); }
+                catch (SucoTempCompileException stce) { throw new SucoCompileException(stce.Message, clause.StartIndex, clause.EndIndex); }
                 var newConditions = clause.Conditions.Select(cond => cond.DeduceTypes(newEnv, context, elementType)).ToList();
                 newClauses.Add(new SucoListClause(clause.StartIndex, clause.EndIndex, clause.VariableName, clause.HasDollar, clause.HasPlus, clause.HasSingleton, newFromExpression, newConditions, elementType));
                 if (clause.HasSingleton)
