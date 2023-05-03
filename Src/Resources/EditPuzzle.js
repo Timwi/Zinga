@@ -102,6 +102,7 @@
             str = `Ctrl+${str}`;
         return str;
     }
+    function ns(num) { return Array.from({ length: num }, (_, ix) => ix); }
     function orthogonal(cell)
     {
         let list = [], w = state.width;
@@ -204,13 +205,13 @@
         for (let variableName of Object.keys(cType.variables))
             newConstraint.values[variableName] = coerceValue(variableName === 'cells' ? cells : null, cType.variables[variableName]);
 
-        let specialVariable = getSpecialVariable(cType.kind);
-        if (specialVariable[0] !== null)
+        let [spVar, spType] = getSpecialVariable(cType.kind);
+        if (spVar !== null)
         {
             let enforceResult = enforceConstraintKind(cType.kind, cells);
             if (!enforceResult.valid)
                 return enforceResult;
-            newConstraint.values[specialVariable[0]] = enforceResult.value;
+            newConstraint.values[spVar] = enforceResult.value;
         }
 
         return { valid: true, constraint: newConstraint };
@@ -260,7 +261,7 @@
     }
     function enforceConstraintKind(kind, value)
     {
-        let w = state.width;
+        let w = state.width, h = state.height;
         // Return value is either:
         // { valid: false, message: 'error message' }
         // { valid: true, value?: new value (may or may not be the same as the input) (may be a single cell, list, list of lists, or absent) }
@@ -270,7 +271,7 @@
                 if (!Array.isArray(value) || value.length < 2)
                     return { valid: false, message: 'This constraint requires at least two cells.' };
 
-                if (Array(value.length - 1).fill(null).some((_, c) => !adjacent(value[c]).includes(value[c + 1])))
+                if (ns(value.length - 1).some(c => !adjacent(value[c]).includes(value[c + 1])))
                     return { valid: false, message: 'This constraint requires each cell to be adjacent to the previous, forming a path.' };
 
                 return { valid: true, value: value };
@@ -321,8 +322,8 @@
                 return {
                     valid: true,
                     value: value[1] > value[0]
-                        ? (row !== null ? Array(w).fill(null).map((_, c) => c + w * row) : Array(w).fill(null).map((_, r) => col + w * r))
-                        : (row !== null ? Array(w).fill(null).map((_, c) => w - 1 - c + w * row) : Array(w).fill(null).map((_, r) => col + w * (w - 1 - r)))
+                        ? (row !== null ? ns(w).map(c => c + w * row) : ns(w).map(r => col + w * r))
+                        : (row !== null ? ns(w).map(c => w - 1 - c + w * row) : ns(w).map(r => col + w * (w - 1 - r)))
                 };
 
             case 'Diagonal':
@@ -336,7 +337,7 @@
 
                 return {
                     valid: true,
-                    value: Array(81).fill(null).map((_, c) => value[1] > value[0] ? c : 80 - c)
+                    value: ns(w * h).map(c => value[1] > value[0] ? c : w * h - 1 - c)
                         .filter(c => forward !== null ? ((c % w) - ((c / w) | 0) === forward) : ((c % w) + ((c / w) | 0) === backward))
                 };
 
@@ -381,8 +382,9 @@
             givens: Array(81).fill(null),
             width: 9,
             height: 9,
-            regions: Array(9).fill(null).map((_, r) => Array(9).fill(null).map((_, c) => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0)))),
-            labels: Array(9).fill(null).map((_, v) => `${v + 1}`),
+            regions: ns(9).map(r => ns(9).map(c => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0)))),
+            labels: ns(9).map(v => `${v + 1}`),
+            values: ns(9).map(v => v + 1),
             constraints: [],
             customConstraintTypes: []
         };
@@ -406,7 +408,7 @@
                 newConstraintList.push(...gap);
             newConstraintList.push(...state.constraints.slice(lastSel));
             state.constraints = newConstraintList;
-            selectedConstraints = Array(selectedConstraints.length).fill(null).map((_, c) => c + (up ? firstSel : lastSel - selectedConstraints.length));
+            selectedConstraints = ns(selectedConstraints.length).map(c => c + (up ? firstSel : lastSel - selectedConstraints.length));
         }
         else
         {
@@ -444,12 +446,12 @@
         function generateVariablesTable()
         {
             let variableNames = Object.keys(cType.variables);
-            let specialVariable = getSpecialVariable(cType.kind)[0];
-            variableNames.sort((a, b) => a === specialVariable ? -1 : b === specialVariable ? 1 : a.localeCompare(b));
+            let [spVar, spType] = getSpecialVariable(cType.kind);
+            variableNames.sort((a, b) => a === spVar ? -1 : b === spVar ? 1 : a.localeCompare(b));
 
             document.getElementById('constraint-code-variables').dataset.variables = JSON.stringify(cType.variables);
             document.getElementById('constraint-code-variables').innerHTML = variableNames
-                .map(variableName => `<tr data-variablename='${variableName}'${variableName === specialVariable ? " class='fixed'" : ''}><th>${variableName}${variableName === specialVariable ? '' : `<button class='mini-btn remove'></button>`}</th><td></td></tr>`)
+                .map(variableName => `<tr data-variablename='${variableName}'${variableName === spVar ? " class='fixed'" : ''}><th>${variableName}${variableName === spVar ? '' : `<button class='mini-btn remove'></button>`}</th><td></td></tr>`)
                 .join('');
             Array.from(document.getElementById('constraint-code-variables').querySelectorAll('tr')).forEach(tr =>
             {
@@ -460,7 +462,7 @@
 
                 let variableName = tr.dataset.variablename;
 
-                if (variableName !== specialVariable)
+                if (variableName !== spVar)
                 {
                     // Button to delete a property
                     setButtonHandler(tr.querySelector('button.remove'), () =>
@@ -541,7 +543,7 @@
                 }
                 else
                 {
-                    tr.querySelector('td').innerHTML = `<span class='fixed'></span>`;
+                    tr.querySelector('td').innerHTML = `<span class='fixed'></span> (fixed)`;
                     tr.querySelector('td>span').innerText = cType.variables[variableName];
                 }
             });
@@ -587,8 +589,9 @@
         {
             st.width = 9;
             st.height = 9;
-            st.regions = Array(9).fill(null).map((_, r) => Array(9).fill(null).map((_, c) => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0))));
-            st.labels = Array(9).fill(null).map((_, v) => `${v + 1}`);
+            st.regions = ns(9).map(r => ns(9).map(c => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0))));
+            st.labels = ns(9).map(v => `${v + 1}`);
+            st.values = ns(9).map(v => v + 1);
         }
         if (st.width < 1)
             st.width = 1;
@@ -625,14 +628,14 @@
         let w = state.width, h = state.height;
         switch (what)
         {
-            case 'e': return Array(w).fill(null).map((_, c) => c + w * offset);
-            case 'w': return Array(w).fill(null).map((_, c) => w - 1 - c + w * offset);
-            case 's': return Array(h).fill(null).map((_, c) => offset + w * c);
-            case 'n': return Array(h).fill(null).map((_, c) => offset + w * (h - 1 - c));
-            case 'se': return Array(w * h).fill(null).map((_, c) => c).filter(c => (c % w) - ((c / w) | 0) === offset);
-            case 'sw': return Array(w * h).fill(null).map((_, c) => c).filter(c => (c % w) + ((c / w) | 0) === offset);
-            case 'nw': return Array(w * h).fill(null).map((_, c) => w * h - 1 - c).filter(c => (c % w) - ((c / w) | 0) === offset);
-            case 'ne': return Array(w * h).fill(null).map((_, c) => w * h - 1 - c).filter(c => (c % w) + ((c / w) | 0) === offset);
+            case 'e': return ns(w).map(c => c + w * offset);
+            case 'w': return ns(w).map(c => w - 1 - c + w * offset);
+            case 's': return ns(h).map(c => offset + w * c);
+            case 'n': return ns(h).map(c => offset + w * (h - 1 - c));
+            case 'se': return ns(w * h).map(c => c).filter(c => (c % w) - ((c / w) | 0) === offset);
+            case 'sw': return ns(w * h).map(c => c).filter(c => (c % w) + ((c / w) | 0) === offset);
+            case 'nw': return ns(w * h).map(c => w * h - 1 - c).filter(c => (c % w) - ((c / w) | 0) === offset);
+            case 'ne': return ns(w * h).map(c => w * h - 1 - c).filter(c => (c % w) + ((c / w) | 0) === offset);
         }
     }
     function selectCell(cell, mode)
@@ -715,9 +718,9 @@
     function selectConstraintRange(cIx1, cIx2, updateOpt)
     {
         if (cIx1 <= cIx2)
-            selectedConstraints = Array(cIx2 - cIx1 + 1).fill(null).map((_, c) => c + cIx1);
+            selectedConstraints = ns(cIx2 - cIx1 + 1).map(c => c + cIx1);
         else
-            selectedConstraints = Array(cIx1 - cIx2 + 1).fill(null).map((_, c) => c + cIx2);
+            selectedConstraints = ns(cIx1 - cIx2 + 1).map(c => c + cIx2);
         lastSelectedConstraint = selectedConstraints.length > 0 ? selectedConstraints[0] | 0 : lastSelectedConstraint;
         editingConstraintType = null;
         selectedCells = [];
@@ -1018,7 +1021,7 @@
         let constraintSelectionUpdated = false;
         if (opt && opt.svg)
         {
-            // Button row
+            // Button row below the puzzle grid
             let buttonRows = [[
                 { id: 'btn-clear', text: 'Delete' },
                 { id: 'btn-undo', text: 'Undo' },
@@ -1061,7 +1064,6 @@
                     x += btnInfo.w + extraPadding + btnMargin;
                 }
                 y += 1;
-                console.log(scale);
                 if (scale !== null)
                     document.getElementById('bb-buttons-scaler').setAttribute('transform', `scale(${scale})`);
             }
@@ -1086,7 +1088,7 @@
             setButtonHandler(document.getElementById('btn-undo'), undo);
             setButtonHandler(document.getElementById('btn-redo'), redo);
 
-            // Re-render all constraint SVGs
+            // Constraint SVGs
             constraintSelectionUpdated = true;
             dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(state)], resultsRaw =>
             {
@@ -1107,7 +1109,7 @@
                 document.getElementById('puzzle-frame').setAttribute('d', results.frame);
                 document.getElementById('puzzle-lines').setAttribute('d', results.lines);
 
-                document.getElementById('puzzle-cells').innerHTML = Array(w * h).fill(null).map((_, cell) => `
+                document.getElementById('puzzle-cells').innerHTML = ns(w * h).map(cell => `
                     <g class='cell${state.regions.length < 1 || state.regions.some(r => r.includes(cell)) ? '' : ' no-region'}' id='sudoku-${cell}' font-size='.25' stroke-width='0'>
                         <rect class='clickable sudoku-cell' data-cell='${cell}' x='${cell % w}' y='${(cell / w) | 0}' width='1' height='1' />
                         <text id='sudoku-text-${cell}' x='${cell % w + .5}' y='${((cell / w) | 0) + .725}' font-size='.65'></text>
@@ -1410,12 +1412,12 @@
             let constraint = state.constraints[cIx];
             let cType = getConstraintType(constraint.type);
 
-            let specialVariable = getSpecialVariable(cType.kind);
+            let [spVar, spType] = getSpecialVariable(cType.kind);
             let enforceResult;
-            if (specialVariable[0] !== null && !(enforceResult = enforceConstraintKind(cType.kind, constraint.values[specialVariable[0]])).valid)
+            if (spVar !== null && !(enforceResult = enforceConstraintKind(cType.kind, constraint.values[spVar])).valid)
             {
                 constraintDiv.classList.add('warning');
-                constraintDiv.querySelector('.name').setAttribute('title', `${enforceResult.message} Either change the “${specialVariable[0]}” property accordingly, or (if the constraint works correctly as it is) change its Kind to “Custom”.`);
+                constraintDiv.querySelector('.name').setAttribute('title', `${enforceResult.message} Either change the “${spVar}” property accordingly, or (if the constraint works correctly as it is) change its Kind to “Custom”.`);
             }
 
             // If constraintSelectionUpdated is true, this is done further up in the Blazor callback
@@ -1831,15 +1833,15 @@
                 let t = getConstraintType(state.constraints[i].type);
                 for (let v of Object.keys(t.variables))
                     state.constraints[i].values[v] = translateValue(state.constraints[i].values[v], t.variables[v]);
-                let sp = getSpecialVariable(t.kind)[0];
-                if (sp !== null)
+                let [spVar, spType] = getSpecialVariable(t.kind);
+                if (spVar !== null)
                 {
-                    let enf = enforceConstraintKind(t.kind, state.constraints[i].values[sp]);
+                    let enf = enforceConstraintKind(t.kind, state.constraints[i].values[spVar]);
                     if (enf.valid)
-                        state.constraints[i].values[sp] = enf.value;
+                        state.constraints[i].values[spVar] = enf.value;
                     else
                     {
-                        console.log(sp, t, state.constraints[i], enf);
+                        console.log(spVar, t, state.constraints[i], enf);
                         state.constraints.splice(i--, 1);
                         continue;
                     }
@@ -1881,7 +1883,7 @@
     });
     setButtonHandler(document.getElementById('region-fill'), () =>
     {
-        let w = state.width, h = state.height, unusedCells = Array(w * h).fill(null).map((_, c) => c).filter(c => !state.regions.some(r => r.includes(c)));
+        let w = state.width, h = state.height, unusedCells = ns(w * h).map(c => c).filter(c => !state.regions.some(r => r.includes(c)));
         if (unusedCells.length < 1)
             return;
         saveUndo();
@@ -1911,9 +1913,9 @@
     {
         let cType = getConstraintType(cTypeId);
         cType.kind = v;
-        let inf = getSpecialVariable(v);
-        if (inf[0] !== null)
-            cType.variables[inf[0]] = inf[1];
+        let [spVar, spType] = getSpecialVariable(v);
+        if (spVar !== null)
+            cType.variables[spVar] = spType;
         populateConstraintEditBox(cTypeId);
     });
 
@@ -2059,7 +2061,7 @@
             case 'Ctrl+Shift+ArrowLeft': selectCellLine('w'); break;
             case 'Ctrl+Shift+ArrowRight': selectCellLine('e'); break;
 
-            case 'Ctrl+KeyA': selectedCells = Array(w * h).fill(null).map((_, c) => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
+            case 'Ctrl+KeyA': selectedCells = ns(w * h).map(c => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
             case 'Escape': pressEscape(); break;
 
             case 'Ctrl+ControlLeft':
