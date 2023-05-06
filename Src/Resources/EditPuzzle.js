@@ -383,7 +383,6 @@
 			width: 9,
 			height: 9,
 			regions: ns(9).map(r => ns(9).map(c => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0)))),
-			labels: ns(9).map(v => `${v + 1}`),
 			values: ns(9).map(v => v + 1),
 			constraints: [],
 			customConstraintTypes: []
@@ -584,13 +583,12 @@
 	}
 	function upgrade(st)
 	{
-		if (st.width === null || st.width === undefined || st.height === null || st.height === undefined || st.regions === null || st.regions === undefined
-			|| st.labels === null || st.labels === undefined || st.values === null || st.values === undefined)
+		if (st.width === null || st.width === undefined || st.height === null || st.height === undefined
+			|| st.regions === null || st.regions === undefined || st.values === null || st.values === undefined)
 		{
 			st.width = 9;
 			st.height = 9;
 			st.regions = ns(9).map(r => ns(9).map(c => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0))));
-			st.labels = ns(9).map(v => `${v + 1}`);
 			st.values = ns(9).map(v => v + 1);
 		}
 		if (st.width < 1)
@@ -1123,36 +1121,32 @@
 				fixViewBox();
 			});
 
-			// Givens/values/labels
+			// Givens/values
 			let givenPresets = [
-				{ id: 'n1', name: `1–${w}`, label: n => `${n + 1}`, value: n => n + 1 },
-				{ id: 'n0', name: `0–${w - 1}`, label: n => `${n}`, value: n => n },
-				{ id: 'l', name: `A–${String.fromCharCode(64 + w)}`, label: n => String.fromCharCode(65 + n), value: n => n + 1 }
+				{ id: 'n1', name: `1–${w}`, value: n => n + 1 },
+				{ id: 'n0', name: `0–${w - 1}`, value: n => n }
 			];
 			document.getElementById('givens-presets').innerHTML = givenPresets.map(p => `<button id='givens-preset-${p.id}'>${p.name}</button>`).join('');
 			givenPresets.forEach(preset =>
 			{
 				document.getElementById(`givens-preset-${preset.id}`).onclick = function()
 				{
-					let newLabels = ns(w).map(preset.label);
 					let newValues = ns(w).map(preset.value);
 					let newGivens = state.givens.map(g => g === null || !newValues.includes(g) ? null : g);
-					if (state.labels.length === w && newLabels.every((l, ix) => l === state.labels[ix]) &&
-						state.values.length === w && newValues.every((v, ix) => v === state.values[ix]) &&
+					if (state.values.length === w && newValues.every((v, ix) => v === state.values[ix]) &&
 						newGivens.every((g, ix) => g === state.givens[ix]))
 						return;
 					saveUndo();
-					state.labels = newLabels;
 					state.values = newValues;
 					state.givens = newGivens;
 					updateVisuals({ svg: true, storage: true });
 				};
 			});
 
-			document.getElementById('givens').innerHTML = state.labels.map((lbl, ix) => `
-				<div class='given' data-given='${state.values[ix]}'>
-					<div class='given-btns'><button class='given-btn'>${lbl}</button></div>
-					<div><input type='number' value='${state.values[ix]}' /></div>
+			document.getElementById('givens').innerHTML = state.values.map(val => `
+				<div class='given' data-given='${val}'>
+					<div class='given-btns'><button class='given-btn'>${val}</button></div>
+					<div><input type='number' value='${val}' /></div>
 					<div><button class='mini-btn remove' /></div>
 				</div>
 			`).join('');
@@ -1163,9 +1157,9 @@
 				setButtonHandler(givenDiv.querySelector('button.remove'), function()
 				{
 					let ix = state.values.indexOf(givenValue);
+					if (ix === -1) return;
 					saveUndo();
 					state.values.splice(ix, 1);
-					state.labels.splice(ix, 1);
 					state.givens = state.givens.map(g => g === null || !state.values.includes(g) ? null : g);
 					updateVisuals({ svg: true, storage: true });
 				});
@@ -1833,7 +1827,6 @@
 	setButtonHandler(document.getElementById('constraint-move-down'), () => moveConstraints(false));
 	setButtonHandler(document.getElementById('constraint-search-cancel'), () => { document.getElementById('constraint-search').classList.remove('shown'); puzzleContainer.focus(); });
 	setButtonHandler(constraintCodeExpander, function() { setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); });
-	setButtonHandler(constraintCodeBox.querySelector('.label'), function() { });
 
 	document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
 	document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
@@ -1951,24 +1944,18 @@
 	});
 	setButtonHandler(document.getElementById('value-add'), () =>
 	{
-		let i = 1;
-		while (state.labels.some(l => l === `${i}`))
-			i++;
-		let label = prompt('Enter a label (what the user sees in the puzzle):', `${i}`);
-		if (label === null || state.labels.includes(label))
-			return;
 		saveUndo();
-		i = 1;
+		let i = 1;
 		while (state.values.includes(i))
 			i++;
 		let insertionPoint = state.values.findIndex(v => v > i);
 		if (insertionPoint === -1)
 			insertionPoint = state.values.length;
-		state.labels.splice(insertionPoint, 0, label);
 		state.values.splice(insertionPoint, 0, i);
 		updateVisuals({ svg: true, storage: true });
 	});
 
+	setButtonHandler(constraintCodeBox.querySelector('.label'), function() { });
 	constraintCodeBox.querySelector('.label').ondblclick = function(ev) { if (ev.target !== constraintCodeExpander) setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); };
 
 	setConstraintCodeEditingEvent('name', (el, ev) => { el.onkeyup = ev; }, cTypeId => getConstraintType(cTypeId).name, (cTypeId, v) => { getConstraintType(cTypeId).name = v; });

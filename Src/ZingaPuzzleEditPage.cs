@@ -118,15 +118,15 @@ namespace Zinga
                                     new DIV { class_ = "label" }._("Links"),
                                     new TABLE { id = "links" }),
                                 new SECTION(
-                                    new DIV { class_ = "btns" }._(new BUTTON { id = "value-add", class_ = "mini-btn add", title = "Add a new value" }),
-                                    new DIV { class_ = "label" }._("Values and givens"),
-                                    new DIV { id = "givens" },
-                                    new DIV { id = "givens-presets", class_ = "buttons" }),
-                                new SECTION(
                                     new DIV { class_ = "label" }._("Grid size"),
                                     new DIV { id = "grid-size" }._(
                                         new LABEL { for_ = "puzzle-width-input", accesskey = "w" }._("Width:".Accel('W')), " ", new INPUT { type = itype.number, min = "1", step = "1", id = "puzzle-width-input" }, " ",
                                         new LABEL { for_ = "puzzle-height-input", accesskey = "h" }._("Height:".Accel('H')), " ", new INPUT { type = itype.number, min = "1", step = "1", id = "puzzle-height-input" })),
+                                new SECTION(
+                                    new DIV { class_ = "btns" }._(new BUTTON { id = "value-add", class_ = "mini-btn add", title = "Add a new value" }),
+                                    new DIV { class_ = "label" }._("Values and givens"),
+                                    new DIV { id = "givens" },
+                                    new DIV { id = "givens-presets", class_ = "buttons" }),
                                 new SECTION(
                                     new DIV { class_ = "btns" }._(new BUTTON { id = "region-add", class_ = "mini-btn add", title = "Add a new region (Alt+R)", accesskey = "r" }),
                                     new DIV { class_ = "label" }._("Regions"),
