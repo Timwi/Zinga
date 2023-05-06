@@ -114,14 +114,14 @@ namespace Zinga
                                     new DIV { class_ = "label" }._("Rules"),
                                     new DIV(new TEXTAREA { id = "puzzle-rules-input", accesskey = "/" })),
                                 new SECTION(
-                                    new DIV { class_ = "btns" }._(new BUTTON { id = "add-link", class_ = "mini-btn add", title = "Add a link (for example, to Logic Masters Germany)" }),
+                                    new DIV { class_ = "btns" }._(new BUTTON { id = "link-add", class_ = "mini-btn add", title = "Add a link (for example, to Logic Masters Germany)" }),
                                     new DIV { class_ = "label" }._("Links"),
                                     new TABLE { id = "links" }),
                                 new SECTION(
-                                    new DIV { class_ = "label" }._("Givens"),
-                                    new DIV { id = "givens" }._(
-                                        Enumerable.Range(1, 9).Select(n => new BUTTON { type = btype.button, id = $"given-{n}", class_ = "btn given-btn" }.Data("given", n)._(new SPAN(n))),
-                                        new DIV { class_ = "list" })),
+                                    new DIV { class_ = "btns" }._(new BUTTON { id = "value-add", class_ = "mini-btn add", title = "Add a new value" }),
+                                    new DIV { class_ = "label" }._("Values and givens"),
+                                    new DIV { id = "givens" },
+                                    new DIV { id = "givens-presets", class_ = "buttons" }),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Grid size"),
                                     new DIV { id = "grid-size" }._(
@@ -131,13 +131,13 @@ namespace Zinga
                                     new DIV { class_ = "btns" }._(new BUTTON { id = "region-add", class_ = "mini-btn add", title = "Add a new region (Alt+R)", accesskey = "r" }),
                                     new DIV { class_ = "label" }._("Regions"),
                                     new DIV { id = "regions" },
-                                    new DIV { id = "region-buttons" }._(
+                                    new DIV { id = "region-buttons", class_ = "buttons" }._(
                                         new SPAN { id = "region-presets" },
                                         new BUTTON { id = "region-remove-all" }._("Remove all"),
                                         new BUTTON { id = "region-fill" }._("Fill the rest"))),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Save"),
-                                    new DIV { class_ = "save-section" }._(
+                                    new DIV { class_ = "save-section buttons" }._(
                                         new BUTTON { id = "puzzle-test", accesskey = "t" }._("Test puzzle".Accel('T')),
                                         new BUTTON { id = "puzzle-save", accesskey = "s" }._("Publish puzzle".Accel('s')),
                                         new DIV("Publishing...")))),

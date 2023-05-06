@@ -417,6 +417,24 @@ svg.puzzle-svg .multi-select {
 }
 
 /* PUZZLE tab */
+#sidebar .buttons {
+    text-align: center;
+    padding: .1cm 0;
+}
+
+    #sidebar .buttons button {
+        padding: .1cm .2cm;
+        margin: 0 .05cm;
+    }
+
+#sidebar #tab-puzzle section {
+    text-align: center;
+}
+
+    #sidebar #tab-puzzle section > .label {
+        text-align: left;
+    }
+
 #sidebar #puzzle-title-input {
     font-size: 16pt;
     font-weight: bold;
@@ -439,20 +457,7 @@ svg.puzzle-svg .multi-select {
             margin-right: .25cm;
         }
 
-#sidebar #givens {
-    text-align: center;
-}
-
-    #sidebar #givens .given-btn {
-        margin: .3cm .05cm .2cm;
-        display: inline-block;
-        width: 1cm;
-        height: 1cm;
-        font-size: 18pt;
-    }
-
 #sidebar .save-section {
-    text-align: center;
     font-size: 18pt;
     padding: .3cm 0 .2cm 0;
 }
@@ -474,16 +479,6 @@ svg.puzzle-svg .multi-select {
         display: block;
     }
 
-#sidebar #region-buttons {
-    text-align: center;
-    padding: .1cm 0;
-}
-
-    #sidebar #region-buttons button {
-        padding: .1cm .2cm;
-        margin: 0 .05cm;
-    }
-
 #sidebar #region-presets.hidden {
     display: none;
 }
@@ -493,7 +488,7 @@ svg.puzzle-svg .multi-select {
     float: right;
 }
 
-#sidebar #regions {
+#sidebar #regions, #sidebar #givens {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
@@ -505,9 +500,22 @@ svg.puzzle-svg .multi-select {
         margin: .3cm;
     }
 
-    #sidebar #regions .controls {
+    #sidebar #givens .given {
+        width: auto;
+        margin: .3cm .1cm;
         text-align: center;
     }
+
+        #sidebar #givens .given .given-btns button {
+            width: 1cm;
+            height: 1cm;
+            margin-bottom: .1cm;
+            font-size: 18pt;
+        }
+
+        #sidebar #givens .given input {
+            width: 1.25cm;
+        }
 
 /* CONSTRAINTS tab */
 #sidebar #constraint-list {
@@ -698,7 +706,7 @@ svg.puzzle-svg .multi-select {
 #sidebar #constraint-code-variables {
     font-size: 11pt;
     background: hsl(225, 80%, 90%);
-    width: 100%;
+    margin: 0 auto;
 }
 
     #sidebar #constraint-code-variables select {
@@ -709,8 +717,9 @@ svg.puzzle-svg .multi-select {
     #sidebar #constraint-code-variables th {
         font-size: 13pt;
         background: white;
-        padding: .075cm .7cm 0 .2cm;
+        padding: .075cm .75cm 0 .2cm;
         position: relative;
+        text-align: right;
     }
 
     #sidebar #constraint-code-variables td {

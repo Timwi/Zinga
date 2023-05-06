@@ -568,7 +568,7 @@
     }
     function setGiven(digit)
     {
-        if (selectedCells.every(c => state.givens[c] === digit))
+        if (!state.values.includes(digit) || selectedCells.every(c => state.givens[c] === digit))
             return;
         saveUndo();
         for (let cell of selectedCells)
@@ -584,8 +584,8 @@
     }
     function upgrade(st)
     {
-        if (st.width === null || st.width === undefined || st.height === null || st.height === undefined
-            || st.regions === null || st.regions === undefined || st.labels === null || st.labels === undefined)
+        if (st.width === null || st.width === undefined || st.height === null || st.height === undefined || st.regions === null || st.regions === undefined
+            || st.labels === null || st.labels === undefined || st.values === null || st.values === undefined)
         {
             st.width = 9;
             st.height = 9;
@@ -679,7 +679,7 @@
     function selectCellLine(dir)
     {
         // Selects one of the rows, columns or diagonals when the user presses the arrow selection thingie at the edge of the grid
-        let c = lastCellLineCell !== null ? lastCellLineCell : selectedCells.length === 0 ? 0 : selectedCells[selectedCells.length - 1]
+        let c = lastCellLineCell !== null ? lastCellLineCell : selectedCells.length === 0 ? 0 : selectedCells[selectedCells.length - 1];
         let cells, nDir = null, w = state.width;
         if ((lastCellLineDir === 's' && dir === 'e') || (dir === 's' && lastCellLineDir === 'e'))
             cells = cellLine('se', (c % w) - ((c / w) | 0));
@@ -954,7 +954,7 @@
             let errorConstraints = selectedConstraints.filter(c => c >= 0 && c < constraintErrors.length && prm in constraintErrors[c]);
             if (editingBox.value.trim().length === 0 || errorConstraints.length === 0)
                 reportingBox.classList.remove('has-error');
-            else 
+            else
             {
                 let err = constraintErrors[errorConstraints[0]][prm];
                 reportingBox.innerHTML = `<span class='error'></span>
@@ -1123,6 +1123,54 @@
                 fixViewBox();
             });
 
+            // Givens/values/labels
+            let givenPresets = [
+                { id: 'n1', name: `1–${w}`, label: n => `${n + 1}`, value: n => n + 1 },
+                { id: 'n0', name: `0–${w - 1}`, label: n => `${n}`, value: n => n },
+                { id: 'l', name: `A–${String.fromCharCode(64 + w)}`, label: n => String.fromCharCode(65 + n), value: n => n + 1 }
+            ];
+            document.getElementById('givens-presets').innerHTML = givenPresets.map(p => `<button id='givens-preset-${p.id}'>${p.name}</button>`).join('');
+            givenPresets.forEach(preset =>
+            {
+                document.getElementById(`givens-preset-${preset.id}`).onclick = function()
+                {
+                    let newLabels = ns(w).map(preset.label);
+                    let newValues = ns(w).map(preset.value);
+                    let newGivens = state.givens.map(g => g === null || !newValues.includes(g) ? null : g);
+                    if (state.labels.length === w && newLabels.every((l, ix) => l === state.labels[ix]) &&
+                        state.values.length === w && newValues.every((v, ix) => v === state.values[ix]) &&
+                        newGivens.every((g, ix) => g === state.givens[ix]))
+                        return;
+                    saveUndo();
+                    state.labels = newLabels;
+                    state.values = newValues;
+                    state.givens = newGivens;
+                    updateVisuals({ svg: true, storage: true });
+                };
+            });
+
+            document.getElementById('givens').innerHTML = state.labels.map((lbl, ix) => `
+                <div class='given' data-given='${state.values[ix]}'>
+                    <div class='given-btns'><button class='given-btn'>${lbl}</button></div>
+                    <div><input type='number' value='${state.values[ix]}' /></div>
+                    <div><button class='mini-btn remove' /></div>
+                </div>
+            `).join('');
+            Array.from(document.querySelectorAll('#givens .given')).forEach(givenDiv =>
+            {
+                let givenValue = givenDiv.dataset.given | 0;
+                setButtonHandler(givenDiv.querySelector('button.given-btn'), function() { setGiven(givenValue); });
+                setButtonHandler(givenDiv.querySelector('button.remove'), function()
+                {
+                    let ix = state.values.indexOf(givenValue);
+                    saveUndo();
+                    state.values.splice(ix, 1);
+                    state.labels.splice(ix, 1);
+                    state.givens = state.givens.map(g => g === null || !state.values.includes(g) ? null : g);
+                    updateVisuals({ svg: true, storage: true });
+                });
+            });
+
             // Regions
             let regionsHtml = '';
             if (state.regions !== null)
@@ -1136,20 +1184,20 @@
                     let minY = Math.min(...ys);
                     let maxY = Math.max(...ys);
                     regionsHtml += `
-                    <div class='region' data-region='${regionIx}'>
-                        <div class='region-svg'>
-                            <svg viewBox='${minX - .2} ${minY - .2} ${maxX - minX + 1.4} ${maxY - minY + 1.4}'>
-                                <path d='${region.map((_, ix) => `M${xs[ix]} ${ys[ix]}h1v1h-1z`).join('')}' fill='white' stroke='none' />
-                                <use href='#puzzle-frame' />
-                                <use href='#puzzle-lines' />
-                            </svg>
-                        </div>
-                        <div class='controls'>
-                            <button class='mini-btn show' title='Select the cells of this region' />
-                            <button class='mini-btn set' title='Change this region' />
-                            <button class='mini-btn remove' title='Remove this region' />
-                        </div>
-                    </div>`;
+                        <div class='region' data-region='${regionIx}'>
+                            <div class='region-svg'>
+                                <svg viewBox='${minX - .2} ${minY - .2} ${maxX - minX + 1.4} ${maxY - minY + 1.4}'>
+                                    <path d='${region.map((_, ix) => `M${xs[ix]} ${ys[ix]}h1v1h-1z`).join('')}' fill='white' stroke='none' />
+                                    <use href='#puzzle-frame' />
+                                    <use href='#puzzle-lines' />
+                                </svg>
+                            </div>
+                            <div class='controls'>
+                                <button class='mini-btn show' title='Select the cells of this region' />
+                                <button class='mini-btn set' title='Change this region' />
+                                <button class='mini-btn remove' title='Remove this region' />
+                            </div>
+                        </div>`;
                 }
             document.getElementById('regions').innerHTML = regionsHtml;
 
@@ -1255,7 +1303,7 @@
                     }
                     editingConstraintType = null;
                     updateVisuals();
-                }
+                };
             });
         }
 
@@ -1753,7 +1801,6 @@
 
     setCellSelectionEvents();
     Array.from(document.querySelectorAll('#sidebar>.tabs>.tab')).forEach(tab => setButtonHandler(tab, function() { selectTab(tab.dataset.tab); }));
-    Array.from(document.querySelectorAll('.given-btn')).forEach(btn => { setButtonHandler(btn, function() { setGiven(btn.dataset.given | 0); }); });
 
     setButtonHandler(document.getElementById('puzzle-test'), () => { window.open(`${window.location.protocol}//${window.location.host}/test`); });
     setButtonHandler(document.getElementById('puzzle-save'), () =>
@@ -1892,7 +1939,7 @@
         selectCells(unusedCells);
         updateVisuals({ svg: true, storage: true });
     });
-    setButtonHandler(document.getElementById('add-link'), () =>
+    setButtonHandler(document.getElementById('link-add'), () =>
     {
         saveUndo();
         if (!Array.isArray(state.links))
@@ -1901,6 +1948,10 @@
         updateVisuals({ storage: true, metadata: true });
         let ts = Array.from(document.querySelectorAll('#links .text'));
         ts[ts.length - 1].focus();
+    });
+    setButtonHandler(document.getElementById('value-add'), () =>
+    {
+        alert('Not implemented.');
     });
 
     constraintCodeBox.querySelector('.label').ondblclick = function(ev) { if (ev.target !== constraintCodeExpander) setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); };
@@ -1948,6 +1999,7 @@
         switch (str)
         {
             // Keys that change something
+            case 'Digit0': case 'Numpad0':
             case 'Digit1': case 'Numpad1':
             case 'Digit2': case 'Numpad2':
             case 'Digit3': case 'Numpad3':
@@ -2265,6 +2317,7 @@
                 for (let varName of Object.keys(cType.variables))
                     state.constraints[i].values[varName] = coerceValue(state.constraints[i].values[varName], cType.variables[varName]);
             }
+            upgrade(state);
         }
 
         let undoB = localStorage.getItem(`zinga-edit-undo`);
