@@ -54,6 +54,7 @@
 		selectionFilter.setAttribute('width', right - left);
 		selectionFilter.setAttribute('height', bottom - top);
 	}
+	function getLsKey() { return puzzleId !== 'test' || (width === 9 && height === 9 && values.length === 9 && values.every((v, ix) => v === ix + 1)) ? '' : `-${width}-${height}-${values.join('-')}`; }
 	function handler(fnc)
 	{
 		return function(ev)
@@ -64,6 +65,7 @@
 			return false;
 		};
 	}
+	function ns(num) { return Array.from({ length: num }, (_, ix) => ix); }
 	function setButtonHandler(btn, click)
 	{
 		btn.onclick = handler(ev => click(ev));
@@ -80,48 +82,57 @@
 	// Puzzle
 	function checkSudokuValid()
 	{
-		let grid = Array(81).fill(null).map((_, c) => getDisplayedSudokuDigit(state, c));
+		let w = state.width, h = state.height;
+		let grid = ns(w * h).map(c => getDisplayedSudokuDigit(state, c));
 		Array.from(document.querySelectorAll('.region-invalid')).forEach(elem => { elem.setAttribute('opacity', 0); });
 		let isValid = true;
 
-		// Check the Sudoku rules (rows, columns and boxes)
-		for (let i = 0; i < 9; i++)
-		{
-			// Check rows
-			let go = true;
-			for (let colA = 0; colA < 9 && go; colA++)
-				for (let colB = colA + 1; colB < 9 && go; colB++)
-					if (grid[colA + 9 * i] !== null && grid[colA + 9 * i] === grid[colB + 9 * i])
-					{
-						if (showErrors)
-							document.getElementById(`row-invalid-${i}`).setAttribute('opacity', 1);
-						isValid = false;
-						go = false;
-					}
-			// Check columns
-			go = true;
-			for (let rowA = 0; rowA < 9 && go; rowA++)
-				for (let rowB = rowA + 1; rowB < 9 && go; rowB++)
-					if (grid[i + 9 * rowA] !== null && grid[i + 9 * rowA] === grid[i + 9 * rowB])
-					{
-						if (showErrors)
-							document.getElementById(`column-invalid-${i}`).setAttribute('opacity', 1);
-						isValid = false;
-						go = false;
-					}
-			// Check boxes
-			go = true;
-			for (let cellA = 0; cellA < 9 && go; cellA++)
-				for (let cellB = cellA + 1; cellB < 9 && go; cellB++)
-					if (grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] !== null &&
-						grid[cellA % 3 + 3 * (i % 3) + 9 * (((cellA / 3) | 0) + 3 * ((i / 3) | 0))] === grid[cellB % 3 + 3 * (i % 3) + 9 * (((cellB / 3) | 0) + 3 * ((i / 3) | 0))])
-					{
-						if (showErrors)
-							document.getElementById(`box-invalid-${i}`).setAttribute('opacity', 1);
-						isValid = false;
-						go = false;
-					}
-		}
+		// Check the Sudoku rules (rows, columns and regions)
+		if (rowsUnique)
+			for (let i = 0; i < h; i++)
+			{
+				// Check rows
+				for (let colA = 0, go = true; colA < w && go; colA++)
+					if (grid[colA + w * i] !== null)
+						for (let colB = colA + 1; colB < w && go; colB++)
+							if (grid[colA + w * i] === grid[colB + w * i])
+							{
+								if (showErrors)
+									document.getElementById(`row-invalid-${i}`).setAttribute('opacity', 1);
+								isValid = false;
+								go = false;
+							}
+			}
+		if (columnsUnique)
+			for (let i = 0; i < w; i++)
+			{
+				// Check columns
+				for (let rowA = 0, go = true; rowA < h && go; rowA++)
+					if (grid[i + w * rowA] !== null)
+						for (let rowB = rowA + 1; rowB < h && go; rowB++)
+							if (grid[i + w * rowA] === grid[i + w * rowB])
+							{
+								if (showErrors)
+									document.getElementById(`column-invalid-${i}`).setAttribute('opacity', 1);
+								isValid = false;
+								go = false;
+							}
+			}
+		if (state.regions)
+			for (let region of state.regions)
+			{
+				// Check regions
+				for (let cellA = 0, go = true; cellA < region.length && go; cellA++)
+					if (grid[region[cellA]] !== null)
+						for (let cellB = cellA + 1; cellB < region.length && go; cellB++)
+							if (grid[region[cellA]] === grid[region[cellB]])
+							{
+								if (showErrors)
+									document.getElementById(`region-invalid-${i}`).setAttribute('opacity', 1);
+								isValid = false;
+								go = false;
+							}
+			}
 
 		// Check that all cells in the Sudoku grid have a digit
 		if (isValid && grid.some(c => c === null))
@@ -132,20 +143,12 @@
 		// Check if any constraints are violated
 		if (showErrors || grid.every(d => d !== null))
 		{
-			dotNet('CheckConstraints', [JSON.stringify(grid), JSON.stringify(constraints)], result =>
+			dotNet('CheckConstraints', [JSON.stringify(grid), JSON.stringify({ constraints: constraints, width: width, height: height, regions: regions })], result =>
 			{
 				let violatedConstraintIxs = JSON.parse(result);
 				setClass(puzzleDiv, 'solved', isValid === true && violatedConstraintIxs.length === 0);
 				for (let cIx = 0; cIx < constraints.length; cIx++)
-				{
-					if (violatedConstraintIxs.includes(cIx) && showErrors)
-					{
-						console.log(`Constraint ${cIx} is violated.`);
-						document.getElementById(`constraint-svg-${cIx}`).classList.add('violated');
-					}
-					else
-						document.getElementById(`constraint-svg-${cIx}`).classList.remove('violated');
-				}
+					setClass(`constraint-svg-${cIx}`, 'violated', showErrors && violatedConstraintIxs.includes(cIx));
 			});
 		}
 		else
@@ -326,10 +329,10 @@
 	function makeCleanState()
 	{
 		return {
-			colors: Array(81).fill(null).map(_ => []),
-			cornerNotation: Array(81).fill(null).map(_ => []),
-			centerNotation: Array(81).fill(null).map(_ => []),
-			enteredDigits: Array(81).fill(null)
+			colors: ns(width * height).map(_ => []),
+			cornerNotation: ns(width * height).map(_ => []),
+			centerNotation: ns(width * height).map(_ => []),
+			enteredDigits: Array(width * height).fill(null)
 		};
 	}
 	function pressDigit(digit, ev)
@@ -378,6 +381,33 @@
 					break;
 			}
 		}
+	}
+	function retrieveStateFromLocalStorage()
+	{
+		try
+		{
+			let lsKey = getLsKey();
+			let optB = localStorage.getItem(`zinga-${puzzleId}${lsKey}-opt`);
+			let opt = optB && JSON.parse(optB);
+
+			showErrors = opt ? !!opt.showErrors : true;
+			multiColorMode = opt ? !!opt.multiColorMode : false;
+			sidebarOn = opt ? !!opt.sidebarOn : true;
+
+			let str = localStorage.getItem(`zinga-${puzzleId}${lsKey}`);
+			let item = null;
+			if (str !== null)
+				try { item = decodeState(str); }
+				catch { item = null; }
+			state = (item && item.cornerNotation && item.centerNotation && item.enteredDigits && item.colors) ? item : makeCleanState();
+
+			let undoB = localStorage.getItem(`zinga-${puzzleId}${lsKey}-undo`);
+			let redoB = localStorage.getItem(`zinga-${puzzleId}${lsKey}-redo`);
+
+			undoBuffer = undoB ? undoB.split(' ') : [];
+			redoBuffer = redoB ? redoB.split(' ') : [];
+		}
+		catch { }
 	}
 	function selectCell(cell, mode)
 	{
@@ -474,72 +504,79 @@
 	function updateConstraints()
 	{
 		// This function is only used on the test page
+		if (document.hidden || puzzleId !== 'test')
+			return;
 
-		if (!document.hidden && puzzleId === 'test')
+		if (outputBlazorTimings)
+			console.log('Re-initializing');
+		let state = null;
+		try { state = JSON.parse(localStorage.getItem(`zinga-edit`)); }
+		catch { }
+		digitsAtPrevCheck = null;
+		if (state && state.givens && state.constraints)
 		{
-			if (outputBlazorTimings)
-				console.log('Re-initializing');
-			let state = null;
-			try { state = JSON.parse(localStorage.getItem(`zinga-edit`)); }
-			catch { }
-			digitsAtPrevCheck = null;
-			if (state && state.givens && state.constraints)
+			width = state.width ?? 9;
+			height = state.height ?? 9;
+			rowsUnique = state.rowsUniq ?? true;
+			columnsUnique = state.colsUniq ?? true;
+			values = state.values ?? [1, 2, 3, 4, 5, 6, 7, 8, 9];
+			givens = state.givens;
+			constraints = state.constraints;
+			customConstraintTypes = state.customConstraintTypes;
+
+			document.querySelector('#topbar>.title').innerText = state.title ?? 'Sudoku';
+			document.querySelector('#topbar>.author').innerText = `by ${state.author ?? 'unknown'}`;
+			document.querySelector('#sidebar .links').innerHTML = Array.isArray(state.links) ? state.links.map(_ => `<li><a></a></li>`).join('') : '';
+			Array.from(document.querySelectorAll('#sidebar .links a')).forEach((obj, ix) => { obj.setAttribute('href', state.links[ix].url); obj.innerText = state.links[ix].text; });
+			document.title = `Testing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
+
+			puzzleDiv.dataset.title = state.title;
+			puzzleDiv.dataset.author = state.author;
+
+			var paragraphs = (state.rules ?? 'Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.').split(/\r?\n/).filter(s => s !== null && !/^\s*$/.test(s));
+			document.getElementById('rules-text').innerHTML = paragraphs.map(_ => '<p></p>').join('');
+			Array.from(document.querySelectorAll('#rules-text>p')).forEach((p, pIx) => { p.innerText = paragraphs[pIx]; });
+
+			dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)]);
+
+			dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], resultsRaw =>
 			{
-				givens = state.givens;
-				constraints = state.constraints;
-				customConstraintTypes = state.customConstraintTypes;
+				let results = JSON.parse(resultsRaw);
 
-				document.querySelector('#topbar>.title').innerText = state.title ?? 'Sudoku';
-				document.querySelector('#topbar>.author').innerText = `by ${state.author ?? 'unknown'}`;
-				document.querySelector('#sidebar .links').innerHTML = Array.isArray(state.links) ? state.links.map(_ => `<li><a></a></li>`).join('') : '';
-				Array.from(document.querySelectorAll('#sidebar .links a')).forEach((obj, ix) => { obj.setAttribute('href', state.links[ix].url); obj.innerText = state.links[ix].text; });
-				document.title = `Testing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
+				let globalSvgs = '', svgs = '', globalY = 0;
+				for (let cIx = 0; cIx < results.svgs.length; cIx++)
+					if (results.svgs[cIx].global)
+					{
+						globalSvgs += `<g id='constraint-svg-${cIx}' class='constraint-svg' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
+						globalY += 1.5;
+					}
+					else
+						svgs += `<g class='constraint-svg' id='constraint-svg-${cIx}'>${results.svgs[cIx].svg}</g>`;
 
-				puzzleDiv.dataset.title = state.title;
-				puzzleDiv.dataset.author = state.author;
+				document.getElementById('constraint-svg-global').innerHTML = globalSvgs;
+				document.getElementById('constraint-svg').innerHTML = svgs;
+				document.getElementById('constraint-defs').innerHTML = results.svgDefs;
 
-				var paragraphs = (state.rules ?? 'Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.').split(/\r?\n/).filter(s => s !== null && !/^\s*$/.test(s));
-				document.getElementById('rules-text').innerHTML = paragraphs.map(_ => '<p></p>').join('');
-				Array.from(document.querySelectorAll('#rules-text>p')).forEach((p, pIx) => { p.innerText = paragraphs[pIx]; });
+				Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
 
-				dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(state.customConstraintTypes), JSON.stringify(state.constraints)]);
+				updateVisuals();
+				fixViewBox();
+				window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
+			});
 
-				dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)], resultsRaw =>
-				{
-					let results = JSON.parse(resultsRaw);
-
-					let globalSvgs = '', svgs = '', globalY = 0;
-					for (let cIx = 0; cIx < results.svgs.length; cIx++)
-						if (results.svgs[cIx].global)
-						{
-							globalSvgs += `<g id='constraint-svg-${cIx}' class='constraint-svg' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
-							globalY += 1.5;
-						}
-						else
-							svgs += `<g class='constraint-svg' id='constraint-svg-${cIx}'>${results.svgs[cIx].svg}</g>`;
-
-					document.getElementById('constraint-svg-global').innerHTML = globalSvgs;
-					document.getElementById('constraint-svg').innerHTML = svgs;
-					document.getElementById('constraint-defs').innerHTML = results.svgDefs;
-
-					Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
-
-					updateVisuals();
-					fixViewBox();
-					window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
-				});
-			}
+			retrieveStateFromLocalStorage();
 		}
 	}
 	function updateVisuals(udpateStorage)
 	{
-		// Update localStorage (only do this when necessary because encodeState() is relatively slow on Firefox)
+		// Update localStorage (only do this when necessary because encodeState() is relatively slow)
 		if (localStorage && udpateStorage)
 		{
-			localStorage.setItem(`zinga-${puzzleId}`, encodeState(state));
-			localStorage.setItem(`zinga-${puzzleId}-undo`, undoBuffer.join(' '));
-			localStorage.setItem(`zinga-${puzzleId}-redo`, redoBuffer.join(' '));
-			localStorage.setItem(`zinga-${puzzleId}-opt`, JSON.stringify({ showErrors: showErrors, multiColorMode: multiColorMode, sidebarOn: sidebarOn }));
+			let lsKey = getLsKey();
+			localStorage.setItem(`zinga-${puzzleId}${lsKey}`, encodeState(state));
+			localStorage.setItem(`zinga-${puzzleId}${lsKey}-undo`, undoBuffer.join(' '));
+			localStorage.setItem(`zinga-${puzzleId}${lsKey}-redo`, redoBuffer.join(' '));
+			localStorage.setItem(`zinga-${puzzleId}${lsKey}-opt`, JSON.stringify({ showErrors: showErrors, multiColorMode: multiColorMode, sidebarOn: sidebarOn }));
 		}
 		resetClearButton();
 
@@ -678,8 +715,17 @@
 	let puzzleId = puzzleDiv.dataset.puzzleid || 'unknown';
 	let constraintTypes = JSON.parse(puzzleDiv.dataset.constrainttypes);
 	let customConstraintTypes = [];
-	let constraints = puzzleId === 'test' ? [] : JSON.parse(puzzleDiv.dataset.constraints);
-	let givens = Array(81).fill(null);
+	let constraints = JSON.parse(puzzleDiv.dataset.constraints ?? null) ?? [];
+	let width = (puzzleDiv.dataset.width ?? 9) | 0;
+	let height = (puzzleDiv.dataset.height ?? 9) | 0;
+	let rowsUnique = !!(puzzleDiv.dataset.rowsuniq ?? true);
+	let columnsUnique = !!(puzzleDiv.dataset.colsuniq ?? true);
+	let regions = JSON.parse(puzzleDiv.dataset.regions ?? null) ?? [[0, 1, 2, 9, 10, 11, 18, 19, 20], [3, 4, 5, 12, 13, 14, 21, 22, 23], [6, 7, 8, 15, 16, 17, 24, 25, 26], [27, 28, 29, 36, 37, 38, 45, 46, 47], [30, 31, 32, 39, 40, 41, 48, 49, 50], [33, 34, 35, 42, 43, 44, 51, 52, 53], [54, 55, 56, 63, 64, 65, 72, 73, 74], [57, 58, 59, 66, 67, 68, 75, 76, 77], [60, 61, 62, 69, 70, 71, 78, 79, 80]];
+	let values = JSON.parse(puzzleDiv.dataset.values ?? null) ?? [1, 2, 3, 4, 5, 6, 7, 8, 9];
+	let givens = Array(width * height).fill(null);
+	for (let givenInf of JSON.parse(puzzleDiv.dataset.givens ?? null) ?? [])
+		if ((givenInf[0] | 0) >= 0 && (givenInf[0] | 0) < width * height && values.includes(givenInf[1] | 0))
+			givens[givenInf[0] | 0] = givenInf[1] | 0;
 	let state = makeCleanState();
 	let undoBuffer = [];
 	let redoBuffer = [];
@@ -846,11 +892,11 @@
 		{
 			alert('Unfortunately, a screenshot of the puzzle could not be generated. This may be due to malformed SVG code on the part of the puzzle author.');
 		};
-		img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgElem.outerHTML
+		img.src = 'data:image/svg+xml;base64,' + btoa(svgElem.outerHTML
 			.replace(/<svg/, `<svg width="${canvas.width}" height="${canvas.height}"`)
 			.replace(/viewBox=".*?"/, `viewBox='${nBox.x} ${nBox.y} ${nBox.width} ${nBox.height}'`)
-			.replace(/(?=<\/style>)/, Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.rules)), [])
-				.filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n")))));
+			.replace(/(?=<\/style>)/, Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.cssRules)), [])
+				.filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n")));
 	});
 	puzzleContainer.addEventListener('keydown', ev =>
 	{
@@ -1090,7 +1136,7 @@
 			else
 			{
 				let start = new Date();
-				var r = DotNet.invokeMethodAsync('ZingaWasm', bq[0], ...bq[1]).then(result =>
+				let r = DotNet.invokeMethodAsync('ZingaWasm', bq[0], ...bq[1]).then(result =>
 				{
 					if (outputBlazorTimings)
 						console.log(`${bq[0]} took ${new Date() - start} ms.`);
@@ -1102,38 +1148,8 @@
 		blazorQueue = null;
 	});
 
-	// Retrieve state from localStorage
-	try
-	{
-		let optB = localStorage.getItem(`zinga-${puzzleId}-opt`);
-		let opt = optB && JSON.parse(optB);
+	retrieveStateFromLocalStorage();
 
-		showErrors = opt ? !!opt.showErrors : true;
-		multiColorMode = opt ? !!opt.multiColorMode : false;
-		sidebarOn = opt ? !!opt.sidebarOn : true;
-
-		let str = localStorage.getItem(`zinga-${puzzleId}`);
-		let item = null;
-		if (str !== null)
-			try { item = decodeState(str); }
-			catch { item = null; }
-		if (item && item.cornerNotation && item.centerNotation && item.enteredDigits && item.colors)
-			state = item;
-
-		let undoB = localStorage.getItem(`zinga-${puzzleId}-undo`);
-		let redoB = localStorage.getItem(`zinga-${puzzleId}-redo`);
-
-		undoBuffer = undoB ? undoB.split(' ') : [];
-		redoBuffer = redoB ? redoB.split(' ') : [];
-	}
-	catch { }
-
-	// Puzzle
-	if (puzzleId !== 'test')
-		for (let givenInf of JSON.parse(puzzleDiv.dataset.givens ?? null) ?? [])
-			givens[givenInf[0]] = givenInf[1];
-
-	// UI
 	if (puzzleId === 'test')
 	{
 		updateConstraints();    // Make sure this happens before the first call to updateVisuals()
@@ -1141,7 +1157,7 @@
 	}
 	else
 	{
-		dotNet('SetupConstraints', [JSON.stringify(givens), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
+		dotNet('SetupConstraints', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, givens: givens, width: width, height: height })]);
 	}
 
 	Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });

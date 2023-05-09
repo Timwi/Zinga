@@ -105,6 +105,7 @@
     <Compile Include="Database\Db.cs" />
     <Compile Include="Database\Puzzle.cs" />
     <Compile Include="Database\PuzzleConstraint.cs" />
+    <Compile Include="Database\PuzzleInfo.cs" />
     <Compile Include="Link.cs" />
     <Compile Include="ZingaConstraintSearch.cs" />
     <Compile Include="ZingaPlayWithSuco.cs" />

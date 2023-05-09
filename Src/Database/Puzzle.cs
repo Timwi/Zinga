@@ -16,14 +16,12 @@ namespace Zinga.Database
         public string Title { get; set; }
         public string Author { get; set; }
         public string Rules { get; set; }
-        public string LinksJson { get; set; }
+        public string LinksJson { get; set; }   // ClassifyJson of Link[]
         public DateTime LastUpdated { get; set; }
         public DateTime LastAccessed { get; set; }
         public bool Generated { get; set; }
-        public string GivensJson { get; set; }
-        public int Width { get; set; }
-        public int Height { get; set; }
-        public string RegionsJson { get; set; }
+        public string GivensJson { get; set; }  // ClassifyJson of (int cell, int value)[]
+        public string InfoJson { get; set; }    // ClassifyJson of PuzzleInfo
 
         public Puzzle()
         {
@@ -45,11 +43,11 @@ namespace Zinga.Database
             set { GivensJson = value.NullOr(v => ClassifyJson.Serialize(v).ToString()); _givensCache = value; }
         }
 
-        private int[][] _regionsCache;
-        public int[][] Regions
+        private PuzzleInfo _infoCache;
+        public PuzzleInfo Info
         {
-            get => _regionsCache ??= RegionsJson.NullOr(reg => ClassifyJson.Deserialize<int[][]>(reg));
-            set { RegionsJson = value.NullOr(v => ClassifyJson.Serialize(v).ToString()); _regionsCache = value; }
+            get => _infoCache ??= InfoJson == null ? PuzzleInfo.Default : ClassifyJson.Deserialize<PuzzleInfo>(InfoJson);
+            set { InfoJson = value.IsDefault ? null : ClassifyJson.Serialize(value).ToString(); _infoCache = value; }
         }
     }
 }

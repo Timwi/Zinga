@@ -84,7 +84,7 @@ namespace Zinga
                     renderButton($"btn-{btn.id}", row.Take(btnIx).Sum(b => b.width * widthFactor + margin), (btnHeight + margin) * btn.row, btn.width * widthFactor, btn.label, btn.color, btn.isSvg));
             }).JoinString();
 
-            var decodedValues = constraints?.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].VariablesJson, puzzle.Width)).ToArray();
+            var decodedValues = constraints?.Select(c => c.DecodeValues(constraintTypes[c.ConstraintID].VariablesJson, puzzle?.Info.Width ?? 9)).ToArray();
 
             var constraintsJson = constraints?.Select(c => c.ToJson()).ToJsonList().ToString();
             var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToJson()).ToString();
@@ -116,6 +116,12 @@ namespace Zinga
                     new DIV { id = "puzzle" }
                         .Data("puzzleid", puzzle?.UrlName ?? "test")
                         .Data("givens", puzzle?.GivensJson)
+                        .Data("width", puzzle?.Info.Width)
+                        .Data("height", puzzle?.Info.Height)
+                        .Data("regions", puzzle?.Info.Regions.Select(region => region.ToJsonList()).ToJsonList())
+                        .Data("rowsuniq", puzzle?.Info.RowsUnique)
+                        .Data("colsuniq", puzzle?.Info.ColumnsUnique)
+                        .Data("values", puzzle?.Info.Values.ToJsonList())
                         .Data("title", puzzle?.Title)
                         .Data("author", puzzle?.Author)
                         .Data("rules", puzzle?.Rules)

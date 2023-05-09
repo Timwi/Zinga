@@ -383,6 +383,8 @@
 			width: 9,
 			height: 9,
 			regions: ns(9).map(r => ns(9).map(c => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0)))),
+			rowsUniq: true,
+			colsUniq: true,
 			values: ns(9).map(v => v + 1),
 			constraints: [],
 			customConstraintTypes: []
@@ -574,13 +576,6 @@
 			state.givens[cell] = digit;
 		updateVisuals({ storage: true });
 	}
-
-	// Undo / redo
-	function saveUndo()
-	{
-		undoBuffer.push(JSON.parse(JSON.stringify(state)));
-		redoBuffer = [];
-	}
 	function upgrade(st)
 	{
 		if (st.width === null || st.width === undefined || st.height === null || st.height === undefined
@@ -591,11 +586,22 @@
 			st.regions = ns(9).map(r => ns(9).map(c => 3 * (r % 3) + (c % 3) + 9 * (3 * ((r / 3) | 0) + ((c / 3) | 0))));
 			st.values = ns(9).map(v => v + 1);
 		}
+		if (st.rowsUniq === null || st.rowsUniq === undefined)
+			st.rowsUniq = true;
+		if (st.colsUniq === null || st.colsUniq === undefined)
+			st.colsUniq = true;
 		if (st.width < 1)
 			st.width = 1;
 		if (st.height < 1)
 			st.height = 1;
 		return st;
+	}
+
+	// Undo / redo
+	function saveUndo()
+	{
+		undoBuffer.push(JSON.parse(JSON.stringify(state)));
+		redoBuffer = [];
 	}
 	function undo()
 	{
@@ -1690,6 +1696,8 @@
 			document.getElementById('puzzle-rules-input').value = state.rules;
 			document.getElementById('puzzle-width-input').value = state.width;
 			document.getElementById('puzzle-height-input').value = state.height;
+			document.getElementById('puzzle-rows-unique').checked = state.rowsUniq;
+			document.getElementById('puzzle-columns-unique').checked = state.colsUniq;
 
 			if (!Array.isArray(state.links))
 				state.links = [];
@@ -1831,6 +1839,8 @@
 	document.getElementById('puzzle-title-input').onchange = function() { saveUndo(); state.title = document.getElementById('puzzle-title-input').value; updateVisuals({ storage: true }); };
 	document.getElementById('puzzle-author-input').onchange = function() { saveUndo(); state.author = document.getElementById('puzzle-author-input').value; updateVisuals({ storage: true }); };
 	document.getElementById('puzzle-rules-input').onchange = function() { saveUndo(); state.rules = document.getElementById('puzzle-rules-input').value; updateVisuals({ storage: true }); };
+	document.getElementById('puzzle-rows-unique').onchange = function() { saveUndo(); state.rowsUniq = document.getElementById('puzzle-rows-unique').checked; updateVisuals({ storage: true }); };
+	document.getElementById('puzzle-columns-unique').onchange = function() { saveUndo(); state.colsUniq = document.getElementById('puzzle-columns-unique').checked; updateVisuals({ storage: true }); };
 	Array.from(document.querySelectorAll('#puzzle-width-input,#puzzle-height-input')).forEach(elem =>
 	{
 		elem.onchange = function()
@@ -2266,16 +2276,6 @@
 				runConstraintSearch(val);
 		}
 	});
-
-	//document.addEventListener('paste', ev =>
-	//{
-	//    let newState;
-	//    try { newState = JSON.parse(ev.clipboardData.getData('text')); }
-	//    catch { return; }
-	//    saveUndo();
-	//    state = newState;
-	//    updateVisuals({ storage: true, svg: true, metadata: true });
-	//});
 
 
 	/// — RUN

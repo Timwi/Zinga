@@ -134,7 +134,10 @@ namespace Zinga
                                     new DIV { id = "region-buttons", class_ = "buttons" }._(
                                         new SPAN { id = "region-presets" },
                                         new BUTTON { id = "region-remove-all" }._("Remove all"),
-                                        new BUTTON { id = "region-fill" }._("Fill the rest"))),
+                                        new BUTTON { id = "region-fill" }._("Fill the rest")),
+                                    new DIV { id = "region-options" }._(
+                                        new DIV(new INPUT { id = "puzzle-rows-unique", type = itype.checkbox }, " ", new LABEL { for_ = "puzzle-rows-unique" }._("Rows must have unique values")),
+                                        new DIV(new INPUT { id = "puzzle-columns-unique", type = itype.checkbox }, " ", new LABEL { for_ = "puzzle-columns-unique" }._("Columns must have unique values")))),
                                 new SECTION(
                                     new DIV { class_ = "label" }._("Save"),
                                     new DIV { class_ = "save-section buttons" }._(

@@ -45,20 +45,13 @@ namespace Zinga
                 puzzle.Author = json["author"].GetString();
                 puzzle.Rules = json["rules"].GetString();
                 puzzle.Links = json["links"]?.GetList().Select(lnk => new Link { Text = lnk["text"].GetString(), Url = lnk["url"].GetString() }).ToArray();
-                puzzle.Width = json["width"].GetInt();
-                puzzle.Height = json["height"].GetInt();
-
-                // Special case: Save space in the DB by using NULL for the standard 3×3 Sudoku regions
-                // and use empty string for puzzles that use no regions
-                if (json["regions"] == null)
-                    puzzle.RegionsJson = "";
-                else
-                {
-                    var regionsJsonStr = json["regions"].ToString();
-                    puzzle.RegionsJson = regionsJsonStr == "[[0,1,2,9,10,11,18,19,20],[3,4,5,12,13,14,21,22,23],[6,7,8,15,16,17,24,25,26],[27,28,29,36,37,38,45,46,47],[30,31,32,39,40,41,48,49,50],[33,34,35,42,43,44,51,52,53],[54,55,56,63,64,65,72,73,74],[57,58,59,66,67,68,75,76,77],[60,61,62,69,70,71,78,79,80]]"
-                        ? null
-                        : regionsJsonStr;
-                }
+                puzzle.Info = new PuzzleInfo(
+                    width: json["width"].GetInt(),
+                    height: json["height"].GetInt(),
+                    regions: json["regions"].GetList().Select(inner => inner.GetList().Select(v => v.GetInt()).ToArray()).ToArray(),
+                    rowsUnique: json["rowsUniq"].GetBool(),
+                    columnsUnique: json["colsUniq"].GetBool(),
+                    values: json["values"].GetList().Select(v => v.GetInt()).ToArray());
 
                 errorLocation = 4;
                 var givens = json["givens"].GetList().Select((v, ix) => (v, ix)).Where(tup => tup.v != null).Select(tup => (cell: tup.ix, value: tup.v.GetInt())).ToArray();
