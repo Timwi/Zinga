@@ -1052,7 +1052,6 @@
 					btnInfo.rect = btnInfo.btn.querySelector('rect.clickable');
 					btnInfo.w = btnInfo.label.getBBox().width + 2 * btnPadding;
 				}
-				console.log(row);
 				let totalWidth = row.reduce((p, n) => p + n.w, 0) + (row.length - 1) * btnMargin;
 				let extraPadding = totalWidth <= state.width ? (state.width - totalWidth) / row.length : 0;
 				let scale = totalWidth <= state.width ? null : state.width / totalWidth;
@@ -2321,6 +2320,7 @@
 			}
 			upgrade(state);
 		}
+		console.log(state);
 
 		let undoB = localStorage.getItem(`zinga-edit-undo`);
 		let redoB = localStorage.getItem(`zinga-edit-redo`);

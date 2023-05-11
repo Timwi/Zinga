@@ -191,6 +191,30 @@ svg.puzzle-svg {
 		opacity: .25;
 	}
 
+	svg.puzzle-svg #button-row-colors {
+		visibility: hidden;
+	}
+
+		svg.puzzle-svg #button-row-colors .clickable {
+			pointer-events: none;
+		}
+
+.show-colors svg.puzzle-svg #button-row-colors {
+	visibility: visible;
+}
+
+	.show-colors svg.puzzle-svg #button-row-colors .clickable {
+		pointer-events: all;
+	}
+
+.show-colors svg.puzzle-svg #button-row-values {
+	visibility: hidden;
+}
+
+	.show-colors svg.puzzle-svg #button-row-values .clickable {
+		pointer-events: none;
+	}
+
 #puzzle-container.dimmable svg.puzzle-svg .constraint-svg * {
 	pointer-events: all;
 }

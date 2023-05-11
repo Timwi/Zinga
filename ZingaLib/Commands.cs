@@ -302,7 +302,7 @@ namespace Zinga.Lib
                                 return new SvgError { Index = i, Message = "Digit 0–9 or ‘;’ expected." };
                             case (_, true, false, false):
                                 if (!char.IsLetter(svg[i]))
-                                    return new SvgError { Index = i, Message = "Letter or ‘;’ expected." };
+                                    return new SvgError { Index = i, Message = "Letter or ‘#’ expected." };
                                 isStart = false;
                                 break;
                             case (_, false, false, false):
@@ -524,6 +524,51 @@ namespace Zinga.Lib
             foreach (var region in regions)
                 svg.Append($"<path d='{ZingaUtil.GenerateSvgPath(region.GetList().Select(v => v.GetInt()).ToArray(), width, height, 0, 0)}' stroke='#2668ff' stroke-width='.15' opacity='.75' fill='none' />");
             return svg.ToString();
+        }
+
+        private record struct ButtonInfo(Func<double, string> getLabel, string id, double width) { }
+        private static Func<double, string> MakeButtonTextLabel(string label) => width => $"<text class='label' x='{width / 2}' y='.6'>{label}</text>";
+        public static string RenderButtonRows(int width, int[] values)
+        {
+            const double btnHeight = .8;
+            const double margin = .135;
+
+            var valueButtons = values.Select(val => new ButtonInfo(MakeButtonTextLabel(val.ToString()), val.ToString(), 1)).ToArray();
+            var colorButtons = Enumerable.Range(0, 9).Select(color => new ButtonInfo(width => $@"
+                    <rect class='color' x='{width / 2 - .3}' y='{btnHeight / 2 - .3}' width='.6' height='.6' fill='{ZingaUtil.Colors[color]}' stroke='black' stroke-width='.01' />
+                    <text class='label' x='{width / 2}' y='.6'>{color + 1}</text>",
+                $"color-{color}", 1)).ToArray();
+            var modeButtons = Ut.NewArray(
+                new ButtonInfo(MakeButtonTextLabel("Normal"), "normal", 1.1),
+                new ButtonInfo(MakeButtonTextLabel("Corner"), "corner", 1),
+                new ButtonInfo(MakeButtonTextLabel("Center"), "center", 1),
+                new ButtonInfo(MakeButtonTextLabel("Color"), "color", .85));
+            var cmdButtons = Ut.NewArray(
+                new ButtonInfo(MakeButtonTextLabel("Clear"), "clear", 1),
+                new ButtonInfo(MakeButtonTextLabel("Undo"), "undo", 1),
+                new ButtonInfo(MakeButtonTextLabel("Redo"), "redo", 1),
+                new ButtonInfo(MakeButtonTextLabel("More"), "sidebar", 1));
+
+            string renderButton(string id, double x, double y, double width, string labelSvg) => $@"
+                <g class='button' id='{id}' transform='translate({x}, {y})'>
+                    <rect class='clickable' x='0' y='0' width='{width}' height='{btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>
+                    {labelSvg}
+                </g>";
+
+            string renderButtonRow(ButtonInfo[] btns, int row)
+            {
+                var totalButtonWidth = width - margin * (btns.Length - 1);
+                var buttonWidthWeight = btns.Sum(r => r.width);
+                var widthFactor = totalButtonWidth / buttonWidthWeight;
+                return btns.Select((btn, btnIx) => renderButton($"btn-{btn.id}", btns.Take(btnIx).Sum(b => b.width * widthFactor + margin),
+                    row, btn.width * widthFactor, btn.getLabel(btn.width * widthFactor))).JoinString();
+            }
+
+            return $@"
+                <g id='button-row-values'>{renderButtonRow(valueButtons, 0)}</g>
+                <g id='button-row-colors'>{renderButtonRow(colorButtons, 0)}</g>
+                <g id='button-row-mode'>{renderButtonRow(modeButtons, 1)}</g>
+                <g id='button-row-cmds'>{renderButtonRow(cmdButtons, 2)}</g>";
         }
     }
 }

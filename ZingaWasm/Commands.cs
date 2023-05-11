@@ -19,5 +19,8 @@ namespace Zinga.Wasm
 
         [JSInvokable]
         public static string CheckConstraints(string enteredDigitsJson, string constraintsJson) => Lib.Commands.CheckConstraints(enteredDigitsJson, constraintsJson);
+
+        [JSInvokable]
+        public static string RenderButtonRows(int width, int[] values) => Lib.Commands.RenderButtonRows(width, values);
     }
 }

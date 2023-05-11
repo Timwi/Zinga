@@ -42,17 +42,24 @@ namespace Zinga.Lib
 
         public static Array CreateArray(this SucoType elementType, int length) => Array.CreateInstance(elementType.CsType, length);
 
+        public static readonly int[] Hues = new[] { 0, 30, 60, 120, 180, 220, 270, 310, 0 };
+        public static readonly int[] Saturations = new[] { 80, 80, 80, 80, 80, 80, 80, 80, 0 };
+        public static readonly int[] Lightnesses = new[] { 80, 80, 80, 80, 80, 80, 80, 80, 80 };
+        public static readonly string[] Colors = Enumerable.Range(0, 9).Select(i => $"hsl({Hues[i]}, {Saturations[i]}%, {Lightnesses[i]}%)").ToArray();
 
         #region Algorithm to generate outlines around cells
         private enum CellDirection { Up, Right, Down, Left }
 
-        public static string GenerateSvgPath(int[] cells, int width, int height, double marginX, double marginY, double? gapX = null, double? gapY = null)
+        public static string GenerateSvgPath(int[] cells, int width, int height, double marginX, double marginY, double? gapX = null, double? gapY = null) =>
+            GenerateSvgPath(GetRegionOutlines(cells, width, height), width, marginX, marginY, gapX, gapY);
+
+        public static string GenerateSvgPath(IEnumerable<(int x, int y)[]> paths, int width, double marginX, double marginY, double? gapX = null, double? gapY = null)
         {
             var path = new StringBuilder();
             double textX = 0;
             double textY = 0;
 
-            foreach (var outline in GetRegionOutlines(cells, width, height))
+            foreach (var outline in paths)
             {
                 path.Append("M");
                 var offset = outline.MinIndex(c => c.x + width * c.y) + outline.Length - 1;
