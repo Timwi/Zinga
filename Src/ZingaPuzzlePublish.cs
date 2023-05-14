@@ -55,8 +55,9 @@ namespace Zinga
 
                 errorLocation = 4;
                 var givens = json["givens"].GetList().Select((v, ix) => (v, ix)).Where(tup => tup.v != null).Select(tup => (cell: tup.ix, value: tup.v.GetInt())).ToArray();
-                if (givens.Any(given => given.cell < 0 || given.cell >= 81))
-                    return HttpResponse.PlainText($"At least one given is out of range (cell {puzzle.Givens.First(given => given.cell < 0 || given.cell >= 81).cell}).", HttpStatusCode._400_BadRequest);
+                var invalidGiven = givens.FirstOrNull(given => given.cell < 0 || given.cell >= puzzle.Info.Width * puzzle.Info.Height);
+                if (invalidGiven != null)
+                    return HttpResponse.PlainText($"At least one given is out of range (cell {invalidGiven.Value.cell}).", HttpStatusCode._400_BadRequest);
                 puzzle.Givens = givens.Length > 0 ? givens : null;
 
                 errorLocation = 5;

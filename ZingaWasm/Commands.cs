@@ -8,10 +8,6 @@ namespace Zinga.Wasm
         public static string CompileSuco(string suco, string variableTypesJson) => Lib.Commands.CompileSuco(suco, variableTypesJson);
 
         [JSInvokable]
-        public static string RenderConstraintSvgs(string constraintTypesJson, string stateJson) =>
-            Lib.Commands.RenderConstraintSvgs(constraintTypesJson, stateJson);
-
-        [JSInvokable]
         public static string GenerateOutline(string regionsJson, int width, int height) => Lib.Commands.GenerateOutline(regionsJson, width, height);
 
         [JSInvokable]
@@ -21,6 +17,7 @@ namespace Zinga.Wasm
         public static string CheckConstraints(string enteredDigitsJson, string constraintsJson) => Lib.Commands.CheckConstraints(enteredDigitsJson, constraintsJson);
 
         [JSInvokable]
-        public static string RenderButtonRows(int width, int[] values) => Lib.Commands.RenderButtonRows(width, values);
+        public static string RenderPuzzleSvg(int width, int height, string regionsJson, bool rowsUnique, bool columnsUnique, string valuesJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson) =>
+            Lib.Commands.RenderPuzzleSvg(width, height, regionsJson, rowsUnique, columnsUnique, valuesJson, constraintTypesJson, customConstraintTypesJson, constraintsJson);
     }
 }

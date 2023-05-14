@@ -6,8 +6,6 @@
 	async function dotNet(method, args) { return DotNet.invokeMethodAsync('ZingaWasm', method, ...args); }
 	function fixViewBox()
 	{
-		let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
-
 		// Step 1: move the button row so that it’s below the puzzle
 		let buttons = document.getElementById('bb-buttons');
 		let extraBBox = document.getElementById('bb-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
@@ -23,12 +21,12 @@
 		let top = Math.min(-.4, fullBBox.y - .1);
 		let right = Math.max(width + .4, fullBBox.x + fullBBox.width + .2);
 		let bottom = Math.max(height + .4, fullBBox.y + fullBBox.height + .2);
-		puzzleSvg.setAttribute('viewBox', `${left} ${top} ${right - left} ${bottom - top}`);
-		let selectionFilter = document.getElementById('constraint-invalid-shadow');
-		selectionFilter.setAttribute('x', left);
-		selectionFilter.setAttribute('y', top);
-		selectionFilter.setAttribute('width', right - left);
-		selectionFilter.setAttribute('height', bottom - top);
+		document.getElementById('puzzle-svg').setAttribute('viewBox', `${left} ${top} ${right - left} ${bottom - top}`);
+		let conflictFilter = document.getElementById('constraint-invalid-shadow');
+		conflictFilter.setAttribute('x', left);
+		conflictFilter.setAttribute('y', top);
+		conflictFilter.setAttribute('width', right - left);
+		conflictFilter.setAttribute('height', bottom - top);
 	}
 	function getLsKey() { return puzzleId !== 'test' || (width === 9 && height === 9 && values.length === 9 && values.every((v, ix) => v === ix + 1)) ? '' : `-${width}-${height}-${values.join('-')}`; }
 	function handler(fnc)
@@ -64,50 +62,40 @@
 
 		// Check the Sudoku rules (rows, columns and regions)
 		if (rowsUnique)
-			for (let i = 0; i < height; i++)
-			{
-				// Check rows
+			for (let r = 0; r < height; r++)
 				for (let colA = 0, go = true; colA < width && go; colA++)
-					if (grid[colA + width * i] !== null)
+					if (grid[colA + width * r] !== null)
 						for (let colB = colA + 1; colB < width && go; colB++)
-							if (grid[colA + width * i] === grid[colB + width * i])
+							if (grid[colA + width * r] === grid[colB + width * r])
 							{
 								if (showErrors)
-									document.getElementById(`row-invalid-${i}`).setAttribute('opacity', 1);
+									document.getElementById(`row-invalid-${r}`).setAttribute('opacity', 1);
 								isValid = false;
 								go = false;
 							}
-			}
 		if (columnsUnique)
-			for (let i = 0; i < width; i++)
-			{
-				// Check columns
+			for (let c = 0; c < width; c++)
 				for (let rowA = 0, go = true; rowA < height && go; rowA++)
-					if (grid[i + width * rowA] !== null)
+					if (grid[c + width * rowA] !== null)
 						for (let rowB = rowA + 1; rowB < height && go; rowB++)
-							if (grid[i + width * rowA] === grid[i + width * rowB])
+							if (grid[c + width * rowA] === grid[c + width * rowB])
 							{
 								if (showErrors)
-									document.getElementById(`column-invalid-${i}`).setAttribute('opacity', 1);
+									document.getElementById(`column-invalid-${c}`).setAttribute('opacity', 1);
 								isValid = false;
 								go = false;
 							}
-			}
-		if (state.regions)
-			for (let region of state.regions)
-			{
-				// Check regions
-				for (let cellA = 0, go = true; cellA < region.length && go; cellA++)
-					if (grid[region[cellA]] !== null)
-						for (let cellB = cellA + 1; cellB < region.length && go; cellB++)
-							if (grid[region[cellA]] === grid[region[cellB]])
-							{
-								if (showErrors)
-									document.getElementById(`region-invalid-${i}`).setAttribute('opacity', 1);
-								isValid = false;
-								go = false;
-							}
-			}
+		for (let rgIx = 0, region = regions[rgIx]; rgIx < regions.length && (region = regions[rgIx]); rgIx++)
+			for (let cellA = 0, go = true; cellA < region.length && go; cellA++)
+				if (grid[region[cellA]] !== null)
+					for (let cellB = cellA + 1; cellB < region.length && go; cellB++)
+						if (grid[region[cellA]] === grid[region[cellB]])
+						{
+							if (showErrors)
+								document.getElementById(`region-invalid-${rgIx}`).setAttribute('opacity', 1);
+							isValid = false;
+							go = false;
+						}
 
 		// Check that all cells in the Sudoku grid have a digit
 		if (isValid && grid.some(c => c === null))
@@ -197,7 +185,7 @@
 			let code = val % nv;
 			val = val / nv;
 			// Complex case: center notation and corner notation
-			if (code === values.length + 1)
+			if (code === nv - 1n)
 			{
 				// Center notation
 				for (let valIx = values.length - 1; valIx >= 0; valIx--)
@@ -531,12 +519,11 @@
 		});
 		ns(values.length).forEach(valIx => { setButtonHandler(document.getElementById(`btn-${values[valIx]}`), function(ev) { pressDigit(values[valIx], ev); }); });
 		ns(9).forEach(color => { setButtonHandler(document.getElementById(`btn-color-${color}`), function(ev) { pressDigit(color, ev, 'color'); }); });
-		["normal", "corner", "center", "color"].forEach(btn => setButtonHandler(puzzleDiv.querySelector(`#btn-${btn}>rect`), function()
-		{
-			mode = btn;
-			updateVisuals();
-		}));
-		setButtonHandler(puzzleDiv.querySelector(`#btn-clear>rect`), function()
+		setButtonHandler(document.getElementById('btn-normal'), function() { mode = 'normal'; updateVisuals(); });
+		setButtonHandler(document.getElementById('btn-corner'), function() { mode = 'corner'; updateVisuals(); });
+		setButtonHandler(document.getElementById('btn-center'), function() { mode = 'center'; updateVisuals(); });
+		setButtonHandler(document.getElementById('btn-color'), function() { mode = 'color'; updateVisuals(); });
+		setButtonHandler(document.getElementById('btn-clear'), function()
 		{
 			let elem = document.getElementById(`btn-clear`);
 			if (!elem.classList.contains('warning'))
@@ -553,9 +540,10 @@
 				updateVisuals(true);
 			}
 		});
-		setButtonHandler(puzzleDiv.querySelector(`#btn-undo>rect`), undo);
-		setButtonHandler(puzzleDiv.querySelector(`#btn-redo>rect`), redo);
-		setButtonHandler(puzzleDiv.querySelector(`#btn-sidebar>rect`), function() { sidebarOn = !sidebarOn; updateVisuals(true); });
+		setButtonHandler(document.getElementById('btn-undo'), undo);
+		setButtonHandler(document.getElementById('btn-redo'), redo);
+		setButtonHandler(document.getElementById('btn-sidebar'), function() { sidebarOn = !sidebarOn; updateVisuals(true); });
+		Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
 	}
 	async function updatePuzzleFromEdit()
 	{
@@ -563,84 +551,47 @@
 		if (document.hidden || puzzleId !== 'test')
 			return;
 
-		let state = null;
-		try { state = JSON.parse(localStorage.getItem(`zinga-edit`)); }
+		let editState = null;
+		try { editState = JSON.parse(localStorage.getItem('zinga-edit')); }
 		catch { }
 		digitsAtPrevCheck = null;
-		if (!state || !state.givens || !state.constraints)
+		if (!editState || !editState.givens || !editState.constraints)
 			return;
 
-		width = state.width ?? 9;
-		height = state.height ?? 9;
-		rowsUnique = state.rowsUniq ?? true;
-		columnsUnique = state.colsUniq ?? true;
-		values = state.values ?? [1, 2, 3, 4, 5, 6, 7, 8, 9];
-		givens = state.givens;
-		regions = state.regions;
-		constraints = state.constraints;
-		customConstraintTypes = state.customConstraintTypes;
+		width = editState.width ?? 9;
+		height = editState.height ?? 9;
+		rowsUnique = editState.rowsUniq ?? true;
+		columnsUnique = editState.colsUniq ?? true;
+		values = editState.values ?? [1, 2, 3, 4, 5, 6, 7, 8, 9];
+		givens = editState.givens;
+		regions = editState.regions;
+		constraints = editState.constraints;
+		customConstraintTypes = editState.customConstraintTypes;
 
-		document.querySelector('#topbar>.title').innerText = state.title ?? 'Sudoku';
-		document.querySelector('#topbar>.author').innerText = `by ${state.author ?? 'unknown'}`;
-		document.querySelector('#sidebar .links').innerHTML = Array.isArray(state.links) ? state.links.map(_ => `<li><a></a></li>`).join('') : '';
-		Array.from(document.querySelectorAll('#sidebar .links a')).forEach((obj, ix) => { obj.setAttribute('href', state.links[ix].url); obj.innerText = state.links[ix].text; });
-		document.title = `Testing: ${state.title ?? 'Sudoku'} by ${state.author ?? 'unknown'}`;
+		document.querySelector('#topbar>.title').innerText = editState.title ?? 'Sudoku';
+		document.querySelector('#topbar>.author').innerText = `by ${editState.author ?? 'unknown'}`;
+		document.querySelector('#sidebar .links').innerHTML = Array.isArray(editState.links) ? editState.links.map(_ => `<li><a></a></li>`).join('') : '';
+		Array.from(document.querySelectorAll('#sidebar .links a')).forEach((obj, ix) => { obj.setAttribute('href', editState.links[ix].url); obj.innerText = editState.links[ix].text; });
+		document.title = `Testing: ${editState.title ?? 'Sudoku'} by ${editState.author ?? 'unknown'}`;
 
-		puzzleDiv.dataset.title = state.title;
-		puzzleDiv.dataset.author = state.author;
+		puzzleDiv.dataset.title = editState.title;
+		puzzleDiv.dataset.author = editState.author;
+		puzzleDiv.dataset.rules = editState.rules;
 
-		var paragraphs = (state.rules ?? 'Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.').split(/\r?\n/).filter(s => s !== null && !/^\s*$/.test(s));
+		let paragraphs = (editState.rules ?? 'Normal Sudoku rules apply: place the digits 1–9 in every row, every column and every 3×3 box.').split(/\r?\n/).filter(s => s !== null && !/^\s*$/.test(s));
 		document.getElementById('rules-text').innerHTML = paragraphs.map(_ => '<p></p>').join('');
 		Array.from(document.querySelectorAll('#rules-text>p')).forEach((p, pIx) => { p.innerText = paragraphs[pIx]; });
 
-		// Update the puzzle grid (clickable squares) and its text objects (center/corner notation)
-		document.getElementById('puzzle-cells').innerHTML = ns(width * height).map(cell => `
-			<g class='cell' data-cell='${cell}' font-size='.25' stroke-width='0'>
-                <rect class='clickable sudoku-cell' data-cell='${cell}' x='${cell % width}' y='${(cell / width) | 0}' width='1' height='1' />
-                <g id='sudoku-multicolor-${cell}' transform='translate(${cell % width + .5}, ${((cell / width) | 0) + .5})'></g>
-            </g>`).join('');
-		document.getElementById('cell-text').innerHTML = ns(width * height).map(cell => `
-			<g class='cell' data-cell='${cell}' font-size='.25' stroke-width='0'>
-                <text id='sudoku-text-${cell}' x='${cell % width + .5}' y='${((cell / width) | 0) + .725}' font-size='.65'></text>
-                <text class='notation' id='sudoku-center-text-${cell}' font-size='.3'></text>
-                <text class='notation' id='sudoku-corner-text-${cell}-0' x='${cell % width + .1}' y='${((cell / width) | 0) + .3}' text-anchor='start'></text>
-                <text class='notation' id='sudoku-corner-text-${cell}-1' x='${cell % width + .9}' y='${((cell / width) | 0) + .3}' text-anchor='end'></text>
-                <text class='notation' id='sudoku-corner-text-${cell}-2' x='${cell % width + .1}' y='${((cell / width) | 0) + .875}' text-anchor='start'></text>
-                <text class='notation' id='sudoku-corner-text-${cell}-3' x='${cell % width + .9}' y='${((cell / width) | 0) + .875}' text-anchor='end'></text>
-                <text class='notation' id='sudoku-corner-text-${cell}-4' x='${cell % width + .5}' y='${((cell / width) | 0) + .3}'></text>
-                <text class='notation' id='sudoku-corner-text-${cell}-5' x='${cell % width + .9}' y='${((cell / width) | 0) + .6125}' text-anchor='end'></text>
-                <text class='notation' id='sudoku-corner-text-${cell}-6' x='${cell % width + .5}' y='${((cell / width) | 0) + .875}'></text>
-                <text class='notation' id='sudoku-corner-text-${cell}-7' x='${cell % width + .1}' y='${((cell / width) | 0) + .6125}' text-anchor='start'></text>
-            </g>`).join('');
+		// Update the puzzle SVG
+		document.getElementById('puzzle-svg').innerHTML = await dotNet('RenderPuzzleSvg', [width, height, JSON.stringify(regions), rowsUnique, columnsUnique, JSON.stringify(values), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
 
 		await dotNet('SetupConstraints', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, givens: givens, width: width, height: height })]);
-		document.getElementById('bb-buttons').innerHTML = await dotNet('RenderButtonRows', [width, values]);
-
-		let results = JSON.parse(await dotNet('RenderConstraintSvgs', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, width: width, height: height, regions: regions })]));
-
-		let globalSvgs = '', svgs = '', globalY = 0;
-		for (let cIx = 0; cIx < results.svgs.length; cIx++)
-			if (results.svgs[cIx].global)
-			{
-				globalSvgs += `<g id='constraint-svg-${cIx}' class='constraint-svg' transform='translate(0, ${globalY})'>${results.svgs[cIx].svg}</g>`;
-				globalY += 1.5;
-			}
-			else
-				svgs += `<g class='constraint-svg' id='constraint-svg-${cIx}'>${results.svgs[cIx].svg}</g>`;
-
-		document.getElementById('constraint-svg-global').innerHTML = globalSvgs;
-		document.getElementById('constraint-svg').innerHTML = svgs;
-		document.getElementById('constraint-defs').innerHTML = results.svgDefs;
-		document.getElementById('puzzle-frame').setAttribute('d', results.frame);
-		document.getElementById('puzzle-lines').setAttribute('d', results.lines);
-
-		Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
 
 		retrieveStateFromLocalStorage();
 		updateVisuals();
 		setDynamicEvents();
 		fixViewBox();
-		window.setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 10);
+		requestAnimationFrame(function() { window.dispatchEvent(new Event('resize')); });
 	}
 	async function updateVisuals(updateStorage)
 	{
@@ -667,8 +618,8 @@
 		for (let cell = 0; cell < width * height; cell++)
 		{
 			let digit = getDisplayedSudokuDigit(state, cell);
-			let valIx = digit == null ? null : values.indexOf(digit);
-			if (valIx)
+			let valIx = digit === null ? null : values.indexOf(digit);
+			if (valIx !== null)
 				digitCounts[valIx]++;
 
 			let intendedText = null;
@@ -728,6 +679,8 @@
 		// Button highlights
 		let pretendMode = ctrlPressed ? shiftPressed ? 'color' : 'center' : shiftPressed ? 'corner' : mode;
 		setClass(puzzleDiv, 'show-colors', pretendMode === 'color');
+		setClass(puzzleContainer, 'dimmable', ctrlPressed && shiftPressed);
+
 		for (let md of ["normal", "center", "corner", "color"])
 		{
 			setClass(document.getElementById(`btn-${md}`), 'selected', pretendMode === md);
@@ -865,7 +818,6 @@
 	setButtonHandler(document.getElementById('opt-screenshot'), () =>
 	{
 		let img = new Image();
-		let svgElem = puzzleDiv.querySelector('svg.puzzle-svg');
 		let bBox = document.getElementById('bb-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
 		let margin = .1;
 		let nBox = { x: bBox.x - margin, y: bBox.y - margin, width: bBox.width + 2 * margin, height: bBox.height + 2 * margin };
@@ -889,24 +841,34 @@
 		{
 			alert('Unfortunately, a screenshot of the puzzle could not be generated. This may be due to malformed SVG code on the part of the puzzle author.');
 		};
-		img.src = 'data:image/svg+xml;base64,' + btoa(svgElem.outerHTML
+		img.src = 'data:image/svg+xml;base64,' + btoa(document.getElementById('puzzle-svg').outerHTML
 			.replace(/<svg/, `<svg width="${canvas.width}" height="${canvas.height}"`)
 			.replace(/viewBox=".*?"/, `viewBox='${nBox.x} ${nBox.y} ${nBox.width} ${nBox.height}'`)
 			.replace(/(?=<\/style>)/, Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.cssRules)), [])
-				.filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg.puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg\.puzzle-svg\s/, '')).join("\n")));
+				.filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg#puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg#puzzle-svg\s/, '')).join("\n")));
 	});
 	puzzleContainer.addEventListener('keydown', ev =>
 	{
-		let str = ev.code;
-		if (ev.shiftKey)
-			str = `Shift+${str}`;
-		if (ev.altKey)
-			str = `Alt+${str}`;
-		if (ev.ctrlKey)
-			str = `Ctrl+${str}`;
+		if (ev.code === 'ControlLeft' || ev.code === 'ControlRight')
+		{
+			ctrlPressed = true;
+			updateVisuals();
+			return;
+		}
+		if (ev.code === 'ShiftLeft' || ev.code === 'ShiftRight')
+		{
+			shiftPressed = true;
+			updateVisuals();
+			return;
+		}
 
-		if (ev.ctrlKey && ev.shiftKey)
-			puzzleContainer.classList.add('dimmable');
+		let keyCombo = ev.code;
+		if (ev.shiftKey)
+			keyCombo = `Shift+${keyCombo}`;
+		if (ev.altKey)
+			keyCombo = `Alt+${keyCombo}`;
+		if (ev.ctrlKey)
+			keyCombo = `Ctrl+${keyCombo}`;
 
 		let anyFunction = true;
 
@@ -926,7 +888,7 @@
 			updateVisuals();
 		}
 
-		switch (str)
+		switch (keyCombo)
 		{
 			// Keys that change something
 			case 'Digit1': case 'Numpad1':
@@ -939,7 +901,7 @@
 			case 'Digit8': case 'Numpad8':
 			case 'Digit9': case 'Numpad9':
 			case 'Digit0': case 'Numpad0':
-				pressDigit(parseInt(str.substring(str.length - 1)), ev);
+				pressDigit(parseInt(keyCombo.substring(keyCombo.length - 1)), ev);
 				break;
 
 			case 'Ctrl+Digit1': case 'Ctrl+Numpad1':
@@ -952,7 +914,7 @@
 			case 'Ctrl+Digit8': case 'Ctrl+Numpad8':
 			case 'Ctrl+Digit9': case 'Ctrl+Numpad9':
 			case 'Ctrl+Digit0': case 'Ctrl+Numpad0':
-				enterCenterNotation(parseInt(str.substring(str.length - 1)));
+				enterCenterNotation(parseInt(keyCombo.substring(keyCombo.length - 1)));
 				break;
 
 			case 'Ctrl+Shift+Digit1': case 'Ctrl+Shift+Numpad1':
@@ -965,7 +927,7 @@
 			case 'Ctrl+Shift+Digit8': case 'Ctrl+Shift+Numpad8':
 			case 'Ctrl+Shift+Digit9': case 'Ctrl+Shift+Numpad9':
 				//case 'Ctrl+Shift+Digit0': case 'Ctrl+Shift+Numpad0':
-				setCellColor(parseInt(str.substring(str.length - 1)) - 1);
+				setCellColor(parseInt(keyCombo.substring(keyCombo.length - 1)) - 1);
 				break;
 
 			case 'Shift+Digit1': case 'Shift+Numpad1':
@@ -978,7 +940,7 @@
 			case 'Shift+Digit8': case 'Shift+Numpad8':
 			case 'Shift+Digit9': case 'Shift+Numpad9':
 			case 'Shift+Digit0': case 'Shift+Numpad0':
-				pressDigit(parseInt(str.substring(str.length - 1)), ev, 'corner');
+				pressDigit(parseInt(keyCombo.substring(keyCombo.length - 1)), ev, 'corner');
 				break;
 
 			case 'Delete':
@@ -1135,7 +1097,7 @@
 
 	if (puzzleId === 'test')
 	{
-		await updatePuzzleFromEdit();    // Make sure this happens before the first call to updateVisuals()
+		await updatePuzzleFromEdit();
 		document.addEventListener('visibilitychange', updatePuzzleFromEdit);
 	}
 	else
@@ -1144,7 +1106,6 @@
 		updateVisuals(true);
 	}
 
-	Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
 	puzzleContainer.focus();
 	fixViewBox();
 });

@@ -1,9 +1,8 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using System;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using RT.Json;
-using RT.Serialization;
 using Zinga.Lib;
-using Zinga.Suco;
 
 namespace Zinga.Database
 {
@@ -16,24 +15,6 @@ namespace Zinga.Database
         public int ConstraintID { get; set; }
         public string ValuesJson { get; set; }
 
-        [ClassifyIgnore]
-        private SucoEnvironment _valuesCache;
-        [ClassifyIgnore]
-        private string _valuesCacheVariables;
-        public SucoEnvironment DecodeValues(string variablesJson, int width)
-        {
-            if (_valuesCache == null || _valuesCacheVariables != variablesJson)
-            {
-                _valuesCacheVariables = variablesJson;
-                _valuesCache = ZingaUtil.ConvertVariableValues(JsonDict.Parse(variablesJson), JsonDict.Parse(ValuesJson), width);
-            }
-            return _valuesCache;
-        }
-
-        public JsonDict ToJson() => new()
-        {
-            ["type"] = ConstraintID,
-            ["values"] = new JsonRaw(ValuesJson)
-        };
+        public ConstraintInfo ToInfo() => new(ConstraintID, ValuesJson);
     }
 }

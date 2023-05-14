@@ -65,7 +65,7 @@ namespace Zinga
                         new DIV { class_ = "author" }._("by unknown")),
                     new DIV { id = "puzzle" }.Data("constrainttypes", constraintTypesJson)._(
                         new DIV { id = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag($@"
-                            <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 11.2' text-anchor='middle' font-family='Bitter' class='puzzle-svg'>
+                            <svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.5 -0.5 10 11.2' text-anchor='middle' font-family='Bitter' id='puzzle-svg'>
                                 <style></style>
                                 <defs>
                                     <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>

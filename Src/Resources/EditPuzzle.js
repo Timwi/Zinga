@@ -1661,8 +1661,6 @@
 
 		function fixViewBox()
 		{
-			let puzzleSvg = puzzleDiv.querySelector('svg.puzzle-svg');
-
 			// — move the button row so that it’s below the puzzle
 			let buttons = document.getElementById('bb-buttons');
 			let sudokuBBox = document.getElementById('bb-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
@@ -1674,7 +1672,7 @@
 
 			// — change the viewBox so that it includes everything
 			let fullBBox = document.getElementById('bb-everything').getBBox();
-			puzzleSvg.setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
+			document.getElementById('puzzle-svg').setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
 			let selectionFilter = document.getElementById('constraint-selection-shadow');
 			selectionFilter.setAttribute('x', fullBBox.x - .1);
 			selectionFilter.setAttribute('y', fullBBox.y - .1);

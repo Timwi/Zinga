@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 
-namespace Zinga.Database
+namespace Zinga
 {
     public sealed class PuzzleInfo
     {
@@ -10,6 +10,8 @@ namespace Zinga.Database
         public bool RowsUnique { get; private set; }
         public bool ColumnsUnique { get; private set; }
         public int[] Values { get; private set; }
+
+        private PuzzleInfo() { }    // for Classify
 
         public PuzzleInfo(int width, int height, int[][] regions, bool rowsUnique, bool columnsUnique, int[] values)
         {

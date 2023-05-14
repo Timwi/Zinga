@@ -29,21 +29,24 @@ namespace Zinga.Database
             LastAccessed = DateTime.UtcNow;
         }
 
-        private Link[] _linksCache;
+        [NotMapped] private Link[] _linksCache;
+        [NotMapped]
         public Link[] Links
         {
             get => _linksCache ??= LinksJson.NullOr(l => ClassifyJson.Deserialize<Link[]>(l));
             set { LinksJson = value.NullOr(v => v.Length == 0 ? null : ClassifyJson.Serialize(v).ToString()); _linksCache = value; }
         }
 
-        private (int cell, int value)[] _givensCache;
+        [NotMapped] private (int cell, int value)[] _givensCache;
+        [NotMapped]
         public (int cell, int value)[] Givens
         {
             get => _givensCache ??= GivensJson.NullOr(cstr => ClassifyJson.Deserialize<(int cell, int value)[]>(cstr));
             set { GivensJson = value.NullOr(v => ClassifyJson.Serialize(v).ToString()); _givensCache = value; }
         }
 
-        private PuzzleInfo _infoCache;
+        [NotMapped] private PuzzleInfo _infoCache;
+        [NotMapped]
         public PuzzleInfo Info
         {
             get => _infoCache ??= InfoJson == null ? PuzzleInfo.Default : ClassifyJson.Deserialize<PuzzleInfo>(InfoJson);

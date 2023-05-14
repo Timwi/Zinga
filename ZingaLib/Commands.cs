@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -129,11 +130,20 @@ namespace Zinga.Lib
                 }
             }
 
-            var puzzleLinesPath =
-                Enumerable.Range(1, width - 1).Select(x => $"M{x} 0V{height}").JoinString() +
-                Enumerable.Range(1, height - 1).Select(x => $"M0 {x}H{width}").JoinString();
+            var (puzzleLinesPath, framePathSvg) = RenderGridLines(state["regions"].GetList().Select(region => region.GetList().Select(v => v.GetInt()).ToArray()).ToArray(), width, height);
 
-            var regions = state["regions"].GetList().Select(region => region.GetList().Select(v => v.GetInt()).ToArray()).ToArray();
+            return new JsonDict
+            {
+                ["svgDefs"] = resultSvgDefs.JoinString(),
+                ["svgs"] = resultSvgs,
+                ["errors"] = resultErrors,
+                ["frame"] = framePathSvg,
+                ["lines"] = puzzleLinesPath
+            }.ToString();
+        }
+
+        private static (string puzzleLinesPath, string framePathSvg) RenderGridLines(int[][] regions, int width, int height)
+        {
             var segments = new HashSet<Link>();
             // Horizontal segments
             for (var y = 0; y <= height; y++)
@@ -201,14 +211,9 @@ namespace Zinga.Lib
                         }
                     }
 
-            return new JsonDict
-            {
-                ["svgDefs"] = resultSvgDefs.JoinString(),
-                ["svgs"] = resultSvgs,
-                ["errors"] = resultErrors,
-                ["frame"] = framePathSvg.ToString(),
-                ["lines"] = puzzleLinesPath
-            }.ToString();
+            var puzzleLinesPath = Enumerable.Range(1, width - 1).Select(x => $"M{x} 0V{height}").JoinString() +
+                Enumerable.Range(1, height - 1).Select(x => $"M0 {x}H{width}").JoinString();
+            return (puzzleLinesPath, framePathSvg.ToString());
         }
 
         enum SvgCheckerState
@@ -550,8 +555,8 @@ namespace Zinga.Lib
                 new ButtonInfo(MakeButtonTextLabel("More"), "sidebar", 1));
 
             string renderButton(string id, double x, double y, double width, string labelSvg) => $@"
-                <g class='button' id='{id}' transform='translate({x}, {y})'>
-                    <rect class='clickable' x='0' y='0' width='{width}' height='{btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>
+                <g class='button' transform='translate({x}, {y})'>
+                    <rect id='{id}' class='clickable' x='0' y='0' width='{width}' height='{btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>
                     {labelSvg}
                 </g>";
 
@@ -569,6 +574,137 @@ namespace Zinga.Lib
                 <g id='button-row-colors'>{renderButtonRow(colorButtons, 0)}</g>
                 <g id='button-row-mode'>{renderButtonRow(modeButtons, 1)}</g>
                 <g id='button-row-cmds'>{renderButtonRow(cmdButtons, 2)}</g>";
+        }
+
+        public static string RenderRegionGlow(int width, int height, bool rowsUnique, bool columnsUnique, int[][] regions)
+        {
+            var (defs, objects) = RenderRegionGlowC(width, height, rowsUnique, columnsUnique, regions);
+            return new JsonDict { ["defs"] = defs, ["objects"] = objects }.ToString();
+        }
+
+        public static (string defs, string objects) RenderRegionGlowC(int width, int height, bool rowsUnique, bool columnsUnique, int[][] regions)
+        {
+            var regionInfos = regions.Select((region, rgIx) =>
+            {
+                var outlines = ZingaUtil.GetRegionOutlines(region, width, height).ToArray();
+                var rgX = outlines.Min(ol => ol.Min(p => p.x)) - 1;
+                var rgY = outlines.Min(ol => ol.Min(p => p.y)) - 1;
+                var rgW = outlines.Max(ol => ol.Max(p => p.x)) - rgX + 1;
+                var rgH = outlines.Max(ol => ol.Max(p => p.y)) - rgY + 1;
+                var svgPath = ZingaUtil.GenerateSvgPath(outlines, width, 0, 0);
+                return (
+                    mask: $@"
+                        <mask id='region-invalid-mask-{rgIx}'>
+                            <rect fill='white' x='{rgX}' y='{rgY}' width='{rgW}' height='{rgH}' />
+                            <path fill='black' d='{svgPath}' />
+                        </mask>",
+                    highlight: $"<path class='region-invalid' id='region-invalid-{rgIx}' d='{svgPath}' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#region-invalid-mask-{rgIx})' opacity='0' />");
+            }).ToArray();
+
+            return (
+                defs: regionInfos.Select(tup => tup.mask).JoinString(),
+                objects: $@"
+                    {(rowsUnique ? Enumerable.Range(0, height).Select(row => $"<rect class='region-invalid' id='row-invalid-{row}' x='0' y='0' width='{width}' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, {row})' opacity='0' />").JoinString() : "")}
+                    {(columnsUnique ? Enumerable.Range(0, width).Select(col => $"<rect class='region-invalid' id='column-invalid-{col}' x='0' y='0' width='1' height='{height}' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate({col}, 0)' opacity='0' />").JoinString() : "")}
+                    {regionInfos.Select(tup => tup.highlight).JoinString()}
+                ");
+        }
+
+        public static string RenderPuzzleSvg(int width, int height, string regionsJson, bool rowsUnique, bool columnsUnique, string valuesJson, string constraintTypesJson, string customConstraintTypesJson, string constraintsJson)
+        {
+            Thread.CurrentThread.CurrentCulture = CultureInfo.InvariantCulture;
+#if DEBUG
+            Console.WriteLine($@"Zinga.Lib.Commands.RenderPuzzleSvg({width}, {height}, ""{regionsJson.CLiteralEscape()}"", {rowsUnique.ToString().ToLowerInvariant()}, {columnsUnique.ToString().ToLowerInvariant()}, ""{valuesJson.CLiteralEscape()}"", ""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
+#endif
+            ConstraintTypeInfo makeInfo(int id, JsonValue j) => new(id, ExactConvert.To<ConstraintKind>(j["kind"].GetString()), j["variables"].ToString(), j["logic"].GetString(), j["svgDefs"].GetString(), j["svg"].GetString());
+            var constraintTypes = JsonDict.Parse(constraintTypesJson)
+                    .Select(kvp => makeInfo(int.Parse(kvp.Key), kvp.Value))
+                    .ToDictionary(ct => ct.ID);
+            var customConstraintTypes = JsonList.Parse(customConstraintTypesJson);
+            for (var i = 0; i < customConstraintTypes.Count; i++)
+                if (customConstraintTypes[i] != null)
+                    constraintTypes[~i] = makeInfo(~i, customConstraintTypes[i]);
+
+            return RenderPuzzleSvgC(
+                new PuzzleInfo(width, height, JsonList.Parse(regionsJson).Select(r => r.GetList().Select(v => v.GetInt()).ToArray()).ToArray(), rowsUnique, columnsUnique, JsonList.Parse(valuesJson).Select(v => v.GetInt()).ToArray()),
+                JsonDict.Parse(constraintTypesJson)
+                    .Select(kvp => new ConstraintTypeInfo(int.Parse(kvp.Key), ExactConvert.To<ConstraintKind>(kvp.Value["kind"].GetString()), kvp.Value["variables"].ToString(), kvp.Value["logic"].GetString(), kvp.Value["svgDefs"].GetString(), kvp.Value["svg"].GetString()))
+                    .ToDictionary(ct => ct.ID),
+                JsonList.Parse(constraintsJson).Select(j => new ConstraintInfo(j["id"].GetInt(), j["values"].ToString()))
+                    .ToArray());
+        }
+
+        public static string RenderPuzzleSvgC(PuzzleInfo puzzleInfo, Dictionary<int, ConstraintTypeInfo> constraintTypes, ConstraintInfo[] constraints, bool fullSvgTag = false)
+        {
+            var w = puzzleInfo.Width;
+            var h = puzzleInfo.Height;
+            var (regionDefs, regionObjects) = RenderRegionGlowC(w, h, puzzleInfo.RowsUnique, puzzleInfo.ColumnsUnique, puzzleInfo.Regions);
+            var allCells = Ut.NewArray(w * h, ix => new Cell(ix, w));
+            var constraintValues = constraints?.Select(c =>
+                ZingaUtil.ConvertVariableValues(JsonDict.Parse(constraintTypes[c.ID].VariablesJson), JsonDict.Parse(c.ValuesJson), w)
+                    .DeclareVariable("allcells", allCells)
+                    .DeclareVariable("width", w)
+                    .DeclareVariable("height", h)
+                    .DeclareVariable("regions", puzzleInfo.Regions)).ToArray();
+            var (puzzleLinesPath, framePathSvg) = RenderGridLines(puzzleInfo.Regions, w, h);
+
+            var innerSvg = $@"
+                <defs id='zinga-defs'>
+                    <filter id='constraint-invalid-shadow' x='-1' y='-1' width='500%' height='500%' filterUnits='userSpaceOnUse'>
+                        <feMorphology in='SourceGraphic' operator='dilate' radius='.05' result='constraint-selection-shadow-1'></feMorphology>
+                        <feColorMatrix in='constraint-selection-shadow-1' type='matrix' result='constraint-selection-shadow-2' values='0 0 0 0 1 0 0 0 0 0 0 0 0 0 0 0 0 0 2 0'></feColorMatrix>
+                        <feGaussianBlur stdDeviation='.05' in='constraint-selection-shadow-2' result='constraint-selection-shadow-3'></feGaussianBlur>
+                        <feComposite in2='constraint-selection-shadow-3' in='SourceGraphic'></feComposite>
+                    </filter>
+                    <filter id='glow-blur'><feGaussianBlur stdDeviation='.1' /></filter>
+                    <mask id='row-invalid-mask'>
+                        <rect fill='white' x='-1' y='-1' width='{w + 2}' height='3' />
+                        <rect fill='black' x='0' y='0' width='{w}' height='1' />
+                    </mask>
+                    <mask id='column-invalid-mask'>
+                        <rect fill='white' x='-1' y='-1' width='3' height='{h + 2}' />
+                        <rect fill='black' x='0' y='0' width='1' height='{h}' />
+                    </mask>
+                </defs>
+                <defs id='puzzle-svg-defs'>{regionDefs}</defs>
+                <defs id='constraint-defs'>{constraints?.SelectMany((c, cIx) => constraintTypes[c.ID].GetSvgDefs(constraintValues[cIx])).Distinct().JoinString()}</defs>
+                <g id='bb-everything'>
+                    <g id='bb-buttons' font-size='.55' text-anchor='middle' transform='translate(0, {h + .4})'>{RenderButtonRows(w, puzzleInfo.Values)}</g>
+
+                    <g id='bb-puzzle'>
+                        <g id='constraint-svg-global'>{constraints?
+                            .Select((c, cIx) => (constraint: c, cIx))
+                            .Where(tup => constraintTypes[tup.constraint.ID].Kind == ConstraintKind.Global)
+                            .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' class='constraint-svg' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ID].GetSvg(constraintValues[tup.cIx])}</g>")
+                            .JoinString()}</g>
+
+                        <g id='puzzle-cells'>{Enumerable.Range(0, w * h).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
+                            <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % w}' y='{cell / w}' width='1' height='1' />
+                            <g id='sudoku-multicolor-{cell}' transform='translate({cell % w + .5}, {cell / w + .5})'></g>
+                        </g>").JoinString()}</g>
+
+                        <path id='puzzle-lines' d='{puzzleLinesPath}' fill='none' stroke='black' stroke-width='.01' />
+                        <path id='puzzle-frame' d='{framePathSvg}' fill='none' stroke='black' stroke-width='.05' />
+
+                        <g id='region-glow'>{regionObjects}</g>
+
+                        <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ID].Kind == ConstraintKind.Global ? null : $"<g class='constraint-svg' id='constraint-svg-{cIx}'>{constraintTypes[c.ID].GetSvg(constraintValues[cIx])}</g>").JoinString()}</g>
+
+                        <g id='cell-text'>{Enumerable.Range(0, w * h).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
+                            <text id='sudoku-text-{cell}' x='{cell % w + .5}' y='{cell / w + .725}' font-size='.65'></text>
+                            <text class='notation' id='sudoku-center-text-{cell}' font-size='.3'></text>
+                            <text class='notation' id='sudoku-corner-text-{cell}-0' x='{cell % w + .1}' y='{cell / w + .3}' text-anchor='start'></text>
+                            <text class='notation' id='sudoku-corner-text-{cell}-1' x='{cell % w + .9}' y='{cell / w + .3}' text-anchor='end'></text>
+                            <text class='notation' id='sudoku-corner-text-{cell}-2' x='{cell % w + .1}' y='{cell / w + .875}' text-anchor='start'></text>
+                            <text class='notation' id='sudoku-corner-text-{cell}-3' x='{cell % w + .9}' y='{cell / w + .875}' text-anchor='end'></text>
+                            <text class='notation' id='sudoku-corner-text-{cell}-4' x='{cell % w + .5}' y='{cell / w + .3}'></text>
+                            <text class='notation' id='sudoku-corner-text-{cell}-5' x='{cell % w + .9}' y='{cell / w + .6125}' text-anchor='end'></text>
+                            <text class='notation' id='sudoku-corner-text-{cell}-6' x='{cell % w + .5}' y='{cell / w + .875}'></text>
+                            <text class='notation' id='sudoku-corner-text-{cell}-7' x='{cell % w + .1}' y='{cell / w + .6125}' text-anchor='start'></text>
+                        </g>").JoinString()}</g>
+                    </g>
+                </g>";
+            return fullSvgTag ? $"<svg xmlns='http://www.w3.org/2000/svg' viewBox='-0.4 -0.4 {w + .8} {h + 3.8}' text-anchor='middle' font-family='Bitter' id='puzzle-svg' stroke-width='.1'>{innerSvg}</svg>" : innerSvg;
         }
     }
 }
