@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data;
 using System.Globalization;
 using System.Linq;
 using System.Text;
@@ -616,7 +615,7 @@ namespace Zinga.Lib
 #if DEBUG
             Console.WriteLine($@"Zinga.Lib.Commands.RenderPuzzleSvg({width}, {height}, ""{regionsJson.CLiteralEscape()}"", {rowsUnique.ToString().ToLowerInvariant()}, {columnsUnique.ToString().ToLowerInvariant()}, ""{valuesJson.CLiteralEscape()}"", ""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
 #endif
-            ConstraintTypeInfo makeInfo(int id, JsonValue j) => new(id, ExactConvert.To<ConstraintKind>(j["kind"].GetString()), j["variables"].ToString(), j["logic"].GetString(), j["svgDefs"].GetString(), j["svg"].GetString());
+            ConstraintTypeInfo makeInfo(int id, JsonValue j) => new(id, ExactConvert.To<ConstraintKind>(j["kind"].GetString()), j["variables"].ToString(), j["logic"].GetString(), j["svgdefs"].GetString(), j["svg"].GetString());
             var constraintTypes = JsonDict.Parse(constraintTypesJson)
                     .Select(kvp => makeInfo(int.Parse(kvp.Key), kvp.Value))
                     .ToDictionary(ct => ct.ID);
@@ -627,11 +626,8 @@ namespace Zinga.Lib
 
             return RenderPuzzleSvgC(
                 new PuzzleInfo(width, height, JsonList.Parse(regionsJson).Select(r => r.GetList().Select(v => v.GetInt()).ToArray()).ToArray(), rowsUnique, columnsUnique, JsonList.Parse(valuesJson).Select(v => v.GetInt()).ToArray()),
-                JsonDict.Parse(constraintTypesJson)
-                    .Select(kvp => new ConstraintTypeInfo(int.Parse(kvp.Key), ExactConvert.To<ConstraintKind>(kvp.Value["kind"].GetString()), kvp.Value["variables"].ToString(), kvp.Value["logic"].GetString(), kvp.Value["svgDefs"].GetString(), kvp.Value["svg"].GetString()))
-                    .ToDictionary(ct => ct.ID),
-                JsonList.Parse(constraintsJson).Select(j => new ConstraintInfo(j["id"].GetInt(), j["values"].ToString()))
-                    .ToArray());
+                constraintTypes,
+                JsonList.Parse(constraintsJson).Select(j => new ConstraintInfo(j["id"].GetInt(), j["values"].ToString())).ToArray());
         }
 
         public static string RenderPuzzleSvgC(PuzzleInfo puzzleInfo, Dictionary<int, ConstraintTypeInfo> constraintTypes, ConstraintInfo[] constraints, bool fullSvgTag = false)
