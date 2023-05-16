@@ -2,12 +2,48 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using RT.Json;
+using RT.Util;
 using RT.Util.ExtensionMethods;
+using Zinga.Lib;
 
 namespace Zinga.Suco
 {
     public class SucoEnvironment
     {
+        public static SucoEnvironment From(JsonDict variablesJson, JsonDict valuesJson, int width, int height, Cell[] allCells, int[][] regions) =>
+            From(variablesJson, valuesJson, width, height, allCells, regions.Select(region => region.Select(ix => new Cell(ix, width)).ToArray()).ToArray());
+        public static SucoEnvironment From(JsonDict variablesJson, JsonDict valuesJson, int width, int height, Cell[] allCells, Cell[][] regions)
+        {
+            object convertList(JsonList list, SucoType elementType, int width)
+            {
+                var result = elementType.CreateArray(list.Count);
+                for (var i = 0; i < list.Count; i++)
+                    result.SetValue(convertVariableValue(elementType, list[i], width), i);
+                return result;
+            }
+
+            object convertVariableValue(SucoType type, JsonValue j, int width) => type switch
+            {
+                SucoBooleanType => j.GetBoolLenientSafe() ?? false,
+                SucoCellType => (j.GetIntLenientSafe() ?? 0).Apply(cell => new Cell(cell, width)),
+                SucoDecimalType => j.GetDoubleLenientSafe() ?? 0d,
+                SucoIntegerType => j.GetIntLenientSafe() ?? 0,
+                SucoStringType => j.GetStringLenientSafe() ?? "",
+                SucoListType lst => convertList(j.GetListSafe() ?? new JsonList(), lst.ElementType, width),
+                _ => throw new NotImplementedException($"Programmer has neglected to include code to deserialize “{type}”.")
+            };
+
+            var list = new List<(string name, object value)>();
+            foreach (var (varName, varType) in variablesJson)
+                list.Add((varName, convertVariableValue(SucoType.Parse(varType.GetString()), valuesJson[varName], width)));
+            return new SucoEnvironment(list)
+                .DeclareVariable("allcells", allCells)
+                .DeclareVariable("width", width)
+                .DeclareVariable("height", height)
+                .DeclareVariable("regions", regions);
+        }
+
         private readonly List<SucoListComprehensionVariable> _variables = new();
 
         public int Width => (int) GetValue("width");

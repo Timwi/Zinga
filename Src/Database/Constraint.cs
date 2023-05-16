@@ -51,6 +51,6 @@ namespace Zinga.Database
             return dic;
         }
 
-        public ConstraintTypeInfo ToInfo() => new(ConstraintID, Kind, VariablesJson, LogicSuco, SvgDefsSuco, SvgSuco);
+        public ConstraintTypeInfo ToInfo() => new(ConstraintID, Name, Kind, VariablesJson, LogicSuco, SvgDefsSuco, SvgSuco, Public);
     }
 }

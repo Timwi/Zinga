@@ -85,13 +85,10 @@ namespace Zinga
 
                         // Some verifications:
                         // Make sure the variable types parse as valid Suco types
-                        var env = new SucoTypeEnvironment();
-                        foreach (var (varName, varType) in cType["variables"].GetDict())
-                        {
-                            if (!SucoType.TryParse(varType.GetString(), out var type))
-                                return HttpResponse.PlainText($"Unrecognized Suco type: {varType.GetString()}.", HttpStatusCode._400_BadRequest);
-                            env = env.DeclareVariable(varName, type);
-                        }
+                        SucoTypeEnvironment env;
+                        try { env = SucoTypeEnvironment.From(cType["variables"].GetDict()); }
+                        catch (SucoParseException) { return HttpResponse.PlainText($"Variables for constraint “{constraint.Safe["name"].GetStringSafe()}” contain unrecognized Suco type: {cType["variables"]}.", HttpStatusCode._400_BadRequest); }
+
                         // Make sure all the Suco code compiles
                         static string nullIfEmpty(string str) => string.IsNullOrWhiteSpace(str) ? null : str;
                         var logicCode = nullIfEmpty(cType["logic"]?.GetString());

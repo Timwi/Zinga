@@ -73,7 +73,7 @@ namespace Zinga.Suco
 
             // Lists of integers
             ("contains", SucoIntegerType) => operand == null ? null : contains(((IEnumerable<int?>) operand).ToArray()),
-            ("same", SucoIntegerType) => operand == null ? null : same(((IEnumerable<int?>) operand)),
+            ("same", SucoIntegerType) => operand == null ? null : same((IEnumerable<int?>) operand),
             ("count", SucoIntegerType) => count<int?>(operand),
             ("sum", SucoIntegerType) => ((IEnumerable<int?>) operand)?.Aggregate((int?) 0, (prev, next) => prev == null || next == null ? null : prev.Value + next.Value),
             ("product", SucoIntegerType) => ((IEnumerable<int?>) operand)?.Aggregate((int?) 1, (prev, next) => prev == null || next == null ? null : prev.Value * next.Value),

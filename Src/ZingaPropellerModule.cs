@@ -24,6 +24,7 @@ namespace Zinga
             _resolver = new UrlResolver(
 #if DEBUG
                 new UrlMapping(path: "/css-websocket", specificPath: true, handler: req => new HttpResponseWebSocket(new AutoUpdatingCssWebsocket(Settings))),
+                new UrlMapping(path: "/play-with-suco", specificPath: true, handler: PlayWithSuco),
 #endif
 
                 new UrlMapping(path: "/", specificPath: true, handler: req => HttpResponse.Redirect(req.Url.WithPathParent().WithPathOnly("/edit"))),

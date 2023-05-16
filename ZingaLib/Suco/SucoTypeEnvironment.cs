@@ -8,11 +8,24 @@ namespace Zinga.Suco
 {
     public class SucoTypeEnvironment
     {
+        public static readonly SucoTypeEnvironment Default = new SucoTypeEnvironment()
+            .DeclareVariable("allcells", SucoType.List(SucoType.Cell))
+            .DeclareVariable("width", SucoType.Integer)
+            .DeclareVariable("height", SucoType.Integer)
+            .DeclareVariable("regions", SucoType.List(SucoType.List(SucoType.Cell)));
+
+        public static SucoTypeEnvironment From(string variableTypesJson) => From(JsonDict.Parse(variableTypesJson));
+        public static SucoTypeEnvironment From(JsonDict variableTypes)
+        {
+            var env = SucoTypeEnvironment.Default;
+            foreach (var (key, value) in variableTypes)
+                env = env.DeclareVariable(key, SucoType.Parse(value.GetString()));
+            return env;
+        }
+
         private readonly List<(string name, SucoType type, bool isInListComprehension)> _variables = new();
 
-        public SucoTypeEnvironment()
-        {
-        }
+        private SucoTypeEnvironment() { }
 
         public SucoTypeEnvironment DeclareVariable(string name, SucoType type, bool isInListComprehension = false)
         {
@@ -27,14 +40,5 @@ namespace Zinga.Suco
 
         public SucoType GetVariableType(string name) => (_variables.FirstOrNull(tup => tup.name == name) ?? throw new SucoTempCompileException($"Unknown variable “{name}”.")).type;
         public bool IsVariableInListComprehension(string name) => (_variables.FirstOrNull(tup => tup.name == name) ?? throw new SucoTempCompileException($"Unknown variable “{name}”.")).isInListComprehension;
-
-        public static SucoTypeEnvironment FromVariablesJson(string variablesJson) => FromVariablesJson(JsonDict.Parse(variablesJson));
-        public static SucoTypeEnvironment FromVariablesJson(JsonDict variables)
-        {
-            var env = new SucoTypeEnvironment();
-            foreach (var (name, type) in variables)
-                env._variables.Add((name, SucoType.Parse(type.GetString()), false));
-            return env;
-        }
     }
 }

@@ -1031,7 +1031,7 @@
 				{ id: 'btn-undo', text: 'Undo' },
 				{ id: 'btn-redo', text: 'Redo' }
 			]];
-			let y = 0, btnSvg = '', btnHeight = .8, btnMargin = .135, btnPadding = .135;
+			let btnSvg = '', btnHeight = .8, btnMargin = .135, btnPadding = .135, scaler = document.getElementById('bb-buttons-scaler');
 			for (let row of buttonRows)
 				for (let btnInfo of row)
 					btnSvg += `
@@ -1039,8 +1039,8 @@
 							<rect class='clickable' x='0' y='0' width='1' height='${btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>
 							<text class='label'>${btnInfo.text}</text>
 						</g>`;
-			document.getElementById('bb-buttons-scaler').innerHTML = btnSvg;
-			document.getElementById('bb-buttons-scaler').removeAttribute('transform');
+			scaler.innerHTML = btnSvg;
+			scaler.removeAttribute('transform');
 
 			for (let rowIx = 0; rowIx < buttonRows.length; rowIx++)
 			{
@@ -1066,7 +1066,6 @@
 					btnInfo.label.setAttribute('y', rowIx + .6);
 					x += btnInfo.w + extraPadding + btnMargin;
 				}
-				y += 1;
 				if (scale !== null)
 					document.getElementById('bb-buttons-scaler').setAttribute('transform', `scale(${scale})`);
 			}
@@ -1109,8 +1108,8 @@
 				document.getElementById('constraint-svg-global').innerHTML = globalSvgs;
 				document.getElementById('constraint-svg').innerHTML = svgs;
 				document.getElementById('constraint-defs').innerHTML = results.svgDefs;
-				document.getElementById('puzzle-frame').setAttribute('d', results.frame);
 				document.getElementById('puzzle-lines').setAttribute('d', results.lines);
+				document.getElementById('puzzle-frame').setAttribute('d', results.frame);
 
 				document.getElementById('puzzle-cells').innerHTML = ns(w * h).map(cell => `
 					<g class='cell${state.regions.length < 1 || state.regions.some(r => r.includes(cell)) ? '' : ' no-region'}' id='sudoku-${cell}' font-size='.25' stroke-width='0'>
@@ -1187,8 +1186,8 @@
 							<div class='region-svg'>
 								<svg viewBox='${minX - .2} ${minY - .2} ${maxX - minX + 1.4} ${maxY - minY + 1.4}'>
 									<path d='${region.map((_, ix) => `M${xs[ix]} ${ys[ix]}h1v1h-1z`).join('')}' fill='white' stroke='none' />
-									<use href='#puzzle-frame' />
 									<use href='#puzzle-lines' />
+									<use href='#puzzle-frame' />
 								</svg>
 							</div>
 							<div class='controls'>
@@ -2318,7 +2317,6 @@
 			}
 			upgrade(state);
 		}
-		console.log(state);
 
 		let undoB = localStorage.getItem(`zinga-edit-undo`);
 		let redoB = localStorage.getItem(`zinga-edit-redo`);

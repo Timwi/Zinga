@@ -11,33 +11,6 @@ namespace Zinga.Lib
 {
     public static class ZingaUtil
     {
-        public static SucoEnvironment ConvertVariableValues(JsonDict variablesJson, JsonDict valuesJson, int width)
-        {
-            var list = new List<(string name, object value)>();
-            foreach (var (varName, varType) in variablesJson)
-                list.Add((varName, convertVariableValue(SucoType.Parse(varType.GetString()), valuesJson[varName], width)));
-            return new SucoEnvironment(list);
-        }
-
-        private static object convertList(JsonList list, SucoType elementType, int width)
-        {
-            var result = elementType.CreateArray(list.Count);
-            for (var i = 0; i < list.Count; i++)
-                result.SetValue(convertVariableValue(elementType, list[i], width), i);
-            return result;
-        }
-
-        private static object convertVariableValue(SucoType type, JsonValue j, int width) => type switch
-        {
-            SucoBooleanType => j.GetBoolLenientSafe() ?? false,
-            SucoCellType => (j.GetIntLenientSafe() ?? 0).Apply(cell => new Cell(cell, width)),
-            SucoDecimalType => j.GetDoubleLenientSafe() ?? 0d,
-            SucoIntegerType => j.GetIntLenientSafe() ?? 0,
-            SucoStringType => j.GetStringLenientSafe() ?? "",
-            SucoListType lst => convertList(j.GetListSafe() ?? new JsonList(), lst.ElementType, width),
-            _ => throw new NotImplementedException($"Programmer has neglected to include code to deserialize “{type}”.")
-        };
-
         public static SucoType List(this SucoType elementType) => SucoType.List(elementType);
 
         public static Array CreateArray(this SucoType elementType, int length) => Array.CreateInstance(elementType.CsType, length);
@@ -46,6 +19,107 @@ namespace Zinga.Lib
         public static readonly int[] Saturations = new[] { 80, 80, 80, 80, 80, 80, 80, 80, 0 };
         public static readonly int[] Lightnesses = new[] { 80, 80, 80, 80, 80, 80, 80, 80, 80 };
         public static readonly string[] Colors = Enumerable.Range(0, 9).Select(i => $"hsl({Hues[i]}, {Saturations[i]}%, {Lightnesses[i]}%)").ToArray();
+
+        public static (string puzzleLinesPath, string framePathSvg) RenderGridLines(int[][] regions, int width, int height)
+        {
+            var segments = new HashSet<Link>();
+            // Horizontal segments
+            for (var y = 0; y <= height; y++)
+                for (var x = 0; x < width; x++)
+                    if (y == 0 || y == height || regions.Any(r => r.Contains(x + width * y) != r.Contains(x + width * (y - 1))))
+                        segments.Add(new Link(x, y, x + 1, y));
+            // Vertical segments
+            for (var x = 0; x <= width; x++)
+                for (var y = 0; y < height; y++)
+                    if (x == 0 || x == width || regions.Any(r => r.Contains(x + width * y) != r.Contains(x - 1 + width * y)))
+                        segments.Add(new Link(x, y, x, y + 1));
+
+            var framePathSvg = new StringBuilder();
+            for (var y = 0; y <= height; y++)
+                for (var x = 0; x <= width; x++)
+                    foreach (var doVert in new[] { false, true })
+                    {
+                        var prevPt = new Xy(x, y);
+                        var curPt = doVert ? new Xy(x, y + 1) : new Xy(x + 1, y);
+                        if (segments.Remove(new Link(prevPt, curPt)))
+                        {
+                            var firstPt = prevPt;
+                            var pts = new List<Xy> { firstPt };
+                            var dir = false;
+                            // Trace out a path starting from here
+                            while (true)
+                            {
+                                // Can we continue the path in the same direction?
+                                var straightPt = new Xy(2 * curPt.X - prevPt.X, 2 * curPt.Y - prevPt.Y);
+                                if (segments.Remove(new Link(curPt, straightPt)))
+                                {
+                                    prevPt = curPt;
+                                    curPt = straightPt;
+                                    continue;
+                                }
+
+                                // Can we continue the path in a perpendicular direction?
+                                var perpendicular1 = prevPt.X == curPt.X ? new Xy(curPt.X - 1, curPt.Y) : new Xy(curPt.X, curPt.Y - 1);
+                                var perpendicular2 = prevPt.X == curPt.X ? new Xy(curPt.X + 1, curPt.Y) : new Xy(curPt.X, curPt.Y + 1);
+                                var one = segments.Contains(new Link(curPt, perpendicular1));
+                                var two = segments.Contains(new Link(curPt, perpendicular2));
+                                if (one == two)
+                                {
+                                    // Check if the path may continue in the opposite direction from where we started
+                                    if (!dir && !curPt.Equals(firstPt))
+                                    {
+                                        pts.Add(curPt);
+                                        dir = true;
+                                        pts.Reverse();
+                                        prevPt = pts[pts.Count - 2];
+                                        curPt = pts[pts.Count - 1];
+                                        firstPt = pts[0];
+                                        pts.RemoveAt(pts.Count - 1);
+                                        continue;
+                                    }
+                                    framePathSvg.Append($"M{pts.Select(pt => $"{pt.X} {pt.Y}").JoinString(" ")}{(curPt.Equals(firstPt) ? "z" : $" {curPt.X} {curPt.Y}")}");
+                                    break;
+                                }
+
+                                pts.Add(curPt);
+                                prevPt = curPt;
+                                curPt = one ? perpendicular1 : perpendicular2;
+                                segments.Remove(new Link(prevPt, curPt));
+                            }
+                        }
+                    }
+
+            var puzzleLinesPath = Enumerable.Range(1, width - 1).Select(x => $"M{x} 0V{height}").JoinString() +
+                Enumerable.Range(1, height - 1).Select(x => $"M0 {x}H{width}").JoinString();
+            return (puzzleLinesPath, framePathSvg.ToString());
+        }
+        public static (string defs, string objects) RenderRegionGlow(int width, int height, bool rowsUnique, bool columnsUnique, int[][] regions)
+        {
+            var regionInfos = regions.Select((region, rgIx) =>
+            {
+                var outlines = GetRegionOutlines(region, width, height).ToArray();
+                var rgX = outlines.Min(ol => ol.Min(p => p.x)) - 1;
+                var rgY = outlines.Min(ol => ol.Min(p => p.y)) - 1;
+                var rgW = outlines.Max(ol => ol.Max(p => p.x)) - rgX + 1;
+                var rgH = outlines.Max(ol => ol.Max(p => p.y)) - rgY + 1;
+                var svgPath = GenerateSvgPath(outlines, width, 0, 0);
+                return (
+                    mask: $@"
+                        <mask id='region-invalid-mask-{rgIx}'>
+                            <rect fill='white' x='{rgX}' y='{rgY}' width='{rgW}' height='{rgH}' />
+                            <path fill='black' d='{svgPath}' />
+                        </mask>",
+                    highlight: $"<path class='region-invalid' id='region-invalid-{rgIx}' d='{svgPath}' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#region-invalid-mask-{rgIx})' opacity='0' />");
+            }).ToArray();
+
+            return (
+                defs: regionInfos.Select(tup => tup.mask).JoinString(),
+                objects: $@"
+                    {(rowsUnique ? Enumerable.Range(0, height).Select(row => $"<rect class='region-invalid' id='row-invalid-{row}' x='0' y='0' width='{width}' height='1' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#row-invalid-mask)' transform='translate(0, {row})' opacity='0' />").JoinString() : "")}
+                    {(columnsUnique ? Enumerable.Range(0, width).Select(col => $"<rect class='region-invalid' id='column-invalid-{col}' x='0' y='0' width='1' height='{height}' fill='black' filter='url(#constraint-invalid-shadow)' mask='url(#column-invalid-mask)' transform='translate({col}, 0)' opacity='0' />").JoinString() : "")}
+                    {regionInfos.Select(tup => tup.highlight).JoinString()}
+                ");
+        }
 
         #region Algorithm to generate outlines around cells
         private enum CellDirection { Up, Right, Down, Left }

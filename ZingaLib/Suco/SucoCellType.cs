@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
 {
@@ -14,7 +16,7 @@ namespace Zinga.Suco
             //"value" => SucoType.Integer,
             "x" => SucoType.Integer,
             "y" => SucoType.Integer,
-            "box" => SucoType.Integer,
+            "region" => SucoType.Integer,
             "index" => SucoType.Integer,
             "value" => context != SucoContext.Constraint ? throw new SucoTempCompileException($"Member “cell.value” can only be used in constraint logic (not SVG code).") : SucoType.Integer,
 
@@ -34,6 +36,7 @@ namespace Zinga.Suco
             {
                 "x" => op.X,
                 "y" => op.Y,
+                "region" => ((Cell[][]) env.GetValue("regions")).IndexOf(reg => reg.Any(cell => cell.Index == op.Index)),
                 "index" => op.Index,
                 "value" => grid[op.Index],
 

@@ -49,14 +49,6 @@ namespace Zinga
                 db.SaveChanges();
             }
 
-            var w = puzzleInfo.Width;
-            var h = puzzleInfo.Height;
-            var vs = puzzleInfo.Values;
-            var constraintsJson = constraints?.Select(c => c.ToJson()).ToJsonList().ToString();
-            var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToJson()).ToString();
-
-            var (regionDefs, regionObjects) = Commands.RenderRegionGlowC(w, h, puzzleInfo.RowsUnique, puzzleInfo.ColumnsUnique, puzzleInfo.Regions);
-
             return HttpResponse.Html(new HTML(
                 new HEAD(
                     new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },
@@ -94,10 +86,10 @@ namespace Zinga
                         .Data("author", puzzle?.Author)
                         .Data("rules", puzzle?.Rules)
                         .Data("links", puzzle?.Links?.Select(l => new JsonDict { ["text"] = l.Text, ["url"] = l.Url }).ToJsonList())
-                        .Data("constrainttypes", constraintTypesJson)
-                        .Data("constraints", constraintsJson)
+                        .Data("constrainttypes", constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToJson()))
+                        .Data("constraints", constraints?.Select(c => c.ToJson()).ToJsonList())
                         ._(
-                            new DIV { id = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag(Commands.RenderPuzzleSvgC(puzzleInfo, constraintTypes, constraints, fullSvgTag: true))),
+                            new DIV { id = "puzzle-container", tabindex = 0, accesskey = "," }._(new RawTag(Commands.RenderPuzzleSvg(puzzleInfo, constraintTypes, constraints, fullSvgTag: true))),
                             new DIV { id = "sidebar" }._(
                                 new DIV { id = "sidebar-content" }._(
                                     new DIV { class_ = "rules" }._(new DIV { id = "rules-text" }._(

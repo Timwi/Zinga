@@ -106,7 +106,7 @@
 		// Check if any constraints are violated
 		if (showErrors || grid.every(d => d !== null))
 		{
-			let violatedConstraintIxs = JSON.parse(await dotNet('CheckConstraints', [JSON.stringify(grid), JSON.stringify({ constraints: constraints, width: width, height: height, regions: regions })]));
+			let violatedConstraintIxs = JSON.parse(await dotNet('CheckConstraints', [JSON.stringify(grid)]));
 			setClass(puzzleDiv, 'solved', isValid === true && violatedConstraintIxs.length === 0);
 			for (let cIx = 0; cIx < constraints.length; cIx++)
 				setClass(document.getElementById(`constraint-svg-${cIx}`), 'violated', showErrors && violatedConstraintIxs.includes(cIx));
@@ -459,8 +459,8 @@
 	// UI
 	function resetClearButton()
 	{
-		document.getElementById(`btn-clear`).classList.remove('warning');
-		document.querySelector(`#btn-clear>text`).textContent = 'Clear';
+		document.getElementById('btn-clear').classList.remove('warning');
+		document.getElementById('btn-clear-text').textContent = 'Clear';
 	}
 	function setDynamicEvents()
 	{
@@ -585,7 +585,7 @@
 		// Update the puzzle SVG
 		document.getElementById('puzzle-svg').innerHTML = await dotNet('RenderPuzzleSvg', [width, height, JSON.stringify(regions), rowsUnique, columnsUnique, JSON.stringify(values), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
 
-		await dotNet('SetupConstraints', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, givens: givens, width: width, height: height })]);
+		await dotNet('SetupConstraints', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, givens: givens, width: width, height: height, regions: regions })]);
 
 		retrieveStateFromLocalStorage();
 		updateVisuals();
@@ -694,9 +694,9 @@
 		}
 
 		setClass(puzzleDiv, 'sidebar-off', !sidebarOn);
-		puzzleDiv.querySelector('#btn-sidebar>text').textContent = sidebarOn ? 'Less' : 'More';
-		puzzleDiv.querySelector('#opt-show-errors').checked = showErrors;
-		puzzleDiv.querySelector('#opt-multi-color').checked = multiColorMode;
+		document.getElementById('btn-sidebar-text').textContent = sidebarOn ? 'Less' : 'More';
+		document.getElementById('opt-show-errors').checked = showErrors;
+		document.getElementById('opt-multi-color').checked = multiColorMode;
 
 		if (digitsAtPrevCheck === null || ns(width * height).some(ix => state.enteredDigits[ix] !== digitsAtPrevCheck[ix]))
 		{
@@ -1102,7 +1102,7 @@
 	}
 	else
 	{
-		await dotNet('SetupConstraints', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, givens: givens, width: width, height: height })]);
+		await dotNet('SetupConstraints', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, givens: givens, width: width, height: height, regions: regions })]);
 		updateVisuals(true);
 	}
 

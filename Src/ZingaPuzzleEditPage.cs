@@ -84,13 +84,10 @@ namespace Zinga
 
                                     <g id='bb-puzzle'>
                                         <g id='constraint-svg-global'></g>
-                                        <g id='puzzle-cells'>{Enumerable.Range(0, 81).Select(cell => $@"<g class='cell' id='sudoku-{cell}' font-size='.25' stroke-width='0'>
-                                            <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % 9}' y='{cell / 9}' width='1' height='1' />
-                                            <text id='sudoku-text-{cell}' x='{cell % 9 + .5}' y='{cell / 9 + .725}' font-size='.65'></text>
-                                        </g>").JoinString()}</g>
+                                        <g id='puzzle-cells'></g>
 
-                                        <path id='puzzle-frame' d='M0 3H9M0 6H9M3 0V9M6 0V9M0 0H9V9H0z' fill='none' stroke='black' stroke-width='.05' />
-                                        <path id='puzzle-lines' d='M0 1H9M0 2H9M0 4H9M0 5H9M0 7H9M0 8H9M1 0V9M2 0V9M4 0V9M5 0V9M7 0V9M8 0V9' fill='none' stroke='black' stroke-width='.01' />
+                                        <path id='puzzle-frame' fill='none' stroke='black' stroke-width='.05' />
+                                        <path id='puzzle-lines' fill='none' stroke='black' stroke-width='.01' />
 
                                         <g id='constraint-svg'></g>
                                         <g id='outline-svg'></g>
