@@ -6,16 +6,65 @@
 	async function dotNet(method, args) { return DotNet.invokeMethodAsync('ZingaWasm', method, ...args); }
 	function fixViewBox()
 	{
-		// Step 1: move the button row so that it’s below the puzzle
+		// ##  Resize the buttons in the button rows below the puzzle grid
+		let buttonRows = [
+			{ row: 0, btnIds: values.map(v => `btn-${v}`) },
+			{ row: 0, btnIds: ns(9).map(c => `btn-color-${c}`) },
+			{ row: 1, btnIds: ['btn-normal', 'btn-corner', 'btn-center', 'btn-color'] },
+			{ row: 2, btnIds: ['btn-clear', 'btn-undo', 'btn-redo', 'btn-sidebar'] }
+		];
+		let btnMargin = .135, btnPadding = .135, scaler = document.getElementById('bb-buttons-scaler');
+		scaler.removeAttribute('transform');
+
+		// Calculate the width of each row assuming each button is unscaled and at its minimum possible width that still accommodates its text
+		let rowWidths = [], boundingBoxes = [];
+		for (let rowIx = 0; rowIx < buttonRows.length; rowIx++)
+		{
+			let totalWidth = 0, bbs = [];
+			for (let btnId of buttonRows[rowIx].btnIds)
+			{
+				let label = document.querySelector(`#${btnId}>g.label`);
+				label.removeAttribute('transform');
+				let bb = label.getBBox({ fill: true, stroke: true, markers: true, clipped: true });
+				bbs.push(bb);
+				totalWidth += bb.width + 2 * btnPadding;
+			}
+			rowWidths.push(totalWidth + (buttonRows[rowIx].btnIds.length - 1) * btnMargin);
+			boundingBoxes.push(bbs);
+		}
+		let targetWidth = Math.max(...rowWidths, width);
+
+		// Add padding to all the buttons so that every row attains the width of ‘targetWidth’
+		for (let rowIx = 0; rowIx < buttonRows.length; rowIx++)
+		{
+			let extraPadding = (targetWidth - rowWidths[rowIx]) / buttonRows[rowIx].btnIds.length;
+			let x = 0;
+			for (let btnIx = 0; btnIx < buttonRows[rowIx].btnIds.length; btnIx++)
+			{
+				let btnId = buttonRows[rowIx].btnIds[btnIx];
+				let rect = document.querySelector(`#${btnId}>rect.clickable`);
+				let label = document.querySelector(`#${btnId}>g.label`);
+				let w = boundingBoxes[rowIx][btnIx].width + 2 * btnPadding + extraPadding;
+				rect.setAttribute('x', x);
+				rect.setAttribute('y', buttonRows[rowIx].row);
+				rect.setAttribute('width', w);
+				label.setAttribute('transform', `translate(${x + w / 2} ${buttonRows[rowIx].row})`);
+				x += w + btnMargin;
+			}
+		}
+		if (targetWidth > width)
+			scaler.setAttribute('transform', `scale(${width / targetWidth})`);
+
+		// Move the button row so that it’s below the puzzle
 		let buttons = document.getElementById('bb-buttons');
 		let extraBBox = document.getElementById('bb-puzzle').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
 		buttons.setAttribute('transform', `translate(0, ${Math.max(height + .4, extraBBox.y + extraBBox.height + .25)})`);
 
-		// Step 2: move the global constraints so they’re to the left of the puzzle
+		// Move the global constraints so they’re to the left of the puzzle
 		let globalBox = document.getElementById('constraint-svg-global');
 		globalBox.setAttribute('transform', `translate(${extraBBox.x - 1.5}, 0)`);
 
-		// Step 3: change the viewBox so that it includes everything
+		// Change the viewBox so that it includes everything
 		let fullBBox = document.getElementById('bb-everything').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
 		let left = Math.min(-.4, fullBBox.x - .1);
 		let top = Math.min(-.4, fullBBox.y - .1);
@@ -460,7 +509,7 @@
 	function resetClearButton()
 	{
 		document.getElementById('btn-clear').classList.remove('warning');
-		document.getElementById('btn-clear-text').textContent = 'Clear';
+		document.querySelector('#btn-clear>g.label>text').textContent = 'Clear';
 	}
 	function setDynamicEvents()
 	{
@@ -517,20 +566,20 @@
 				remoteLog2(`ontouchmove ${cell}`);
 			};
 		});
-		ns(values.length).forEach(valIx => { setButtonHandler(document.getElementById(`btn-${values[valIx]}`), function(ev) { pressDigit(values[valIx], ev); }); });
-		ns(9).forEach(color => { setButtonHandler(document.getElementById(`btn-color-${color}`), function(ev) { pressDigit(color, ev, 'color'); }); });
-		setButtonHandler(document.getElementById('btn-normal'), function() { mode = 'normal'; updateVisuals(); });
-		setButtonHandler(document.getElementById('btn-corner'), function() { mode = 'corner'; updateVisuals(); });
-		setButtonHandler(document.getElementById('btn-center'), function() { mode = 'center'; updateVisuals(); });
-		setButtonHandler(document.getElementById('btn-color'), function() { mode = 'color'; updateVisuals(); });
-		setButtonHandler(document.getElementById('btn-clear'), function()
+		ns(values.length).forEach(valIx => { setButtonHandler(document.querySelector(`#btn-${values[valIx]}>rect`), function(ev) { pressDigit(values[valIx], ev); }); });
+		ns(9).forEach(color => { setButtonHandler(document.querySelector(`#btn-color-${color}>rect`), function(ev) { pressDigit(color, ev, 'color'); }); });
+		setButtonHandler(document.querySelector('#btn-normal>rect'), function() { mode = 'normal'; updateVisuals(); });
+		setButtonHandler(document.querySelector('#btn-corner>rect'), function() { mode = 'corner'; updateVisuals(); });
+		setButtonHandler(document.querySelector('#btn-center>rect'), function() { mode = 'center'; updateVisuals(); });
+		setButtonHandler(document.querySelector('#btn-color>rect'), function() { mode = 'color'; updateVisuals(); });
+		setButtonHandler(document.querySelector('#btn-clear>rect'), function()
 		{
-			let elem = document.getElementById(`btn-clear`);
+			let elem = document.getElementById('btn-clear');
 			if (!elem.classList.contains('warning'))
 			{
 				clearCells();
 				elem.classList.add('warning');
-				puzzleDiv.querySelector(`#btn-clear>text`).textContent = 'Restart';
+				puzzleDiv.querySelector(`#btn-clear>g.label>text`).textContent = 'Restart';
 			}
 			else
 			{
@@ -540,9 +589,9 @@
 				updateVisuals(true);
 			}
 		});
-		setButtonHandler(document.getElementById('btn-undo'), undo);
-		setButtonHandler(document.getElementById('btn-redo'), redo);
-		setButtonHandler(document.getElementById('btn-sidebar'), function() { sidebarOn = !sidebarOn; updateVisuals(true); });
+		setButtonHandler(document.querySelector('#btn-undo>rect'), undo);
+		setButtonHandler(document.querySelector('#btn-redo>rect'), redo);
+		setButtonHandler(document.querySelector('#btn-sidebar>rect'), function() { sidebarOn = !sidebarOn; updateVisuals(true); });
 		Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
 	}
 	async function updatePuzzleFromEdit()
@@ -584,6 +633,7 @@
 
 		// Update the puzzle SVG
 		document.getElementById('puzzle-svg').innerHTML = await dotNet('RenderPuzzleSvg', [width, height, JSON.stringify(regions), rowsUnique, columnsUnique, JSON.stringify(values), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
+		resizeButtons();
 
 		await dotNet('SetupConstraints', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, givens: givens, width: width, height: height, regions: regions })]);
 
@@ -641,7 +691,7 @@
 			var centerText = document.getElementById(`sudoku-center-text-${cell}`);
 			centerText.setAttribute('transform', `translate(${cell % width + .5} ${((cell / width) | 0) + .62})`);
 			centerText.textContent = intendedCenterDigits !== null ? intendedCenterDigits : '';
-			var ctBb = centerText.getBBox();
+			var ctBb = centerText.getBBox({ fill: true, stroke: true, markers: true, clipped: true });
 			if (ctBb.width > .8)
 				centerText.setAttribute('transform', `translate(${cell % width + .5} ${((cell / width) | 0) + .62}) scale(${.8 / ctBb.width})`);
 
@@ -694,7 +744,7 @@
 		}
 
 		setClass(puzzleDiv, 'sidebar-off', !sidebarOn);
-		document.getElementById('btn-sidebar-text').textContent = sidebarOn ? 'Less' : 'More';
+		document.querySelector('#btn-sidebar>g.label>text').textContent = sidebarOn ? 'Less' : 'More';
 		document.getElementById('opt-show-errors').checked = showErrors;
 		document.getElementById('opt-multi-color').checked = multiColorMode;
 
@@ -841,11 +891,21 @@
 		{
 			alert('Unfortunately, a screenshot of the puzzle could not be generated. This may be due to malformed SVG code on the part of the puzzle author.');
 		};
-		img.src = 'data:image/svg+xml;base64,' + btoa(document.getElementById('puzzle-svg').outerHTML
-			.replace(/<svg/, `<svg width="${canvas.width}" height="${canvas.height}"`)
-			.replace(/viewBox=".*?"/, `viewBox='${nBox.x} ${nBox.y} ${nBox.width} ${nBox.height}'`)
-			.replace(/(?=<\/style>)/, Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.cssRules)), [])
-				.filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg#puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg#puzzle-svg\s/, '')).join("\n")));
+		let svgCode = encodeURIComponent(document.getElementById('puzzle-svg').outerHTML
+			.replace(/<svg([^>]*)>/, (_, p) => `<svg width="${canvas.width}" height="${canvas.height}"${p.replace(/viewBox=".*?"/, `viewBox='${nBox.x} ${nBox.y} ${nBox.width} ${nBox.height}'`)}><style>${Array.from(document.styleSheets).reduce((p, ss) => p.concat(Array.from(ss.cssRules)), [])
+				.filter(rule => !(rule instanceof CSSStyleRule) || rule.selectorText.startsWith('svg#puzzle-svg ')).map(rule => rule.cssText.replace(/^\s*svg#puzzle-svg\s/, '')).join("\n")}</style>`));
+		let base64 = "", b64ch = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+		for (let i = 0; i < svgCode.length;)
+		{
+			let byte1 = svgCode[i] == '%' ? parseInt(svgCode.substring(i += 1, i += 2), 16) : svgCode.charCodeAt(i++);
+			let byte2 = i < svgCode.length ? (svgCode[i] == '%' ? parseInt(svgCode.substring(i += 1, i += 2), 16) : svgCode.charCodeAt(i++)) : 32;
+			let byte3 = i < svgCode.length ? (svgCode[i] == '%' ? parseInt(svgCode.substring(i += 1, i += 2), 16) : svgCode.charCodeAt(i++)) : 32;
+			base64 += b64ch[byte1 >> 2];
+			base64 += b64ch[((byte1 & 0x3) << 4) | (byte2 >> 4)];
+			base64 += b64ch[((byte2 & 0xF) << 2) | (byte3 >> 6)];
+			base64 += b64ch[byte3 & 0x3F];
+		}
+		img.src = 'data:image/svg+xml;base64,' + base64;
 	});
 	puzzleContainer.addEventListener('keydown', ev =>
 	{

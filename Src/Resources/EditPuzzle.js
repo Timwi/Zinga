@@ -834,7 +834,7 @@
 						svg += `<g id='constraint-search-result-svg-${cTypeId}'>${results.svgs[i].svg ?? ''}</g>`;
 						let svgElem = constraintResults[i].div.querySelector('svg');
 						svgElem.innerHTML = svg;
-						let bBox = document.getElementById(`constraint-search-result-svg-${cTypeId}`).getBBox();
+						let bBox = document.getElementById(`constraint-search-result-svg-${cTypeId}`).getBBox({ fill: true, stroke: true, markers: true, clipped: true });
 
 						if (minX < bBox.x)
 						{
@@ -1050,7 +1050,7 @@
 					btnInfo.btn = document.getElementById(btnInfo.id);
 					btnInfo.label = btnInfo.btn.querySelector('text.label');
 					btnInfo.rect = btnInfo.btn.querySelector('rect.clickable');
-					btnInfo.w = btnInfo.label.getBBox().width + 2 * btnPadding;
+					btnInfo.w = btnInfo.label.getBBox({ fill: true, stroke: true, markers: true, clipped: true }).width + 2 * btnPadding;
 				}
 				let totalWidth = row.reduce((p, n) => p + n.w, 0) + (row.length - 1) * btnMargin;
 				let extraPadding = totalWidth <= state.width ? (state.width - totalWidth) / row.length : 0;
@@ -1670,7 +1670,7 @@
 			globalBox.setAttribute('transform', `translate(${sudokuBBox.x - 1.5}, 0)`);
 
 			// — change the viewBox so that it includes everything
-			let fullBBox = document.getElementById('bb-everything').getBBox();
+			let fullBBox = document.getElementById('bb-everything').getBBox({ fill: true, stroke: true, markers: true, clipped: true });
 			document.getElementById('puzzle-svg').setAttribute('viewBox', `${fullBBox.x - .1} ${fullBBox.y - .1} ${fullBBox.width + .2} ${fullBBox.height + .5}`);
 			let selectionFilter = document.getElementById('constraint-selection-shadow');
 			selectionFilter.setAttribute('x', fullBBox.x - .1);

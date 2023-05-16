@@ -368,9 +368,22 @@ namespace Zinga.Lib
                 var cTypeId = constraints[i]["type"].GetInt();
                 var cType = cTypeId < 0 ? customConstraintTypes[~cTypeId] : constraintTypes[cTypeId.ToString()];
                 if (!parsedSucos.TryGetValue(cTypeId, out var sucoTup))
-                    sucoTup = parsedSucos[cTypeId] = (
-                        expr: SucoParser.ParseCode(cType["logic"].GetString(), SucoTypeEnvironment.From(cType["variables"].GetDict()), SucoContext.Constraint, SucoType.Boolean),
-                        variables: cType["variables"].GetDict());
+                    try
+                    {
+                        sucoTup = parsedSucos[cTypeId] = (
+                            expr: SucoParser.ParseCode(cType["logic"].GetString(), SucoTypeEnvironment.From(cType["variables"].GetDict()), SucoContext.Constraint, SucoType.Boolean),
+                            variables: cType["variables"].GetDict());
+                    }
+                    catch (SucoParseException spe)
+                    {
+                        Console.Error.WriteLine($"Constraint “{cType.Safe["name"].GetStringSafe()}” has invalid Suco and will not be enfored: {spe.StartIndex}:{spe.EndIndex}: {spe.Message}");
+                        sucoTup = parsedSucos[cTypeId] = (new SucoConstant(0, 4, SucoType.Boolean, true), new JsonDict());
+                    }
+                    catch (SucoCompileException sce)
+                    {
+                        Console.Error.WriteLine($"Constraint “{cType.Safe["name"].GetStringSafe()}” has invalid Suco and will not be enfored: {sce.StartIndex}:{sce.EndIndex}: {sce.Message}");
+                        sucoTup = parsedSucos[cTypeId] = (new SucoConstant(0, 4, SucoType.Boolean, true), new JsonDict());
+                    }
 
                 var env = SucoEnvironment.From(sucoTup.variables, constraints[i]["values"].GetDict(), width, height, allCells, regions);
                 _constraintLogic[i] = (sucoTup.expr.Optimize(env, givens), env);
@@ -407,26 +420,27 @@ namespace Zinga.Lib
             const double btnHeight = .8;
             const double margin = .135;
 
-            var valueButtons = values.Select(val => (new Func<double, string>(width => $"<text class='label' x='{width / 2}' y='.6'>{val}</text>"), val.ToString(), 1d)).ToArray();
+            var valueButtons = values.Select(val => (new Func<double, string>(width => $@"
+                <rect x='-.3' y='{btnHeight / 2 - .3}' width='.6' height='.6' fill='white' opacity='0' stroke='none' />
+                <text y='.6'>{val}</text>"), val.ToString(), 1d)).ToArray();
             var colorButtons = Enumerable.Range(0, 9).Select(color => (new Func<double, string>(width => $@"
-                    <rect class='color' x='{width * .15}' y='{btnHeight / 2 - .3}' width='{width * .7}' height='.6' fill='{ZingaUtil.Colors[color]}' stroke='black' stroke-width='.01' />
-                    <text class='label' x='{width / 2}' y='.6'>{color + 1}</text>"),
-                $"color-{color}", 1d)).ToArray();
+                <rect class='color' x='-.3' y='{btnHeight / 2 - .3}' width='.6' height='.6' fill='{ZingaUtil.Colors[color]}' stroke='black' stroke-width='.01' />
+                <text y='.6'>{color + 1}</text>"), $"color-{color}", 1d)).ToArray();
             var modeButtons = Ut.NewArray<(Func<double, string> getLabel, string id, double width)>(
-                (width => $"<text class='label' x='{width / 2}' y='.6'>Normal</text>", "normal", 1.1),
-                (width => $"<text class='label' x='{width / 2}' y='.6'>Corner</text>", "corner", 1),
-                (width => $"<text class='label' x='{width / 2}' y='.6'>Center</text>", "center", 1),
-                (width => $"<text class='label' x='{width / 2}' y='.6'>Color</text>", "color", .85));
+                (width => $"<text y='.6'>Normal</text>", "normal", 1.1),
+                (width => $"<text y='.6'>Corner</text>", "corner", 1),
+                (width => $"<text y='.6'>Center</text>", "center", 1),
+                (width => $"<text y='.6'>Color</text>", "color", .85));
             var cmdButtons = Ut.NewArray<(Func<double, string> getLabel, string id, double width)>(
-                (width => $"<text class='label' x='{width / 2}' y='.6' id='btn-clear-text'>Clear</text>", "clear", 1d),
-                (width => $"<text class='label' x='{width / 2}' y='.6'>Undo</text>", "undo", 1d),
-                (width => $"<text class='label' x='{width / 2}' y='.6'>Redo</text>", "redo", 1d),
-                (width => $"<text class='label' x='{width / 2}' y='.6' id='btn-sidebar-text'>More</text>", "sidebar", 1d));
+                (width => $"<text y='.6'>Clear</text>", "clear", 1d),
+                (width => $"<text y='.6'>Undo</text>", "undo", 1d),
+                (width => $"<text y='.6'>Redo</text>", "redo", 1d),
+                (width => $"<text y='.6'>More</text>", "sidebar", 1d));
 
             string renderButton(string id, double x, double y, double width, string labelSvg) => $@"
-                <g class='button' transform='translate({x}, {y})'>
-                    <rect id='{id}' class='clickable' x='0' y='0' width='{width}' height='{btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>
-                    {labelSvg}
+                <g id='{id}' class='button'>
+                    <rect class='clickable' x='{x}' y='{y}' width='{width}' height='{btnHeight}' stroke-width='.025' rx='.08' ry='.08'/>
+                    <g class='label' transform='translate({width / 2 + x}, {y})'>{labelSvg}</g>
                 </g>";
 
             string renderButtonRow((Func<double, string> getLabel, string id, double width)[] btns, int row)
@@ -451,7 +465,7 @@ namespace Zinga.Lib
 #if DEBUG
             Console.WriteLine($@"Zinga.Lib.Commands.RenderPuzzleSvg({width}, {height}, ""{regionsJson.CLiteralEscape()}"", {rowsUnique.ToString().ToLowerInvariant()}, {columnsUnique.ToString().ToLowerInvariant()}, ""{valuesJson.CLiteralEscape()}"", ""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
 #endif
-            ConstraintTypeInfo makeInfo(int id, JsonValue j) => new(id, j["name"].GetString(), ExactConvert.To<ConstraintKind>(j["kind"].GetString()), j["variables"].ToString(), j["logic"].GetString(), j["svgdefs"]?.GetString(), j["svg"]?.GetString(), j["public"].GetBoolLenient());
+            ConstraintTypeInfo makeInfo(int id, JsonValue j) => new(id, j["name"].GetString(), ExactConvert.To<ConstraintKind>(j["kind"].GetString()), j["variables"].ToString(), j["logic"].GetString(), j["svgdefs"]?.GetString(), j["svg"]?.GetString(), j.Safe["public"].GetBoolLenientSafe() ?? false);
             var constraintTypes = JsonDict.Parse(constraintTypesJson)
                     .Select(kvp => makeInfo(int.Parse(kvp.Key), kvp.Value))
                     .ToDictionary(ct => ct.ID);
@@ -493,16 +507,16 @@ namespace Zinga.Lib
                         <rect fill='black' x='0' y='0' width='1' height='{h}' />
                     </mask>
                     {regionDefs}
-                    {constraints?.SelectMany((c, cIx) => constraintTypes[c.ID].GetSvgDefs(constraintEnvs[cIx])).Distinct().JoinString()}
+                    {constraints?.SelectMany((c, cIx) => constraintTypes[c.ID].GetSvgDefs(constraintEnvs[cIx], ignoreErrors: true)).Distinct().JoinString()}
                 </defs>
                 <g id='bb-everything'>
-                    <g id='bb-buttons' font-size='.55' text-anchor='middle' transform='translate(0, {h + .4})'>{renderButtonRows(w, puzzleInfo.Values)}</g>
+                    <g id='bb-buttons' transform='translate(0, {h + .4})'><g id='bb-buttons-scaler' font-size='.55' text-anchor='middle'>{renderButtonRows(w, puzzleInfo.Values)}</g></g>
 
                     <g id='bb-puzzle'>
                         <g id='constraint-svg-global'>{constraints?
                             .Select((c, cIx) => (constraint: c, cIx))
                             .Where(tup => constraintTypes[tup.constraint.ID].Kind == ConstraintKind.Global)
-                            .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' class='constraint-svg' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ID].GetSvg(constraintEnvs[tup.cIx])}</g>")
+                            .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' class='constraint-svg' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ID].GetSvg(constraintEnvs[tup.cIx], ignoreErrors: true)}</g>")
                             .JoinString()}</g>
 
                         {Enumerable.Range(0, w * h).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
@@ -515,7 +529,7 @@ namespace Zinga.Lib
 
                         {regionObjects}
 
-                        <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ID].Kind == ConstraintKind.Global ? null : $"<g class='constraint-svg' id='constraint-svg-{cIx}'>{constraintTypes[c.ID].GetSvg(constraintEnvs[cIx])}</g>").JoinString()}</g>
+                        <g id='constraint-svg'>{constraints?.Select((c, cIx) => constraintTypes[c.ID].Kind == ConstraintKind.Global ? null : $"<g class='constraint-svg' id='constraint-svg-{cIx}'>{constraintTypes[c.ID].GetSvg(constraintEnvs[cIx], ignoreErrors: true)}</g>").JoinString()}</g>
 
                         {Enumerable.Range(0, w * h).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
                             <text id='sudoku-text-{cell}' x='{cell % w + .5}' y='{cell / w + .725}' font-size='.65'></text>

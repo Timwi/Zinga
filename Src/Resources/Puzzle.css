@@ -154,7 +154,7 @@ svg#puzzle-svg {
 		fill: hsl(0, 80%, 40%);
 	}
 
-	svg#puzzle-svg .button.selected > text.label, svg#puzzle-svg .button.warning > text.label {
+	svg#puzzle-svg .button.selected > g.label text, svg#puzzle-svg .button.warning > g.label text {
 		fill: white;
 	}
 

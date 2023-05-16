@@ -89,7 +89,7 @@ namespace Zinga.Suco
                     (variables, null, Selector == null ? new SucoConstant(StartIndex, EndIndex, ((SucoListType) Type).ElementType, env.GetValue(Clauses[0].VariableName)) : Selector.Optimize(env, givens))
                 };
 
-            var collection = Clauses[clIx].FromExpressionResolved.Optimize(env, givens);
+            var collection = Clauses[clIx].ResolveFromExpression().Optimize(env, givens);
             if (collection is not SucoConstant c)
                 return null;
 
@@ -174,7 +174,7 @@ namespace Zinga.Suco
             }
 
             var anyConditionNull = false;
-            var list = (IEnumerable) Clauses[clIx].FromExpressionResolved.Interpret(curEnv, grid);
+            var list = (IEnumerable) Clauses[clIx].ResolveFromExpression().Interpret(curEnv, grid);
             collections[clIx] = list;
             int? oneFoundPosition = null;
             object oneFoundValue = null;

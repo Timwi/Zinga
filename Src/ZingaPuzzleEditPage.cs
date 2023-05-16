@@ -34,23 +34,23 @@ namespace Zinga
                     new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Font.css"))),
                     autoCss ? Ut.NewArray<object>(
                         new STYLE { id = "auto-css" },
-                        new SCRIPTLiteral(@"
-                            (function() {
-                                let socket = new WebSocket('ws://localhost:8990/css-websocket');
+                        new SCRIPTLiteral($@"
+                            (function() {{
+                                let socket = new WebSocket('ws://{req.Url.Domain}:{req.Url.Port}/css-websocket');
                                 socket.onopen = function()
-                                {
+                                {{
                                     socket.send('css');
-                                    window.setInterval(function() { socket.send('css'); }, 500);
-                                };
+                                    window.setInterval(function() {{ socket.send('css'); }}, 500);
+                                }};
                                 socket.onclose = function()
-                                {
+                                {{
                                     console.log('Socket closed.');
-                                };
+                                }};
                                 socket.onmessage = function(msg)
-                                {
+                                {{
                                     document.getElementById('auto-css').innerText = msg.data.replace(/\r|\n/g, ' ');
-                                };
-                            })();
+                                }};
+                            }})();
                         ")
                     ) : new STYLELiteral(File.ReadAllText(Path.Combine(Settings.ResourcesDir, "Puzzle.css"))),
 #else

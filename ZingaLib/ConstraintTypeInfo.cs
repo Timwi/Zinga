@@ -13,9 +13,9 @@ namespace Zinga.Lib
             Name = name;
             Kind = kind;
             VariablesJson = variablesJson;
-            LogicSuco = logicSuco;
-            SvgDefsSuco = svgDefsSuco;
-            SvgSuco = svgSuco;
+            LogicSuco = string.IsNullOrWhiteSpace(logicSuco) ? null : logicSuco;
+            SvgDefsSuco = string.IsNullOrWhiteSpace(svgDefsSuco) ? null : svgDefsSuco;
+            SvgSuco = string.IsNullOrWhiteSpace(svgSuco) ? null : svgSuco;
             IsPublic = isPublic;
         }
 
@@ -29,20 +29,34 @@ namespace Zinga.Lib
         public bool IsPublic { get; private set; }
 
         private SucoExpression _svgDefsCache;
-        public IEnumerable<string> GetSvgDefs(SucoEnvironment env)
+        public IEnumerable<string> GetSvgDefs(SucoEnvironment env, bool ignoreErrors)
         {
             if (SvgDefsSuco == null)
                 return Enumerable.Empty<string>();
-            _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, SucoTypeEnvironment.From(VariablesJson), SucoContext.Svg, SucoType.String.List());
+            if (ignoreErrors)
+            {
+                try { _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, SucoTypeEnvironment.From(VariablesJson), SucoContext.Svg, SucoType.String.List()); }
+                catch (SucoParseException) { return null; }
+                catch (SucoCompileException) { return null; }
+            }
+            else
+                _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, SucoTypeEnvironment.From(VariablesJson), SucoContext.Svg, SucoType.String.List());
             return ((IEnumerable<object>) _svgDefsCache.Interpret(env, null)).Cast<string>();
         }
 
         private SucoExpression _svgCache;
-        public string GetSvg(SucoEnvironment env)
+        public string GetSvg(SucoEnvironment env, bool ignoreErrors)
         {
             if (SvgSuco == null)
                 return null;
-            _svgCache ??= SucoParser.ParseCode(SvgSuco, SucoTypeEnvironment.From(VariablesJson), SucoContext.Svg, SucoType.String);
+            if (ignoreErrors)
+            {
+                try { _svgCache ??= SucoParser.ParseCode(SvgSuco, SucoTypeEnvironment.From(VariablesJson), SucoContext.Svg, SucoType.String); }
+                catch (SucoParseException) { return null; }
+                catch (SucoCompileException) { return null; }
+            }
+            else
+                _svgCache ??= SucoParser.ParseCode(SvgSuco, SucoTypeEnvironment.From(VariablesJson), SucoContext.Svg, SucoType.String);
             return (string) _svgCache.Interpret(env, null);
         }
 

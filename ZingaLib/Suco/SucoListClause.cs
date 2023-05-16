@@ -28,6 +28,6 @@ namespace Zinga.Suco
             VariableType = varType;
         }
 
-        public SucoExpression FromExpressionResolved => FromExpression ?? (HasDollar ? new SucoIdentifierExpression(StartIndex, EndIndex, "allcells") : new SucoIdentifierExpression(StartIndex, EndIndex, "cells"));
+        public SucoExpression ResolveFromExpression() => FromExpression ?? (HasDollar ? new SucoIdentifierExpression(StartIndex, EndIndex, "allcells") : new SucoIdentifierExpression(StartIndex, EndIndex, "cells"));
     }
 }

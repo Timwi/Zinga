@@ -18,8 +18,8 @@ namespace Zinga
         private HttpResponse PlayWithSuco(HttpRequest req)
         {
             List<object> htmlBlocks = null;
+            var variables = req.Post["variables"].Value;
             var code = req.Post["code"].Value;
-            var environment = SucoTypeEnvironment.Default;
 
             if (code != null)
             {
@@ -52,20 +52,48 @@ namespace Zinga
                         .Concat((start: exc.StartIndex, end: exc.EndIndex)).ToArray());
                 object compileExceptionBox(SucoCompileException exc) => exceptionBox(exc, new[] { (start: exc.StartIndex, end: exc.EndIndex.Nullable()) });
 
+                var environment = SucoTypeEnvironment.Default;
+                if (variables != null)
+                    foreach (var (name, type) in variables.Split('\n').Where(v => v.Contains('=')).Select(v => v.Split('=')).Select(ar => (ar[0].Trim(), SucoType.Parse(ar[1].Trim()))))
+                        environment = environment.DeclareVariable(name, type);
+
                 // Parse tree
                 try
                 {
-                    var parseTree = SucoParser.ParseCode(code, environment, SucoContext.Svg);
+                    var parseTree = SucoParser.ParseCode(code, environment, req.Post["context"].Value == "svg" ? SucoContext.Svg : SucoContext.Constraint);
 
-                    object span(SucoNode node) => new SPAN { class_ = "node" }.Data("type", $"{Regex.Replace(node.GetType().Name, @"^Suco|Expression$", "")}{(node is SucoExpression expr ? $" — {expr.Type}" : null)}")._(visit(node));
+                    object span(SucoNode node)
+                    {
+                        var inner = visit(node).ToList();
+                        var outer = new List<object>();
+                        while (inner.Count > 0 && inner[0] is string firstText && (firstText.Length == 0 || char.IsWhiteSpace(firstText, 0)))
+                        {
+                            if (string.IsNullOrWhiteSpace(firstText))
+                            {
+                                if (firstText.Length > 0)
+                                    outer.Add(firstText);
+                                inner.RemoveAt(0);
+                            }
+                            else
+                            {
+                                var i = 0;
+                                while (i < firstText.Length && char.IsWhiteSpace(firstText, i)) i++;
+                                outer.Add(firstText.Substring(0, i));
+                                inner[0] = firstText.Substring(i);
+                            }
+                        }
+                        return new object[] { outer, new SPAN { class_ = "node" }.Data("type", $"{Regex.Replace(node.GetType().Name, @"^Suco|Expression$", "")}{(node is SucoExpression expr ? $" — {expr.Type}" : null)}")._(inner) };
+                    }
+
                     IEnumerable<object> visit(SucoNode expr)
                     {
-                        var properties = expr.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
                         var ix = expr.StartIndex;
-                        foreach (var inner in properties.Where(p => typeof(SucoNode).IsAssignableFrom(p.PropertyType)).Select(p => (SucoNode) p.GetValue(expr))
-                            .Concat(properties.Where(p => typeof(IEnumerable<SucoNode>).IsAssignableFrom(p.PropertyType)).SelectMany(p => (IEnumerable<SucoNode>) p.GetValue(expr)))
-                            .Where(expr => expr != null)
-                            .OrderBy(expr => expr.StartIndex))
+                        var properties = expr.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+                        var collection = properties.Where(p => typeof(SucoNode).IsAssignableFrom(p.PropertyType)).Select(p => (property: p, value: (SucoNode) p.GetValue(expr)))
+                            .Concat(properties.Where(p => typeof(IEnumerable<SucoNode>).IsAssignableFrom(p.PropertyType)).SelectMany(p => ((IEnumerable<SucoNode>) p.GetValue(expr)).Select(val => (property: p, value: val))))
+                            .Where(expr => expr.value != null)
+                            .OrderBy(expr => expr.value.StartIndex);
+                        foreach (var (innerProperty, inner) in collection)
                         {
                             yield return code.Substring(ix, inner.StartIndex - ix);
                             yield return span(inner);
@@ -101,14 +129,15 @@ namespace Zinga
                             box-sizing: border-box;
                             background: white;
                         }
-                        .node:hover {
+                        .node {
                             border-color: black;
                             background: #def;
                         }
-                        .node:hover::after {
+                        .node::after {
                             content: attr(data-type);
                             position: absolute;
-                            left: 0;
+                            left: 50%;
+                            transform: translateX(-50%);
                             bottom: calc(100% + 1px);
                             font-size: 9pt;
                             font-weight: 300;
@@ -157,7 +186,11 @@ namespace Zinga
                 new BODY(
                     htmlBlocks,
                     new DIV(new FORM { method = method.post, action = "/play-with-suco" }._(
-                        new DIV(new TEXTAREA { accesskey = ",", name = "code" }._(code)),
+                        new DIV(new TEXTAREA { accesskey = ",", name = "variables" }._(variables)),
+                        new DIV(new TEXTAREA { accesskey = ".", name = "code" }._(code)),
+                        new DIV("Context: ",
+                            new INPUT { type = itype.checkbox, name = "context", value = "svg" }, " ", new LABEL { accesskey = "s", for_ = "context-svg" }._("SVG".Accel('S')),
+                            new INPUT { type = itype.checkbox, name = "context", value = "logic" }, " ", new LABEL { accesskey = "l", for_ = "context-logic" }._("Logic".Accel('L'))),
                         new DIV(new BUTTON { type = btype.submit, accesskey = "p" }._("Parse")))))));
         }
     }
