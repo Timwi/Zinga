@@ -241,7 +241,7 @@ namespace Zinga.Suco
             var list = listToSearch.ToArray();
             if (find == null || find.Contains(null))
                 return null;
-            if (find.All(f => list.Count(v => v.Value == f.Value) >= find.Count(v => v.Value == f.Value)))
+            if (find.All(f => list.Count(v => v == f.Value) >= find.Count(v => v == f.Value)))
                 return true;
             return list.Contains(null) ? null : false;
         }
