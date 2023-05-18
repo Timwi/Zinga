@@ -661,15 +661,17 @@
 		else if (mode === 'clear')
 		{
 			selectedCells = [cell];
+			keepMove = false;
 		}
-		else if (mode === 'add')
+		else if (mode === 'add' || (mode === 'move' && keepMove))
 		{
 			let ix = selectedCells.indexOf(cell);
 			if (ix !== -1)
 				selectedCells.splice(ix, 1);
 			selectedCells.push(cell);
+			keepMove = false;
 		}
-		else    // mode === 'move'
+		else    // mode === 'move' && !keepMove
 		{
 			selectedCells.pop();
 			selectedCells.push(cell);
@@ -1779,6 +1781,7 @@
 
 	// Variables: UI other
 	let draggingMode = null;
+	let keepMove = false;
 	let selectedCells = [];
 	let lastSelectedCell = 0;
 	let selectedConstraints = [];
@@ -2012,15 +2015,16 @@
 
 		function ArrowMovement(dx, dy, mode)
 		{
-			let toSelect = lastSelectedCell;
-			if (selectedCells.length !== 0)
+			let width = state.width, height = state.height;
+			if (selectedCells.length === 0)
+				selectedCells = [lastSelectedCell ?? 0];
+			else
 			{
-				let lastCell = lastCellLineCell !== null ? lastCellLineCell : selectedCells[selectedCells.length - 1];
-				let newX = ((lastCell % w) + w + dx) % w;
-				let newY = (((lastCell / w) | 0) + h + dy) % h;
-				toSelect = newX + w * newY;
+				let lastCell = selectedCells[selectedCells.length - 1];
+				let newX = ((lastCell % width) + width + dx) % width;
+				let newY = (((lastCell / width) | 0) + height + dy) % height;
+				selectCell(newX + width * newY, mode);
 			}
-			selectCell(toSelect, mode);
 			updateVisuals();
 		}
 
@@ -2129,11 +2133,10 @@
 			case 'Ctrl+ArrowLeft': ArrowMovement(-1, 0, 'move'); break;
 			case 'Ctrl+ArrowRight': ArrowMovement(1, 0, 'move'); break;
 			case 'Ctrl+Space':
-				let numSel = selectedCells.map((c, ix) => c === selectedCells[selectedCells.length - 1] ? ix : null).filter(x => x !== null);
-				if (numSel.length === 2)
-					selectedCells.splice(numSel[0], 1);
+				if (selectedCells.length >= 2 && selectedCells[selectedCells.length - 2] === selectedCells[selectedCells.length - 1])
+					selectedCells.splice(selectedCells.length - 1, 1);
 				else
-					selectedCells.push(selectedCells[selectedCells.length - 1]);
+					keepMove = !keepMove;
 				updateVisuals();
 				break;
 			case 'Ctrl+Shift+ArrowUp': selectCellLine('n'); break;
@@ -2141,13 +2144,14 @@
 			case 'Ctrl+Shift+ArrowLeft': selectCellLine('w'); break;
 			case 'Ctrl+Shift+ArrowRight': selectCellLine('e'); break;
 
-			case 'Ctrl+KeyA': selectedCells = ns(w * h).map(c => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
-			case 'Escape': pressEscape(); break;
-
 			case 'Ctrl+ControlLeft':
 			case 'Ctrl+ControlRight':
+				keepMove = true;
 				document.getElementById('selection-arrows-svg').style.opacity = 1;
 				break;
+
+			case 'Ctrl+KeyA': selectedCells = ns(w * h).map(c => c); selectedConstraints = []; editingConstraintType = null; updateVisuals(); break;
+			case 'Escape': pressEscape(); break;
 
 			// Undo/redo
 			case 'Alt+Backspace':

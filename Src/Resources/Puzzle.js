@@ -421,9 +421,10 @@
 	}
 	function selectCell(cell, mode)
 	{
+		// Processes a mouse click or keypress that causes a cell selection. The cell may be added to an already existing selection.
 		if (mode === 'toggle')
 		{
-			if (selectedCells.length === 1 && selectedCells.includes(cell))
+			if (selectedCells.length === 1 && selectedCells[0] === cell)
 				selectedCells = [];
 			else
 				selectedCells = [cell];
@@ -912,13 +913,11 @@
 		{
 			ctrlPressed = true;
 			updateVisuals();
-			return;
 		}
 		if (ev.code === 'ShiftLeft' || ev.code === 'ShiftRight')
 		{
 			shiftPressed = true;
 			updateVisuals();
-			return;
 		}
 
 		let keyCombo = ev.code;
@@ -941,8 +940,7 @@
 				let lastCell = selectedCells[selectedCells.length - 1];
 				let newX = ((lastCell % width) + width + dx) % width;
 				let newY = (((lastCell / width) | 0) + height + dy) % height;
-				let coord = newX + width * newY;
-				selectCell(coord, mode);
+				selectCell(newX + width * newY, mode);
 			}
 			updateVisuals();
 		}
