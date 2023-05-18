@@ -205,7 +205,7 @@
 		for (let variableName of Object.keys(cType.variables))
 			newConstraint.values[variableName] = coerceValue(variableName === 'cells' ? cells : null, cType.variables[variableName]);
 
-		let [spVar, spType] = getSpecialVariable(cType.kind);
+		let [spVar, _] = getSpecialVariable(cType.kind);
 		if (spVar !== null)
 		{
 			let enforceResult = enforceConstraintKind(cType.kind, cells);
@@ -824,7 +824,7 @@
 				let maxX = Math.max(...selectedCells.map(sc => sc % w)) + 1;
 				let minY = Math.min(...selectedCells.map(sc => (sc / w) | 0));
 				let maxY = Math.max(...selectedCells.map(sc => (sc / w) | 0)) + 1;
-				dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), JSON.stringify({ customConstraintTypes: [], width: state.width, height: state.height, constraints: constraintResults.map(inf => inf.constraint) })], resultsRaw =>
+				dotNet('RenderConstraintSvgs', [JSON.stringify(req.response.results), JSON.stringify({ customConstraintTypes: [], width: state.width, height: state.height, regions: state.regions, constraints: constraintResults.map(inf => inf.constraint) })], resultsRaw =>
 				{
 					let results = JSON.parse(resultsRaw);
 					for (let i = 0; i < results.svgs.length; i++)
@@ -1154,7 +1154,7 @@
 					<div><button class='mini-btn remove' /></div>
 				</div>
 			`).join('');
-			Array.from(document.querySelectorAll('#givens .given')).forEach(givenDiv =>
+			Array.from(document.querySelectorAll('#givens .given')).forEach((givenDiv, givenIx) =>
 			{
 				let givenValue = givenDiv.dataset.given | 0;
 				setButtonHandler(givenDiv.querySelector('button.given-btn'), function() { setGiven(givenValue); });
@@ -1167,6 +1167,26 @@
 					state.givens = state.givens.map(g => g === null || !state.values.includes(g) ? null : g);
 					updateVisuals({ svg: true, storage: true });
 				});
+				let inp = givenDiv.querySelector('input');
+				inp.onchange = function()
+				{
+					let newValue = inp.value | 0;
+					let newValues = Array.from(state.values);
+					newValues[givenIx] = null;
+					if (newValues.includes(newValue))
+					{
+						inp.value = state.values[givenIx];
+						return false;
+					}
+					newValues[givenIx] = newValue;
+					saveUndo();
+					state.values = newValues;
+					state.values.sort((a, b) => a - b);
+					for (var i = 0; i < state.givens.length; i++)
+						if (state.givens[i] !== null && !newValues.includes(state.givens[i]))
+							state.givens[i] = null;
+					updateVisuals({ svg: true, storage: true });
+				};
 			});
 
 			// Regions

@@ -633,7 +633,6 @@
 
 		// Update the puzzle SVG
 		document.getElementById('puzzle-svg').innerHTML = await dotNet('RenderPuzzleSvg', [width, height, JSON.stringify(regions), rowsUnique, columnsUnique, JSON.stringify(values), JSON.stringify(constraintTypes), JSON.stringify(customConstraintTypes), JSON.stringify(constraints)]);
-		resizeButtons();
 
 		await dotNet('SetupConstraints', [JSON.stringify(constraintTypes), JSON.stringify({ customConstraintTypes: customConstraintTypes, constraints: constraints, givens: givens, width: width, height: height, regions: regions })]);
 
@@ -961,7 +960,11 @@
 			case 'Digit8': case 'Numpad8':
 			case 'Digit9': case 'Numpad9':
 			case 'Digit0': case 'Numpad0':
-				pressDigit(parseInt(keyCombo.substring(keyCombo.length - 1)), ev);
+				let pressedDigit = parseInt(keyCombo.substring(keyCombo.length - 1));
+				if (mode === 'color' && pressedDigit > 0)
+					pressDigit(pressedDigit - 1, ev);
+				else if (mode !== 'color')
+					pressDigit(pressedDigit, ev);
 				break;
 
 			case 'Ctrl+Digit1': case 'Ctrl+Numpad1':
