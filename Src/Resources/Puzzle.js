@@ -512,15 +512,47 @@
 		document.getElementById('btn-clear').classList.remove('warning');
 		document.querySelector('#btn-clear>g.label>text').textContent = 'Clear';
 	}
+	function selectSimilar(ev)
+	{
+		let cellsToSelect;
+		if (mode === 'color')
+		{
+			let selectedColors = new Set(selectedCells.reduce((p, n) => p.concat(state.colors[n]), []));
+			cellsToSelect = ns(width * height).filter(c => state.colors[c].some(col => selectedColors.has(col)));
+		}
+		else
+		{
+			let selectedDigits = new Set(selectedCells.reduce((p, n) =>
+			{
+				let d = getDisplayedSudokuDigit(state, n);
+				return p.concat(d === null ? state.cornerNotation[n].concat(state.centerNotation[n]) : [d]);
+			}, []));
+			cellsToSelect = ns(width * height).filter(c =>
+			{
+				let d = getDisplayedSudokuDigit(state, c);
+				return d === null ? state.cornerNotation[c].concat(state.centerNotation[c]).some(dg => selectedDigits.has(dg)) : selectedDigits.has(d);
+			});
+		}
+		selectedCells = ev.shiftKey ? [...new Set(cellsToSelect.concat(selectedCells))] : cellsToSelect;
+		updateVisuals();
+	}
 	function setDynamicEvents()
 	{
 		// This function hooks up all of the UI events (onclick etc.) relating to elements that are re-created in updatePuzzleFromEdit().
 		Array.from(puzzleDiv.getElementsByClassName('sudoku-cell')).forEach(cellRect =>
 		{
+			let mostRecentMouseDown = null;
 			let cell = parseInt(cellRect.dataset.cell);
 			cellRect.onclick = handler(function() { remoteLog2(`onclick ${cell}`); });
 			cellRect.onmousedown = cellRect.ontouchstart = handler(function(ev)
 			{
+				if (mostRecentMouseDown !== null && new Date() - mostRecentMouseDown <= 500)
+				{
+					selectSimilar(ev);
+					mostRecentMouseDown = null;
+					return;
+				}
+				mostRecentMouseDown = +new Date();
 				puzzleContainer.focus();
 				if (draggingMode !== null)
 				{
@@ -1069,6 +1101,7 @@
 				break;
 			case 'Escape': selectedCells = []; highlightedDigits = []; updateVisuals(); break;
 			case 'Ctrl+KeyA': selectedCells = ns(width * height); updateVisuals(); break;
+			case 'Equal': case 'Shift+Equal': selectSimilar(ev); break;
 
 			// Undo/redo
 			case 'Alt+Backspace':
@@ -1089,7 +1122,7 @@
 
 			default:
 				anyFunction = false;
-				//console.log(str, ev.code);
+				//console.log(keyCombo, ev.code);
 				break;
 		}
 
