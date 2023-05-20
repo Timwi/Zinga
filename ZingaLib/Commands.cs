@@ -511,14 +511,13 @@ namespace Zinga.Lib
                 </defs>
                 <g id='bb-everything'>
                     <g id='bb-buttons' transform='translate(0, {h + .4})'><g id='bb-buttons-scaler' font-size='.55' text-anchor='middle'>{renderButtonRows(w, puzzleInfo.Values)}</g></g>
-
-                    <g id='bb-puzzle'>
                         <g id='constraint-svg-global'>{constraints?
                             .Select((c, cIx) => (constraint: c, cIx))
                             .Where(tup => constraintTypes[tup.constraint.ID].Kind == ConstraintKind.Global)
                             .Select((tup, ix) => $"<g transform='translate(0, {1.5 * ix})' class='constraint-svg' id='constraint-svg-{tup.cIx}'><rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{constraintTypes[tup.constraint.ID].GetSvg(constraintEnvs[tup.cIx], ignoreErrors: true)}</g>")
                             .JoinString()}</g>
 
+                    <g id='bb-puzzle'>
                         {Enumerable.Range(0, w * h).Select(cell => $@"<g class='cell' data-cell='{cell}' font-size='.25' stroke-width='0'>
                             <rect class='clickable sudoku-cell' data-cell='{cell}' x='{cell % w}' y='{cell / w}' width='1' height='1' />
                             <g id='sudoku-multicolor-{cell}' transform='translate({cell % w + .5}, {cell / w + .5})'></g>

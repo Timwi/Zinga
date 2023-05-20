@@ -81,9 +81,9 @@ namespace Zinga
                                 <defs id='constraint-defs'></defs>
                                 <g id='bb-everything'>
                                     <g id='bb-buttons'><g id='bb-buttons-scaler' font-size='.55' text-anchor='middle'></g></g>
+                                    <g id='constraint-svg-global'></g>
 
                                     <g id='bb-puzzle'>
-                                        <g id='constraint-svg-global'></g>
                                         <g id='puzzle-cells'></g>
 
                                         <path id='puzzle-frame' fill='none' stroke='black' stroke-width='.05' />
