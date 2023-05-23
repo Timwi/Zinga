@@ -8,9 +8,6 @@
         [ConstraintKindInfo("Global (e.g. anti-knight)")]
         Global,
 
-        [ConstraintKindInfo("Single cell (e.g. odd/even)")]
-        SingleCell,
-
         [ConstraintKindInfo("Path (e.g. thermometer)")]
         Path,
 
@@ -30,6 +27,9 @@
         TwoCells,
 
         [ConstraintKindInfo("Four cells in a 2×2 (e.g. clockwise)")]
-        FourCells
+        FourCells,
+
+        [ConstraintKindInfo("Single cell (e.g. odd/even)")]
+        SingleCell
     }
 }

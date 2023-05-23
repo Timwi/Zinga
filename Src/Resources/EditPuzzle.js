@@ -134,7 +134,7 @@
 		{
 			selectTab('constraints');
 			setClass(constraintElem, 'expanded', true);
-			constraint.expanded = true;
+			constraints[0].expanded = true;
 			uiElement.focus();
 			if (uiElement.nodeName === 'INPUT' || uiElement.nodeName === 'TEXTAREA')
 				uiElement.select();
