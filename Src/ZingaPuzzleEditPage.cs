@@ -1,7 +1,7 @@
 ﻿using System.Data;
-using System.Data.Entity;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using RT.Json;
 using RT.Servers;
 using RT.TagSoup;
@@ -13,8 +13,18 @@ namespace Zinga
 {
     public partial class ZingaPropellerModule
     {
+        private static (ConstraintKind value, string name)[] _constraintKindCache;
+
         public HttpResponse PuzzleEditPage(HttpRequest req)
         {
+            if (_constraintKindCache == null)
+                lock (this)
+                    _constraintKindCache ??= typeof(ConstraintKind)
+                        .GetFields(BindingFlags.Static | BindingFlags.Public)
+                        .Select(f => (value: (ConstraintKind) f.GetValue(null), name: f.GetCustomAttribute<ConstraintKindInfoAttribute>()?.Name))
+                        .Where(tup => tup.name != null)
+                        .ToArray();
+
             using var db = new Db();
 
             var constraintTypes = db.Constraints.Where(c => c.Public).ToDictionary(c => c.ConstraintID);
@@ -156,7 +166,7 @@ namespace Zinga
                                         new DIV { class_ = "label" }._("Name"),
                                         new DIV(new INPUT { type = itype.text, id = "constraint-code-name" }),
                                         new DIV { class_ = "label" }._("Kind"),
-                                        new DIV(new SELECT { id = "constraint-code-kind" }._(EnumStrong.GetValues<ConstraintKind>().Select(v => new OPTION { value = v.ToString() }._(v.GetCustomAttribute<ConstraintKindInfoAttribute>().Name)))),
+                                        new DIV(new SELECT { id = "constraint-code-kind" }._(_constraintKindCache.Select(tup => new OPTION { value = tup.value.ToString() }._(tup.name)))),
                                         new DIV { class_ = "label" }._("Properties", new BUTTON { id = "constraint-code-addvar", class_ = "mini-btn add", title = "Add a new property" }),
                                         new DIV(new TABLE { id = "constraint-code-variables" }),
                                         new DIV { class_ = "label" }._("Logic (Suco)"),
