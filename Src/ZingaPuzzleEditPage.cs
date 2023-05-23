@@ -171,11 +171,11 @@ namespace Zinga
                                         new UL(
                                             new LI("Select a set of cells in the grid."),
                                             new LI("Press a lower-case letter to add one of the common constraints listed below."),
-                                            new LI("Press Shift with a letter to search for more constraints.")),
+                                            new LI("Press Shift with a letter to ", new A { href = "#", id = "constraint-search-link" }._("search for more constraints"), ".")),
                                         new HR(),
                                         new P("Shortcuts for common constraints:"),
                                         new TABLE(
-                                            constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(c.Name))),
+                                            constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(new A { href = "#", class_ = "constraint-shortcut", }.Data("id", c.ConstraintID)._(c.Name)))),
                                             new TR { id = "add-last-selected-constraint" }._(new TH('='), new TD("Last selected constraint"))))))),
                         new DIV { class_ = "focus-catcher", tabindex = 0 }),
 

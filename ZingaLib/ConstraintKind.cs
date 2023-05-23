@@ -8,6 +8,9 @@
         [ConstraintKindInfo("Global (e.g. anti-knight)")]
         Global,
 
+        [ConstraintKindInfo("Single cell (e.g. odd/even)")]
+        SingleCell,
+
         [ConstraintKindInfo("Path (e.g. thermometer)")]
         Path,
 

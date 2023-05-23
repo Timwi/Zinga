@@ -80,6 +80,7 @@
 	{
 		switch (kind)
 		{
+			case 'SingleCell': return ['cell', 'cell']; break;
 			case 'Path': return ['cells', 'list(cell)']; break;
 			case 'Region': return ['cells', 'list(cell)']; break;
 			case 'MatchingRegions': return ['cells', 'list(list(cell))']; break;
@@ -117,25 +118,15 @@
 	}
 
 	// State, editing, constraints
-	function createConstraint(cTypeId)
+	function addConstraints(constraints)
 	{
-		// Creates a new constraint (from a constraint type ID) and adds it to the puzzle
-		let enf = createDefaultConstraint(getConstraintType(cTypeId), cTypeId, selectedCells);
-		if (!enf.valid)
-		{
-			alert(enf.message);
-			return;
-		}
-		addConstraint(enf.constraint);
-	}
-	function addConstraint(constraint)
-	{
-		// Adds a constraints to the puzzle that has already been generated (e.g. by the constraint search box). (Use createConstraint() instead to generate a new constraint.)
+		// Adds constraints to the puzzle that have already been generated (e.g. by the constraint search box).
+		// (Use createConstraint() instead to generate a new constraint.)
 
 		saveUndo();
 		let cIx = state.constraints.length;
-		state.constraints.push(constraint);
-		selectConstraintRange(cIx, cIx, { storage: true, svg: true });
+		state.constraints.push(...constraints);
+		selectConstraintRange(cIx, state.constraints.length - 1, { storage: true, svg: true });
 
 		let constraintElem = document.getElementById(`constraint-${cIx}`);
 		let uiElement = constraintElem.querySelector('input,textarea,select');
@@ -153,7 +144,7 @@
 	{
 		constraintTypes[constr.type] = cType;
 		document.getElementById('constraint-search').classList.remove('shown');
-		addConstraint(constr);
+		addConstraints([constr]);
 	}
 	function clearCells()
 	{
@@ -194,6 +185,37 @@
 			case 'decimal': return +value;
 		}
 		return null;
+	}
+	function createConstraint(cTypeId)
+	{
+		// Creates a new constraint (from a constraint type ID) and adds it to the puzzle
+		let cType = getConstraintType(cTypeId);
+		let enf = createDefaultConstraint(cType, cTypeId, selectedCells);
+		if (enf.valid)
+		{
+			addConstraints([enf.constraint]);
+			return;
+		}
+
+		// Special case: if it’s a single-cell constraint, and multiple cells are selected, create multiple constraints
+		if (cType.kind !== 'SingleCell' || selectedCells.length <= 1)
+		{
+			alert(enf.message);
+			return;
+		}
+
+		let constraints = [];
+		for (let cell of selectedCells)
+		{
+			let enf2 = createDefaultConstraint(cType, cTypeId, [cell]);
+			if (!enf2.valid)
+			{
+				alert(enf2.message);
+				return;
+			}
+			constraints.push(enf2.constraint);
+		}
+		addConstraints(constraints);
 	}
 	function createDefaultConstraint(cType, cTypeId, cells)
 	{
@@ -267,6 +289,11 @@
 		// { valid: true, value?: new value (may or may not be the same as the input) (may be a single cell, list, list of lists, or absent) }
 		switch (kind)
 		{
+			case 'SingleCell':
+				if (Array.isArray(value) && value.length !== 1)
+					return { valid: false, message: 'This constraint requires a single cell.' };
+				return { valid: true, value: Array.isArray(value) ? value[0] : value };
+
 			case 'Path':
 				if (!Array.isArray(value) || value.length < 2)
 					return { valid: false, message: 'This constraint requires at least two cells.' };
@@ -1983,6 +2010,14 @@
 		state.values.splice(insertionPoint, 0, i);
 		updateVisuals({ svg: true, storage: true });
 	});
+	setButtonHandler(document.getElementById('constraint-search-link'), () =>
+	{
+		document.getElementById('constraint-search').classList.add('shown');
+		let si = document.getElementById('constraint-search-input');
+		si.value = '';
+		si.focus();
+	});
+	Array.from(document.getElementsByClassName('constraint-shortcut')).forEach(elem => { setButtonHandler(elem, () => { createConstraint(elem.dataset.id | 0); }); });
 
 	setButtonHandler(constraintCodeBox.querySelector('.label'), function() { });
 	constraintCodeBox.querySelector('.label').ondblclick = function(ev) { if (ev.target !== constraintCodeExpander) setClass(constraintCodeBox, 'expanded', !constraintCodeBox.classList.contains('expanded')); };
@@ -1997,7 +2032,11 @@
 		cType.kind = v;
 		let [spVar, spType] = getSpecialVariable(v);
 		if (spVar !== null)
+		{
 			cType.variables[spVar] = spType;
+			for (let c in selectedConstraints)
+				state.constraints[c].values[spVar] = coerceValue(state.constraints[c].values[spVar], spType);
+		}
 		populateConstraintEditBox(cTypeId);
 	});
 

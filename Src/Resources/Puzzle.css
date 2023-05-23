@@ -776,6 +776,11 @@ svg#puzzle-svg .multi-select {
 			padding: .05cm .25cm;
 		}
 
+			#sidebar #constraint-add-section .main td a {
+				color: inherit;
+				text-decoration: none;
+			}
+
 		#sidebar #constraint-add-section .main hr {
 			border: none;
 			border-bottom: 1px solid hsl(225, 40%, 60%);
