@@ -721,11 +721,10 @@
 				document.getElementById(`sudoku-corner-text-${cell}-${i}`).textContent = intendedCornerDigits !== null && i < intendedCornerDigits.length ? intendedCornerDigits[i] : '';
 
 			var centerText = document.getElementById(`sudoku-center-text-${cell}`);
-			centerText.setAttribute('transform', `translate(${cell % width + .5} ${((cell / width) | 0) + .62})`);
+			centerText.removeAttribute('transform');
 			centerText.textContent = intendedCenterDigits !== null ? intendedCenterDigits : '';
 			var ctBb = centerText.getBBox({ fill: true, stroke: true, markers: true, clipped: true });
-			if (ctBb.width > .8)
-				centerText.setAttribute('transform', `translate(${cell % width + .5} ${((cell / width) | 0) + .62}) scale(${.8 / ctBb.width})`);
+			centerText.setAttribute('transform', `translate(${cell % width + .5} ${((cell / width) | 0) + .5})${ctBb.width > .8 ? ` scale(${.8 / ctBb.width})` : ''} translate(0, .12)`);
 
 			function getPerimeterPoint(angle)
 			{
