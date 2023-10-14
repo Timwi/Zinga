@@ -1704,7 +1704,7 @@
 		else
 		{
 			lscTh.style.display = 'table-row';
-			lscTh.querySelector('td').innerText = `Last selected constraint (${getConstraintType(state.constraints[lastSelectedConstraint].type).name})`;
+			lscTh.querySelector('td>a').innerText = `Last selected constraint (${getConstraintType(state.constraints[lastSelectedConstraint].type).name})`;
 		}
 
 		function fixViewBox()
@@ -2017,6 +2017,7 @@
 		si.value = '';
 		si.focus();
 	});
+	setButtonHandler(document.getElementById('constraint-shortcut-last'), () => { if (lastSelectedConstraint !== null) createConstraint(state.constraints[lastSelectedConstraint].type); });
 	Array.from(document.getElementsByClassName('constraint-shortcut')).forEach(elem => { setButtonHandler(elem, () => { createConstraint(elem.dataset.id | 0); }); });
 
 	setButtonHandler(constraintCodeBox.querySelector('.label'), function() { });

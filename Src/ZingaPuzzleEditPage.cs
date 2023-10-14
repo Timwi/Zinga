@@ -185,8 +185,8 @@ namespace Zinga
                                         new HR(),
                                         new P("Shortcuts for common constraints:"),
                                         new TABLE(
-                                            constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(new A { href = "#", class_ = "constraint-shortcut", }.Data("id", c.ConstraintID)._(c.Name)))),
-                                            new TR { id = "add-last-selected-constraint" }._(new TH('='), new TD("Last selected constraint"))))))),
+                                            constraintTypes.Values.Where(c => c.Shortcut != null).OrderBy(c => c.Shortcut).Select(c => new TR(new TH(c.Shortcut), new TD(new A { href = "#", class_ = "constraint-shortcut" }.Data("id", c.ConstraintID)._(c.Name)))),
+                                            new TR { id = "add-last-selected-constraint" }._(new TH('='), new TD(new A { href = "#", id = "constraint-shortcut-last" }._("Last selected constraint")))))))),
                         new DIV { class_ = "focus-catcher", tabindex = 0 }),
 
                     new DIV { id = "constraint-search" }._(
