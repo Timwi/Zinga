@@ -882,6 +882,12 @@
 				rules: puzzleDiv.dataset.rules,
 				links: links ?? [],
 				givens: givens,
+				width: width,
+				height: height,
+				regions: regions,
+				rowsUniq: rowsUnique,
+				colsUniq: columnsUnique,
+				values: values,
 				constraints: [],
 				customConstraintTypes: []
 			};
