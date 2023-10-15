@@ -199,7 +199,8 @@
 			colors: Array(width * height).fill(null),
 			cornerNotation: Array(width * height).fill(null).map(_ => []),
 			centerNotation: Array(width * height).fill(null).map(_ => []),
-			enteredDigits: Array(width * height).fill(null)
+			enteredDigits: Array(width * height).fill(null),
+			dimmedConstraints: []
 		};
 
 		// Decode Sudoku grid
@@ -255,11 +256,20 @@
 			else if (code > 0n)
 				st.enteredDigits[cell] = values[Number(code) - 1];
 		}
+
+		// Dimmed constraints
+		for (let i = 0; i < constraints.length; i++)
+			if ((val & (1n << BigInt(i))) != 0)
+				st.dimmedConstraints.push(i);
 		return st;
 	}
 	function encodeState(st)
 	{
 		let val = 0n, nv = BigInt(values.length + 2);
+
+		// Dimmed constraints
+		for (let constrIx of st.dimmedConstraints)
+			val = val + (1n << BigInt(constrIx));
 
 		// Encode the Sudoku grid
 		for (let cell = 0; cell < width * height; cell++)
@@ -342,7 +352,8 @@
 			colors: ns(width * height).map(_ => []),
 			cornerNotation: ns(width * height).map(_ => []),
 			centerNotation: ns(width * height).map(_ => []),
-			enteredDigits: Array(width * height).fill(null)
+			enteredDigits: Array(width * height).fill(null),
+			dimmedConstraints: []
 		};
 	}
 	function pressDigit(digit, ev, forceMode)
@@ -410,6 +421,7 @@
 				try { item = decodeState(str); }
 				catch { item = null; }
 			state = (item && item.cornerNotation && item.centerNotation && item.enteredDigits && item.colors) ? item : makeCleanState();
+			state.dimmedConstraints ??= [];
 
 			let undoB = localStorage.getItem(`zinga-${puzzleId}${lsKey}-undo`);
 			let redoB = localStorage.getItem(`zinga-${puzzleId}${lsKey}-redo`);
@@ -625,7 +637,24 @@
 		setButtonHandler(document.querySelector('#btn-undo>rect'), undo);
 		setButtonHandler(document.querySelector('#btn-redo>rect'), redo);
 		setButtonHandler(document.querySelector('#btn-sidebar>rect'), function() { sidebarOn = !sidebarOn; updateVisuals(true); });
-		Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj => { obj.addEventListener('click', () => { obj.classList.toggle('dimmed'); }); });
+		Array.from(document.querySelectorAll('.constraint-svg')).forEach(obj =>
+		{
+			let idm = /^constraint-svg-(\d+)$/.exec(obj.id);
+			if (idm)
+			{
+				let id = idm[1] | 0;
+				obj.addEventListener('click', () =>
+				{
+					saveUndo();
+					let p = state.dimmedConstraints.indexOf(id);
+					if (p === -1)
+						state.dimmedConstraints.push(id);
+					else
+						state.dimmedConstraints.splice(p, 1);
+					updateVisuals(true);
+				});
+			}
+		});
 	}
 	async function updatePuzzleFromEdit()
 	{
@@ -687,6 +716,10 @@
 			localStorage.setItem(`zinga-${puzzleId}${lsKey}-opt`, JSON.stringify({ showErrors: showErrors, multiColorMode: multiColorMode, sidebarOn: sidebarOn }));
 		}
 		resetClearButton();
+
+		// Dimmed constraints
+		for (let constrIx = 0; constrIx < constraints.length; constrIx++)
+			setClass(document.getElementById(`constraint-svg-${constrIx}`), 'dimmed', state.dimmedConstraints.includes(constrIx));
 
 		// Sudoku grid (digits, selection/highlight)
 		Array.from(document.querySelectorAll('.cell')).forEach(cellElem =>
@@ -850,8 +883,8 @@
 			draggingMode = null;
 		remoteLog(`${ev.type} puzzleContainer`);
 	});
-	document.getElementById(`opt-show-errors`).onchange = function() { showErrors = !showErrors; updateVisuals(true); };
-	document.getElementById(`opt-multi-color`).onchange = function() { multiColorMode = !multiColorMode; updateVisuals(true); };
+	document.getElementById('opt-show-errors').onchange = function() { showErrors = !showErrors; updateVisuals(true); };
+	document.getElementById('opt-multi-color').onchange = function() { multiColorMode = !multiColorMode; updateVisuals(true); };
 	setButtonHandler(document.getElementById('opt-edit'), () =>
 	{
 		if (puzzleId !== 'test')
