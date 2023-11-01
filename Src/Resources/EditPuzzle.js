@@ -9,9 +9,9 @@
 		let x = cell % w;
 		let y = (cell / w) | 0;
 		for (let xx = x - 1; xx <= x + 1; xx++)
-			if (inRange(xx))
+			if (inRangeX(xx))
 				for (let yy = y - 1; yy <= y + 1; yy++)
-					if (inRange(yy) && (xx != x || yy != y))
+					if (inRangeY(yy) && (xx != x || yy != y))
 						list.push(xx + w * yy);
 		return list;
 	}
@@ -49,7 +49,7 @@
 				{
 					let xOffset = rem[0] % w - reg[0] % w;
 					let yOffset = ((rem[0] / w) | 0) - ((reg[0] / w) | 0);
-					if (!reg.every(c => inRange(c % w + xOffset) && inRange(((c / w) | 0) + yOffset) && rem.includes(c + xOffset + w * yOffset)))
+					if (!reg.every(c => inRangeX(c % w + xOffset) && inRangeY(((c / w) | 0) + yOffset) && rem.includes(c + xOffset + w * yOffset)))
 						break;
 					regions.push(reg.map(c => c + xOffset + w * yOffset));
 					rem = rem.filter(c => !reg.includes(c - xOffset - w * yOffset));
@@ -91,7 +91,8 @@
 		}
 		return [null, null];
 	}
-	function inRange(x) { return x >= 0 && x < state.width; }
+	function inRangeX(x) { return x >= 0 && x < state.width; }
+	function inRangeY(y) { return y >= 0 && y < state.height; }
 	function keyName(ev)
 	{
 		let str = ev.code;
@@ -110,9 +111,9 @@
 		let x = cell % w;
 		let y = (cell / w) | 0;
 		for (let xx = x - 1; xx <= x + 1; xx++)
-			if (inRange(xx))
+			if (inRangeX(xx))
 				for (let yy = y - 1; yy <= y + 1; yy++)
-					if (inRange(yy) && (xx == x || yy == y) && (xx != x || yy != y))
+					if (inRangeY(yy) && (xx == x || yy == y) && (xx != x || yy != y))
 						list.push(xx + w * yy);
 		return list;
 	}
@@ -2012,6 +2013,7 @@
 	});
 	setButtonHandler(document.getElementById('constraint-search-link'), () =>
 	{
+		document.getElementById('constraint-results-box').innerHTML = '';
 		document.getElementById('constraint-search').classList.add('shown');
 		let si = document.getElementById('constraint-search-input');
 		si.value = '';
@@ -2334,6 +2336,8 @@
 			let val = document.getElementById('constraint-search-input').value;
 			if (val.length > 0)
 				runConstraintSearch(val);
+			else
+				document.getElementById('constraint-results-box').innerHTML = '';
 		}
 	});
 
