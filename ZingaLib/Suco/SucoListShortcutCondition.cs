@@ -25,6 +25,7 @@ namespace Zinga.Suco
                 case "before":
                 case "after":
                 case "~":
+                case "corresponding":
                     break;
 
                 case "^":
@@ -75,6 +76,7 @@ namespace Zinga.Suco
             "last" => env.GetLastPosition() == env.GetLastList().Cast<object>().Count(),
             "before" => env.GetLastPosition() < env.GetPrevLastPosition(),
             "after" => env.GetLastPosition() > env.GetPrevLastPosition(),
+            "corresponding" => env.GetLastPosition() == env.GetPrevLastPosition(),
             "~" => env.GetLastList() != env.GetPrevLastList() ? throw new SucoCompileException("“~” requires that both elements are from the same list.", StartIndex, EndIndex) : env.GetLastPosition() == env.GetPrevLastPosition() + 1,
             "diagonal" => cellOp(env, (c1, c2) => Math.Abs(c1.X - c2.X) == Math.Abs(c1.Y - c2.Y)),
             "adjacent" => cellOp(env, (c1, c2) => Math.Abs(c1.X - c2.X) <= 1 && Math.Abs(c1.Y - c2.Y) <= 1),
