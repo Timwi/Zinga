@@ -1079,6 +1079,39 @@
 				clearCells();
 				break;
 
+			case 'Ctrl+Delete':
+			case 'Ctrl+Backspace':
+				if (selectedCells.some(c => state.enteredDigits[c] === null && state.centerNotation[c].length > 0))
+				{
+					saveUndo();
+					for (let cell of selectedCells)
+						state.centerNotation[cell] = [];
+					updateVisuals(true);
+				}
+				break;
+
+			case 'Shift+Delete':
+			case 'Shift+Backspace':
+				if (selectedCells.some(c => state.enteredDigits[c] === null && state.cornerNotation[c].length > 0))
+				{
+					saveUndo();
+					for (let cell of selectedCells)
+						state.cornerNotation[cell] = [];
+					updateVisuals(true);
+				}
+				break;
+
+			case 'Ctrl+Shift+Delete':
+			case 'Ctrl+Shift+Backspace':
+				if (selectedCells.some(c => state.colors[c].length > 0))
+				{
+					saveUndo();
+					for (let cell of selectedCells)
+						state.colors[cell] = [];
+					updateVisuals(true);
+				}
+				break;
+
 			case 'Ctrl+KeyC':
 			case 'Ctrl+Insert':
 				navigator.clipboard.writeText(selectedCells.map(c => getDisplayedSudokuDigit(state, c) ?? '.').join(''));
