@@ -13,7 +13,6 @@ namespace Zinga.Suco
     {
         public List<SucoListClause> Clauses { get; private set; }
         public SucoExpression Selector { get; private set; }
-        private SucoContext _context;
         public SucoType ElementType => ((SucoListType) Type).ElementType;
         public override string ToString() => $"{{{Clauses.JoinString(", ")}{Selector.NullOr(s => $": {s}")}}}";
 
@@ -78,7 +77,7 @@ namespace Zinga.Suco
             if (anySingleton && !resultType.Equals(SucoType.Boolean.List()))
                 throw new SucoCompileException("A list comprehension with a “1” extra must have a boolean selector.", StartIndex, EndIndex);
 
-            return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, resultType) { _context = context };
+            return new SucoListComprehensionExpression(StartIndex, EndIndex, newClauses, newSelector, resultType);
         }
 
         private IList<(SucoListComprehensionVariable[] variables, List<SucoListCondition> conditions, SucoExpression expr)> optimizeClause(int clIx, SucoListComprehensionVariable[] variables, SucoEnvironment env, int?[] givens)
