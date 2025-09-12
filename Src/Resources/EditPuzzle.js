@@ -2228,7 +2228,7 @@
 			return false;
 		}
 	});
-	sidebarDiv.addEventListener('keydown', ev =>
+	sidebarDiv.addEventListener('keydown', async ev =>
 	{
 		if (ev.target !== sidebarDiv)
 			return true;
@@ -2280,6 +2280,11 @@
 				redo();
 				break;
 
+			// Copy
+			case 'Ctrl+KeyC':
+				await navigator.clipboard.writeText(JSON.stringify(selectedConstraints.map(ix => state.constraints[ix])));
+				break;
+
 			default:
 				anyFunction = false;
 				//console.log(str, ev.code);
@@ -2291,6 +2296,24 @@
 			ev.stopPropagation();
 			ev.preventDefault();
 			return false;
+		}
+	});
+	sidebarDiv.addEventListener('paste', async ev =>
+	{
+		try
+		{
+			let j = JSON.parse(ev.clipboardData.getData("text"));
+			console.log(j, state.customConstraintTypes);
+			if (Array.isArray(j) && j.every(cs => 'type' in cs && Number.isInteger(cs.type) && (cs.type >= 0 || ~cs.type < state.customConstraintTypes.length) && 'values' in cs && typeof cs.values === 'object'))
+			{
+				saveUndo();
+				state.constraints.push(...j);
+				updateVisuals({ storage: true, svg: true });
+			}
+		}
+		catch (e)
+		{
+			console.error(e);
 		}
 	});
 	document.getElementById('constraint-search-input').addEventListener('keydown', ev =>
