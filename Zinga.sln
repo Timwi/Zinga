@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.6.33513.286
+# Visual Studio Version 18
+VisualStudioVersion = 18.2.11415.280 d18.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Zinga", "Src\Zinga.csproj", "{CA13A37B-4850-4889-B0D6-525E747957DB}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -11,6 +11,11 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZingaWasm", "ZingaWasm\ZingaWasm.csproj", "{F911EC69-67D5-4769-A549-E7EC0876DA04}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ZingaLib", "ZingaLib\ZingaLib.csproj", "{00EB7B3C-171E-4703-9443-2C900D242626}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{3D5A4BED-3007-46FF-B46C-E1EC71C93E38}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -26,8 +31,8 @@ Global
 		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F911EC69-67D5-4769-A549-E7EC0876DA04}.Release|Any CPU.Build.0 = Release|Any CPU
-		{00EB7B3C-171E-4703-9443-2C900D242626}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{00EB7B3C-171E-4703-9443-2C900D242626}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{00EB7B3C-171E-4703-9443-2C900D242626}.Debug|Any CPU.ActiveCfg = Debug-Nuget|Any CPU
+		{00EB7B3C-171E-4703-9443-2C900D242626}.Debug|Any CPU.Build.0 = Debug-Nuget|Any CPU
 		{00EB7B3C-171E-4703-9443-2C900D242626}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{00EB7B3C-171E-4703-9443-2C900D242626}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
