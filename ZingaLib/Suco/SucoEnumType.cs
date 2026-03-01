@@ -1,19 +1,15 @@
 ﻿using System;
+using System.Linq;
 using RT.Util;
 using RT.Util.ExtensionMethods;
 
 namespace Zinga.Suco
 {
-    public class SucoEnumType : SucoType
+    public class SucoEnumType(string[] names) : SucoType
     {
-        public string[] Names { get; private set; }
+        public string[] Names { get; private set; } = names ?? throw new ArgumentNullException(nameof(names));
         public override string ToString() => $"[{Names.JoinString(", ")}]";
         public override Type CsType => typeof(string);
-
-        public SucoEnumType(string[] names)
-        {
-            Names = names ?? throw new ArgumentNullException(nameof(names));
-        }
 
         public override bool Equals(SucoType other) => other is SucoEnumType e && e.Names.SequenceEqual(Names);
 

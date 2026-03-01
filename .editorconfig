@@ -1,0 +1,7 @@
+﻿[*.cs]
+
+# IDE0130: Let me specify my namespaces
+dotnet_diagnostic.IDE0130.severity = none
+
+# IDE0305: Let me use .ToArray()/.ToList()
+dotnet_diagnostic.IDE0305.severity = none

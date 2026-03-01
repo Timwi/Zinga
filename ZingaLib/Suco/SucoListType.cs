@@ -7,14 +7,9 @@ using Zinga.Lib;
 
 namespace Zinga.Suco
 {
-    public class SucoListType : SucoType
+    public class SucoListType(SucoType elementType) : SucoType
     {
-        public SucoType ElementType { get; private set; }
-
-        public SucoListType(SucoType elementType)
-        {
-            ElementType = elementType;
-        }
+        public SucoType ElementType { get; private set; } = elementType;
 
         public override bool Equals(SucoType other) => other is SucoListType list && list.ElementType.Equals(ElementType);
         public override string ToString() => $"list({ElementType})";
