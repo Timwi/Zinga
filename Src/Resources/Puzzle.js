@@ -1114,7 +1114,7 @@
 
 			case 'Ctrl+KeyC':
 			case 'Ctrl+Insert':
-				navigator.clipboard.writeText(selectedCells.map(c => getDisplayedSudokuDigit(state, c) ?? '.').join(''));
+				navigator.clipboard.writeText(selectedCells.slice().sort((a, b) => a - b).map(c => getDisplayedSudokuDigit(state, c) ?? '.').join(''));
 				break;
 
 			// Navigation
