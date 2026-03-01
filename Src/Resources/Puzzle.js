@@ -1029,7 +1029,11 @@
 			case 'Digit9': case 'Numpad9':
 			case 'Digit0': case 'Numpad0':
 				let pressedDigit = parseInt(keyCombo.substring(keyCombo.length - 1));
-				if (mode === 'color' && pressedDigit > 0)
+
+				// ev.shiftKey is wrong on Windows if Numlock is on and the numpad was used
+				if (/^Numpad/.test(keyCombo) && ev.getModifierState("NumLock") && /^(?:Arrow(?:Down|Left|Right|Up)|Clear|End|Home|Insert|Page(?:Down|Up))$/.test(ev.key))
+					pressDigit(pressedDigit, ev, 'corner');
+				else if (mode === 'color' && pressedDigit > 0)
 					pressDigit(pressedDigit - 1, ev);
 				else if (mode !== 'color')
 					pressDigit(pressedDigit, ev);
