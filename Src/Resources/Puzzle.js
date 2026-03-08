@@ -1049,7 +1049,12 @@
 			case 'Ctrl+Digit8': case 'Ctrl+Numpad8':
 			case 'Ctrl+Digit9': case 'Ctrl+Numpad9':
 			case 'Ctrl+Digit0': case 'Ctrl+Numpad0':
-				enterCenterNotation(parseInt(keyCombo.substring(keyCombo.length - 1)));
+				let colorDigit = parseInt(keyCombo.substring(keyCombo.length - 1));
+				// ev.shiftKey is wrong on Windows if Numlock is on and the numpad was used
+				if (/^Ctrl\+Numpad/.test(keyCombo) && ev.getModifierState("NumLock") && /^(?:Arrow(?:Down|Left|Right|Up)|Clear|End|Home|Insert|Page(?:Down|Up))$/.test(ev.key))
+					setCellColor(colorDigit - 1);
+				else
+					enterCenterNotation(colorDigit);
 				break;
 
 			case 'Ctrl+Shift+Digit1': case 'Ctrl+Shift+Numpad1':
@@ -1061,7 +1066,6 @@
 			case 'Ctrl+Shift+Digit7': case 'Ctrl+Shift+Numpad7':
 			case 'Ctrl+Shift+Digit8': case 'Ctrl+Shift+Numpad8':
 			case 'Ctrl+Shift+Digit9': case 'Ctrl+Shift+Numpad9':
-				//case 'Ctrl+Shift+Digit0': case 'Ctrl+Shift+Numpad0':
 				setCellColor(parseInt(keyCombo.substring(keyCombo.length - 1)) - 1);
 				break;
 
