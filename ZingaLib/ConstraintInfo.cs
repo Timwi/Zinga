@@ -2,16 +2,10 @@
 
 namespace Zinga.Lib
 {
-    public sealed class ConstraintInfo
+    public sealed class ConstraintInfo(int id, string valuesJson)
     {
-        public int ID { get; private set; }
-        public string ValuesJson { get; private set; }
-
-        public ConstraintInfo(int id, string valuesJson)
-        {
-            ID = id;
-            ValuesJson = valuesJson;
-        }
+        public int ID { get; private set; } = id;
+        public string ValuesJson { get; private set; } = valuesJson;
 
         public JsonDict ToJson() => new()
         {

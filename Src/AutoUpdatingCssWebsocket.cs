@@ -1,19 +1,13 @@
 ﻿#if DEBUG
-using System.IO;
 using RT.Servers;
 
 namespace Zinga
 {
     public partial class ZingaPropellerModule
     {
-        private class AutoUpdatingCssWebsocket : WebSocket
+        private class AutoUpdatingCssWebsocket(ZingaSettings settings) : WebSocket
         {
-            public AutoUpdatingCssWebsocket(ZingaSettings settings)
-            {
-                _settings = settings;
-            }
-
-            private readonly ZingaSettings _settings;
+            private readonly ZingaSettings _settings = settings;
 
             protected override void onTextMessageReceived(string msg)
             {

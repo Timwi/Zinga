@@ -17,7 +17,7 @@ namespace Zinga.Lib
         private static readonly Dictionary<
             /* TKey */ (string suco, string variablesJson, SucoContext context, string expectedResultType),
             /* TValue */ (SucoExpression expr, SucoTypeEnvironment env, Dictionary<string, object> interpreted)
-        > _parsedSuco = new();
+        > _parsedSuco = [];
 
         private static (SucoExpression expr, SucoTypeEnvironment env, Dictionary<string, object> interpreted) parseSuco(string suco, JsonDict variablesJson, SucoContext context, SucoType expectedResultType)
         {
@@ -122,10 +122,9 @@ namespace Zinga.Lib
 
                 if (svgCode != null)
                 {
-                    if (type["kind"].GetString() == "Global")
-                        resultSvgs[cIx] = new JsonDict { ["global"] = true, ["svg"] = $"<rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{svgCode}" };
-                    else
-                        resultSvgs[cIx] = new JsonDict { ["global"] = false, ["svg"] = svgCode };
+                    resultSvgs[cIx] = type["kind"].GetString() == "Global"
+                        ? new JsonDict { ["global"] = true, ["svg"] = $"<rect x='0' y='0' width='1' height='1' rx='.1' ry='.1' fill='white' stroke='black' stroke-width='.03' />{svgCode}" }
+                        : new JsonDict { ["global"] = false, ["svg"] = svgCode };
                 }
             }
 
@@ -465,7 +464,7 @@ namespace Zinga.Lib
 #if DEBUG
             Console.WriteLine($@"Zinga.Lib.Commands.RenderPuzzleSvg({width}, {height}, ""{regionsJson.CLiteralEscape()}"", {rowsUnique.ToString().ToLowerInvariant()}, {columnsUnique.ToString().ToLowerInvariant()}, ""{valuesJson.CLiteralEscape()}"", ""{constraintTypesJson.CLiteralEscape()}"", ""{customConstraintTypesJson.CLiteralEscape()}"", ""{constraintsJson.CLiteralEscape()}"");");
 #endif
-            ConstraintTypeInfo makeInfo(int id, JsonValue j) => new(id, j["name"].GetString(), ExactConvert.To<ConstraintKind>(j["kind"].GetString()), j["variables"].ToString(), j["logic"].GetString(), j["svgdefs"]?.GetString(), j["svg"]?.GetString(), j.Safe["public"].GetBoolLenientSafe() ?? false);
+            static ConstraintTypeInfo makeInfo(int id, JsonValue j) => new(id, j["name"].GetString(), ExactConvert.To<ConstraintKind>(j["kind"].GetString()), j["variables"].ToString(), j["logic"].GetString(), j["svgdefs"]?.GetString(), j["svg"]?.GetString(), j.Safe["public"].GetBoolLenientSafe() ?? false);
             var constraintTypes = JsonDict.Parse(constraintTypesJson)
                     .Select(kvp => makeInfo(int.Parse(kvp.Key), kvp.Value))
                     .ToDictionary(ct => ct.ID);

@@ -13,7 +13,7 @@ namespace Zinga
 {
     public partial class ZingaPropellerModule
     {
-        public HttpResponse PuzzlePublish(HttpRequest req)
+        public static HttpResponse PuzzlePublish(HttpRequest req)
         {
             if (req.Method != RT.Servers.HttpMethod.Post)
                 return HttpResponse.Empty(HttpStatusCode._405_MethodNotAllowed);
@@ -93,7 +93,7 @@ namespace Zinga
                         var svgCode = nullIfEmpty(cType["svg"]?.GetString());
                         var svgDefsCode = nullIfEmpty(cType["svgdefs"]?.GetString());
 
-                        if (!SucoParser.IsValidCode(logicCode, env, SucoContext.Constraint, SucoType.Boolean, out string error))
+                        if (!SucoParser.IsValidCode(logicCode, env, SucoContext.Constraint, SucoType.Boolean, out var error))
                             return HttpResponse.PlainText($"The Suco code for the constraint logic in “{cType["name"].GetString()}” doesn’t compile: {error}", HttpStatusCode._400_BadRequest);
                         if (svgCode != null && !SucoParser.IsValidCode(svgCode, env, SucoContext.Svg, SucoType.String, out error))
                             return HttpResponse.PlainText($"The Suco code for generating SVG code in “{cType["name"].GetString()}” doesn’t compile: {error}", HttpStatusCode._400_BadRequest);

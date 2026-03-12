@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using RT.Json;
 using RT.Util;
 using RT.Util.ExtensionMethods;
 using Zinga.Suco;
@@ -15,9 +14,9 @@ namespace Zinga.Lib
 
         public static Array CreateArray(this SucoType elementType, int length) => Array.CreateInstance(elementType.CsType, length);
 
-        public static readonly int[] Hues = new[] { 0, 30, 60, 120, 180, 220, 270, 310, 0 };
-        public static readonly int[] Saturations = new[] { 80, 80, 80, 80, 80, 80, 80, 80, 0 };
-        public static readonly int[] Lightnesses = new[] { 80, 80, 80, 80, 80, 80, 80, 80, 80 };
+        public static readonly int[] Hues = [0, 30, 60, 120, 180, 220, 270, 310, 0];
+        public static readonly int[] Saturations = [80, 80, 80, 80, 80, 80, 80, 80, 0];
+        public static readonly int[] Lightnesses = [80, 80, 80, 80, 80, 80, 80, 80, 80];
         public static readonly string[] Colors = Enumerable.Range(0, 9).Select(i => $"hsl({Hues[i]}, {Saturations[i]}%, {Lightnesses[i]}%)").ToArray();
 
         public static (string puzzleLinesPath, string framePathSvg) RenderGridLines(int[][] regions, int width, int height)
@@ -139,7 +138,7 @@ namespace Zinga.Lib
                 var offset = outline.MinIndex(c => c.x + width * c.y) + outline.Length - 1;
                 textX = outline[(offset + 1) % outline.Length].x + .03;
                 textY = outline[(offset + 1) % outline.Length].y + .25;
-                for (int j = 0; j <= outline.Length; j++)
+                for (var j = 0; j <= outline.Length; j++)
                 {
                     if (j == outline.Length && gapX == null && gapY == null)
                     {
@@ -184,20 +183,20 @@ namespace Zinga.Lib
         public static IEnumerable<(int x, int y)[]> GetRegionOutlines(int[] cells, int width, int height)
         {
             var visitedUpArrow = Ut.NewArray<bool>(width, height);
-            for (int j = 0; j < height; j++)
-                for (int i = 0; i < width; i++)
+            for (var j = 0; j < height; j++)
+                for (var i = 0; i < width; i++)
                     // every region must have at least one up arrow (left edge)
                     if (!visitedUpArrow[i][j] && get(cells, i, j, width, height) && !get(cells, i - 1, j, width, height))
                         yield return tracePolygon(cells, i, j, width, height, visitedUpArrow);
         }
 
-        static CellDirection getDir((int x, int y) from, (int x, int y) to) => from.x == to.x
+        private static CellDirection getDir((int x, int y) from, (int x, int y) to) => from.x == to.x
                         ? (from.y > to.y ? CellDirection.Up : CellDirection.Down)
                         : (from.x > to.x ? CellDirection.Left : CellDirection.Right);
 
-        static bool get(int[] cells, int x, int y, int width, int height) => x >= 0 && x < width && y >= 0 && y < height && cells.Contains(x + width * y);
+        private static bool get(int[] cells, int x, int y, int width, int height) => x >= 0 && x < width && y >= 0 && y < height && cells.Contains(x + width * y);
 
-        static (int x, int y)[] tracePolygon(int[] cells, int i, int j, int width, int height, bool[][] visitedUpArrow)
+        private static (int x, int y)[] tracePolygon(int[] cells, int i, int j, int width, int height, bool[][] visitedUpArrow)
         {
             var result = new List<(int x, int y)>();
             var dir = CellDirection.Up;

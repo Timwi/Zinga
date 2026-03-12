@@ -2,30 +2,20 @@
 
 namespace Zinga.Lib
 {
-    public struct Xy : IEquatable<Xy>
+    public struct Xy(int x, int y) : IEquatable<Xy>
     {
-        public int X { get; private set; }
-        public int Y { get; private set; }
-        public Xy(int x, int y)
-        {
-            X = x;
-            Y = y;
-        }
+        public int X { get; private set; } = x;
+        public int Y { get; private set; } = y;
+
         public readonly bool Equals(Xy other) => other.X == X && other.Y == Y;
         public override readonly int GetHashCode() => unchecked(Y * 10247 + X);
         public override readonly bool Equals(object obj) => obj is Xy xy && Equals(xy);
         public override readonly string ToString() => $"({X}, {Y})";
     }
-    public struct Link : IEquatable<Link>
+    public struct Link(Xy from, Xy to) : IEquatable<Link>
     {
-        public Xy From { get; private set; }
-        public Xy To { get; private set; }
-
-        public Link(Xy from, Xy to)
-        {
-            From = from;
-            To = to;
-        }
+        public Xy From { get; private set; } = from;
+        public Xy To { get; private set; } = to;
 
         public Link(int fromX, int fromY, int toX, int toY) : this(new Xy(fromX, fromY), new Xy(toX, toY)) { }
 

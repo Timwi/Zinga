@@ -22,7 +22,7 @@ namespace Zinga
 
             var isTest = url == "test";
             Puzzle puzzle = null;
-            PuzzleInfo puzzleInfo = PuzzleInfo.Default;
+            var puzzleInfo = PuzzleInfo.Default;
             ConstraintInfo[] constraints = null;
             Dictionary<int, ConstraintTypeInfo> constraintTypes;
             if (isTest)

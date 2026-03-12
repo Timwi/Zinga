@@ -31,14 +31,14 @@ namespace Zinga.Lib
             var sizeMsg = (ulong) input.Length * 8;
             var bMsg = new byte[sizeMsgBuff];
 
-            for (int i = 0; i < input.Length; i++)
+            for (var i = 0; i < input.Length; i++)
                 bMsg[i] = input[i];
 
             // make first bit of padding 1
             bMsg[input.Length] |= 0x80;
 
             // write the size value
-            for (int i = 8; i > 0; i--)
+            for (var i = 8; i > 0; i--)
                 bMsg[sizeMsgBuff - i] = (byte) (sizeMsg >> ((8 - i) * 8) & 0xff);
 
             var xArr = new uint[16];
@@ -64,10 +64,10 @@ namespace Zinga.Lib
                         (((uint) bMsg[block + j + 1]) << 8) |
                         bMsg[block + j];
 
-                uint oa = a;
-                uint ob = b;
-                uint oc = c;
-                uint od = d;
+                var oa = a;
+                var ob = b;
+                var oc = c;
+                var od = d;
 
                 // Round 1
                 a = TransF(a, b, c, d, 0, 7, 1); d = TransF(d, a, b, c, 1, 12, 2); c = TransF(c, d, a, b, 2, 17, 3); b = TransF(b, c, d, a, 3, 22, 4);
@@ -109,8 +109,8 @@ namespace Zinga.Lib
         }
 
         /// <summary>Lookup table for 4294967296*sin(i)</summary>
-        private static readonly uint[] T = new uint[]
-        {
+        private static readonly uint[] T =
+        [
             0xd76aa478, 0xe8c7b756, 0x242070db, 0xc1bdceee,
             0xf57c0faf, 0x4787c62a, 0xa8304613, 0xfd469501,
             0x698098d8, 0x8b44f7af, 0xffff5bb1, 0x895cd7be,
@@ -127,6 +127,6 @@ namespace Zinga.Lib
             0x655b59c3, 0x8f0ccc92, 0xffeff47d, 0x85845dd1,
             0x6fa87e4f, 0xfe2ce6e0, 0xa3014314, 0x4e0811a1,
             0xf7537e82, 0xbd3af235, 0x2ad7d2bb, 0xeb86d391
-        };
+        ];
     }
 }

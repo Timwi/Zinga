@@ -2,13 +2,8 @@
 
 namespace Zinga
 {
-    public class ConstraintKindInfoAttribute : Attribute
+    public class ConstraintKindInfoAttribute(string name) : Attribute
     {
-        public ConstraintKindInfoAttribute(string name)
-        {
-            Name = name;
-        }
-
-        public string Name { get; }
+        public string Name { get; } = name;
     }
 }

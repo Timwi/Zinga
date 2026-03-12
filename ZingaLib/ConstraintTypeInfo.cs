@@ -5,34 +5,22 @@ using Zinga.Suco;
 
 namespace Zinga.Lib
 {
-    public sealed class ConstraintTypeInfo
+    public sealed class ConstraintTypeInfo(int id, string name, ConstraintKind kind, string variablesJson, string logicSuco, string svgDefsSuco, string svgSuco, bool isPublic)
     {
-        public ConstraintTypeInfo(int id, string name, ConstraintKind kind, string variablesJson, string logicSuco, string svgDefsSuco, string svgSuco, bool isPublic)
-        {
-            ID = id;
-            Name = name;
-            Kind = kind;
-            VariablesJson = variablesJson;
-            LogicSuco = string.IsNullOrWhiteSpace(logicSuco) ? null : logicSuco;
-            SvgDefsSuco = string.IsNullOrWhiteSpace(svgDefsSuco) ? null : svgDefsSuco;
-            SvgSuco = string.IsNullOrWhiteSpace(svgSuco) ? null : svgSuco;
-            IsPublic = isPublic;
-        }
-
-        public int ID { get; private set; }
-        public string Name { get; private set; }
-        public ConstraintKind Kind { get; private set; }
-        public string VariablesJson { get; private set; }
-        public string LogicSuco { get; private set; }
-        public string SvgDefsSuco { get; private set; }
-        public string SvgSuco { get; private set; }
-        public bool IsPublic { get; private set; }
+        public int ID { get; private set; } = id;
+        public string Name { get; private set; } = name;
+        public ConstraintKind Kind { get; private set; } = kind;
+        public string VariablesJson { get; private set; } = variablesJson;
+        public string LogicSuco { get; private set; } = string.IsNullOrWhiteSpace(logicSuco) ? null : logicSuco;
+        public string SvgDefsSuco { get; private set; } = string.IsNullOrWhiteSpace(svgDefsSuco) ? null : svgDefsSuco;
+        public string SvgSuco { get; private set; } = string.IsNullOrWhiteSpace(svgSuco) ? null : svgSuco;
+        public bool IsPublic { get; private set; } = isPublic;
 
         private SucoExpression _svgDefsCache;
         public IEnumerable<string> GetSvgDefs(SucoEnvironment env, bool ignoreErrors)
         {
             if (SvgDefsSuco == null)
-                return Enumerable.Empty<string>();
+                return [];
             if (ignoreErrors)
             {
                 try { _svgDefsCache ??= SucoParser.ParseCode(SvgDefsSuco, SucoTypeEnvironment.From(VariablesJson), SucoContext.Svg, SucoType.String.List()); }

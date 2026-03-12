@@ -5,3 +5,15 @@ dotnet_diagnostic.IDE0130.severity = none
 
 # IDE0305: Let me use .ToArray()/.ToList()
 dotnet_diagnostic.IDE0305.severity = none
+
+# SYSLIB1045: Convert to 'GeneratedRegexAttribute'.
+dotnet_diagnostic.SYSLIB1045.severity = none
+
+# IDE0057: Let me use .Substring()
+dotnet_diagnostic.IDE0057.severity = none
+
+# CA1859: I know how to use return types
+dotnet_diagnostic.CA1859.severity = none
+
+# CS9236: Compiling requires binding the lambda expression many times. Consider declaring the lambda expression with explicit parameter types, or if the containing method call is generic, consider using explicit type arguments.
+dotnet_diagnostic.CS9236.severity = none

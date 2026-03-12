@@ -19,7 +19,7 @@ namespace Zinga
 
             if (code != null)
             {
-                htmlBlocks = new List<object>();
+                htmlBlocks = [];
 
                 object exceptionBox(Exception exc, (int start, int? end)[] highlights)
                 {
@@ -46,7 +46,7 @@ namespace Zinga
                 object parseExceptionBox(SucoParseException exc) =>
                     exceptionBox(exc, (exc.Highlights?.OrderBy(h => h.StartIndex).Select(h => (start: h.StartIndex, end: h.EndIndex)).ToArray() ?? Enumerable.Empty<(int start, int? end)>())
                         .Concat((start: exc.StartIndex, end: exc.EndIndex)).ToArray());
-                object compileExceptionBox(SucoCompileException exc) => exceptionBox(exc, new[] { (start: exc.StartIndex, end: exc.EndIndex.Nullable()) });
+                object compileExceptionBox(SucoCompileException exc) => exceptionBox(exc, [(start: exc.StartIndex, end: exc.EndIndex.Nullable())]);
 
                 var environment = SucoTypeEnvironment.Default;
                 if (variables != null)
