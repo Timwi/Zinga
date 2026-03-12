@@ -1930,7 +1930,7 @@
 				let t = getConstraintType(state.constraints[i].type);
 				for (let v of Object.keys(t.variables))
 					state.constraints[i].values[v] = translateValue(state.constraints[i].values[v], t.variables[v]);
-				let [spVar, spType] = getSpecialVariable(t.kind);
+				let [spVar] = getSpecialVariable(t.kind);
 				if (spVar !== null)
 				{
 					let enf = enforceConstraintKind(t.kind, state.constraints[i].values[spVar]);
@@ -1938,7 +1938,6 @@
 						state.constraints[i].values[spVar] = enf.value;
 					else
 					{
-						console.log(spVar, t, state.constraints[i], enf);
 						state.constraints.splice(i--, 1);
 						continue;
 					}
@@ -2303,7 +2302,6 @@
 		try
 		{
 			let j = JSON.parse(ev.clipboardData.getData("text"));
-			console.log(j, state.customConstraintTypes);
 			if (Array.isArray(j) && j.every(cs => 'type' in cs && Number.isInteger(cs.type) && (cs.type >= 0 || ~cs.type < state.customConstraintTypes.length) && 'values' in cs && typeof cs.values === 'object'))
 			{
 				saveUndo();

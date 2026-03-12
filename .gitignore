@@ -1,5 +1,6 @@
 .vs/
-Builds/
+bin
+obj
 packages/
 Src/*.user
 *.suo

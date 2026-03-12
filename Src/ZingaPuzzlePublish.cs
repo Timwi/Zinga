@@ -1,6 +1,4 @@
-﻿using System;
-using System.Data;
-using System.Linq;
+﻿using System.Data;
 using System.Transactions;
 using RT.Json;
 using RT.Servers;
@@ -17,7 +15,7 @@ namespace Zinga
     {
         public HttpResponse PuzzlePublish(HttpRequest req)
         {
-            if (req.Method != HttpMethod.Post)
+            if (req.Method != RT.Servers.HttpMethod.Post)
                 return HttpResponse.Empty(HttpStatusCode._405_MethodNotAllowed);
 
             var jsonRaw = req.Post["puzzle"].Value;

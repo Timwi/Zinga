@@ -1,6 +1,4 @@
 ﻿using System.Data;
-using System.IO;
-using System.Linq;
 using System.Reflection;
 using RT.Json;
 using RT.Servers;
@@ -31,7 +29,7 @@ namespace Zinga
 
             var constraintTypesJson = constraintTypes.ToJsonDict(kvp => kvp.Key.ToString(), kvp => kvp.Value.ToJson()).ToString();
 
-            const bool autoCss = true;
+            const bool autoCss = false;
             return HttpResponse.Html(new HTML(
                 new HEAD(
                     new META { httpEquiv = "content-type", content = "text/html; charset=UTF-8" },

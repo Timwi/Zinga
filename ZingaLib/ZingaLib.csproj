@@ -2,9 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <Configurations>Debug-Nuget;Release;Debug-locallibs</Configurations>
-    <OutputPath>..\Builds\$(Configuration)-$(TargetFramework)$(RuntimeIdentifier)\</OutputPath>
-    <IntermediateOutputPath>$(BaseIntermediateOutputPath)\$(Configuration)-$(TargetFramework)$(RuntimeIdentifier)\</IntermediateOutputPath>
+    <Configurations>Debug-Nuget;Debug-locallibs;Release</Configurations>
     <LangVersion>latest</LangVersion>
     <RootNamespace>Zinga.Lib</RootNamespace>
   </PropertyGroup>
@@ -15,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' != 'Debug-locallibs'">
-    <PackageReference Include="RT.Serialization.Json" Version="2.0.1770" />
-    <PackageReference Include="RT.Util.Core" Version="2.0.1770" />
+    <PackageReference Include="RT.Serialization.Json" Version="2.0.1822" />
+    <PackageReference Include="RT.Util.Core" Version="2.0.1822" />
   </ItemGroup>
 
 </Project>

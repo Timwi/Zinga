@@ -12,7 +12,7 @@ namespace Zinga
     {
         private HttpResponse ConstraintSearch(HttpRequest req)
         {
-            if (req.Method != HttpMethod.Post)
+            if (req.Method != RT.Servers.HttpMethod.Post)
                 return HttpResponse.PlainText("Only POST requests allowed.", HttpStatusCode._405_MethodNotAllowed);
 
             var query = req.Post["msg"].Value;

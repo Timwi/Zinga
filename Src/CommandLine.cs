@@ -5,14 +5,22 @@ using RT.PropellerApi;
 
 namespace Zinga
 {
-    [CommandLine]
+    sealed class CommandLine
+    {
+        [IsPositional, IsMandatory]
+        public CommandLineBase Command = null;
+
+        public int Execute() => Command.Execute();
+    }
+
+    [CommandGroup]
     abstract class CommandLineBase
     {
         public abstract int Execute();
 
         public static void PostBuildCheck(IPostBuildReporter rep)
         {
-            CommandLineParser.PostBuildStep<CommandLineBase>(rep, null);
+            CommandLineParser.PostBuildStep<CommandLineBase>(rep);
         }
     }
 
