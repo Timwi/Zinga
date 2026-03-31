@@ -1,4 +1,5 @@
-﻿using System.Data.Entity;
+﻿using System.Reflection;
+using Microsoft.EntityFrameworkCore;
 using RT.PropellerApi;
 using RT.Servers;
 using Zinga.Database;
@@ -13,12 +14,15 @@ namespace Zinga
 
         public override void Init()
         {
-            System.Data.Entity.Database.SetInitializer(new MigrateDatabaseToLatestVersion<Db, Configuration>());
             Db.ConnectionString = Settings.ConnectionString;
 
-            // This also triggers any pending migrations. Without doing some DB stuff here, transactions that don’t commit mess up the migrations.
-            using var db = new Db();
-            Log.Info($"Zinga: Number of puzzles in the database: {db.Puzzles.Count()}");
+            using (var db = new Db())
+            {
+                db.Database.Migrate();
+                Log.Info($"Zinga: Number of puzzles in the database: {db.Puzzles.Count()}");
+            }
+
+            var frameworkPath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location), "_framework");
 
             _resolver = new UrlResolver(
 #if DEBUG
@@ -31,8 +35,7 @@ namespace Zinga
                 new UrlMapping(path: "/font", handler: req => HttpResponse.Css(Resources.FontCss)),
                 new UrlMapping(path: "/edit", handler: PuzzleEditPage),
                 new UrlMapping(path: "/publish", handler: PuzzlePublish),
-                new UrlMapping(path: "/_framework", handler: new FileSystemHandler(Settings.FrameworkDir).Handle),
-                new UrlMapping(path: "/edit/_framework", handler: new FileSystemHandler(Settings.FrameworkDir).Handle),
+                new UrlMapping(path: "/_framework", handler: new FileSystemHandler(frameworkPath).Handle),
                 new UrlMapping(path: "/constraint-search", handler: ConstraintSearch),
                 new UrlMapping(path: null, handler: PuzzlePage));
         }

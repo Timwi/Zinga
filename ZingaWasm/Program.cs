@@ -1,9 +1,6 @@
-namespace Zinga.Wasm
-{
-    public class Program
-    {
-        public static void Main()
-        {
-        }
-    }
-}
+using System;
+using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
+
+Console.WriteLine("Started.");
+var builder = WebAssemblyHostBuilder.CreateDefault(args);
+await builder.Build().RunAsync();
