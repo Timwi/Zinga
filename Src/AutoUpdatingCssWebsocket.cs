@@ -9,7 +9,7 @@ namespace Zinga
         {
             private readonly ZingaSettings _settings = settings;
 
-            protected override void onTextMessageReceived(string msg)
+            protected override void OnTextMessageReceived(string msg)
             {
                 if (msg == "css")
                     SendMessage(File.ReadAllText(Path.Combine(_settings.ResourcesDir, "Puzzle.css")));
