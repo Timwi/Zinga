@@ -1,6 +1,6 @@
 ﻿using System.Data;
-using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using RT.Json;
 using RT.Servers;
 using RT.Util.ExtensionMethods;
@@ -30,7 +30,7 @@ namespace Zinga
                 results = results.Where(c => !already.Contains(c.ConstraintID));
             foreach (var piece in Regex.Split(query, @"\s"))
                 if (!string.IsNullOrWhiteSpace(piece))
-                    results = results.Where(c => c.Name.Contains(piece, StringComparison.CurrentCultureIgnoreCase) || c.Description.Contains(piece, StringComparison.CurrentCultureIgnoreCase) || c.AkasJson.Contains(piece, StringComparison.CurrentCultureIgnoreCase));
+                    results = results.Where(c => EF.Functions.Like(c.Name, $"%{piece}%") || EF.Functions.Like(c.Description, $"%{piece}%") || EF.Functions.Like(c.AkasJson, $"%{piece}%"));
 
             var resultsArr = results.ToArray();
             return HttpResponse.Json(new JsonDict { ["status"] = "ok", ["results"] = resultsArr.ToJsonDict(c => c.ConstraintID.ToString(), c => c.ToJson()), ["order"] = resultsArr.Select(c => c.ConstraintID).ToJsonList() });
